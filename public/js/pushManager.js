@@ -20,6 +20,26 @@ window.checkNotificationPromptNeeded = function() {
     return Notification.permission === 'default';
 };
 
+window.triggerOfflineCron = async function() {
+    try {
+        const lastRun = localStorage.getItem('last_offline_cron');
+        const now = Date.now();
+        // Hanya jalankan maksimal 1 jam sekali (3600000 ms) dari setiap client
+        if (lastRun && (now - parseInt(lastRun)) < 3600000) {
+            return;
+        }
+        
+        // Panggil endpoint cron_affirmations secara background
+        fetch('/api/push?action=cron_affirmations', {
+            method: 'GET'
+        }).catch(e => console.warn('Offline cron trigger failed', e));
+        
+        localStorage.setItem('last_offline_cron', now.toString());
+    } catch (e) {
+        console.warn('Error running offline cron', e);
+    }
+};
+
 window.initPushManager = async function(playerName, forcePrompt = false) {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         console.warn('Push notifications are not supported by this browser.');

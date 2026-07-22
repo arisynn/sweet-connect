@@ -1,0 +1,15 @@
+name: Hourly Push Notifications Cron
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  cron_affirmations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Affirmations API
+        run: |
+          curl -X GET "${{ secrets.VERCEL_URL }}/api/push?action=cron_affirmations" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

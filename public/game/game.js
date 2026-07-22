@@ -472,6 +472,9 @@ const App = () => {
         if (window.initPushManager) {
             window.initPushManager(name);
         }
+        if (window.triggerOfflineCron) {
+            window.triggerOfflineCron();
+        }
         await new Promise(r => setTimeout(r, 500));
         
         setStartupStep(10); setStartupMessage('Selesai.'); setStartupProgress(100);

@@ -2,6 +2,8 @@ import type { Request, Response } from 'express';
 import { getSupabase } from './supabase.js';
 import webpush from 'web-push';
 
+let lastGlobalCronExecution = 0;
+
 export default async function handler(req: Request, res: Response) {
     res.setHeader('Access-Control-Allow-Credentials', "true");
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -274,6 +276,13 @@ export default async function handler(req: Request, res: Response) {
         const action = req.query.action;
         
         if (action === 'cron_affirmations') {
+            const now = Date.now();
+            // Cegah eksekusi lebih dari 1x setiap 30 menit per container (Membantu mengurangi spam dari client)
+            if (now - lastGlobalCronExecution < 1800000) {
+                return res.status(200).json({ success: true, reason: 'rate_limited', players: 0, sent: 0 });
+            }
+            lastGlobalCronExecution = now;
+
             try {
                 const supabase = getSupabase();
                 if (!supabase) return res.status(500).json({ error: 'Supabase not initialized' });

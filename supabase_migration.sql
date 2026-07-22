@@ -41,3 +41,25 @@ CREATE POLICY "Allow public delete on push_subscriptions" ON push_subscriptions 
 
 -- Create an index on player_name
 CREATE INDEX push_subscriptions_player_name_idx ON push_subscriptions(player_name);
+
+-- ==============================================================================
+-- ALTERNATIVE CRON: Supabase pg_cron + pg_net (Recommended for Vercel Hobby)
+-- ==============================================================================
+-- To run the hourly push notifications entirely from Supabase without Vercel limits:
+-- 1. Enable the pg_net extension in your Supabase Dashboard (Database -> Extensions).
+-- 2. Run the following SQL to schedule the job:
+--
+-- CREATE EXTENSION IF NOT EXISTS pg_net;
+-- 
+-- SELECT cron.schedule(
+--   'invoke-push-affirmations',
+--   '0 * * * *', -- Every hour
+--   $$
+--     SELECT net.http_get(
+--         url:='https://YOUR_VERCEL_DOMAIN.vercel.app/api/push?action=cron_affirmations',
+--         headers:='{"Content-Type": "application/json"}'::jsonb
+--     );
+--   $$
+-- );
+--
+-- This completely bypasses Vercel's 1-cron-per-day limit on the Hobby tier.
