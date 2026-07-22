@@ -1,0 +1,39 @@
+{
+    "id": "neon",
+    "name": "Neon Night",
+    "desc": "Warna-warni neon di malam hari.",
+    "category": "reward",
+    "rarity": "Epic",
+    "data": [
+        "🟣",
+        "🟪",
+        "🧿",
+        "🔮",
+        "🦄",
+        "🎆",
+        "🌌",
+        "✨",
+        "⚡",
+        "🔥",
+        "🌠",
+        "☄️",
+        "🛸",
+        "👾",
+        "🎮",
+        "🎧",
+        "🎸",
+        "🥁"
+    ],
+    "colors": {
+        "bg": "#171717",
+        "border": "#525252",
+        "text": "#d946ef",
+        "accent": "#c026d3",
+        "buttonActive": "#a21caf"
+    },
+    "background": null,
+    "logo": null,
+    "preview": null,
+    "tilesDir": "tiles",
+    "menuDir": "menu"
+}

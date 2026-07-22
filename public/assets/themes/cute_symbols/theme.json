@@ -1,0 +1,40 @@
+{
+    "id": "cute_symbols",
+    "name": "Line Art (Cute)",
+    "desc": "Simbol garis lucu dan minimalis.",
+    "category": "standar",
+    "price": 5000,
+    "currency": "coins",
+    "data": [
+        "♡",
+        "✧",
+        "ꕤ",
+        "❀",
+        "✿",
+        "❁",
+        "✾",
+        "☼",
+        "☽",
+        "☾",
+        "☁︎",
+        "★",
+        "☆",
+        "♥",
+        "♪",
+        "♫",
+        "ஐ",
+        "♡"
+    ],
+    "colors": {
+        "bg": "#fdf4ff",
+        "border": "#f0abfc",
+        "text": "#c026d3",
+        "accent": "#d946ef",
+        "buttonActive": "#a21caf"
+    },
+    "background": null,
+    "logo": null,
+    "preview": null,
+    "tilesDir": "tiles",
+    "menuDir": "menu"
+}

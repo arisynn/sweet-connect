@@ -1,0 +1,40 @@
+{
+    "id": "sweets",
+    "name": "Dessert",
+    "desc": "Tema bawaan game. Manis dan lezat.",
+    "category": "standar",
+    "price": 0,
+    "currency": "coins",
+    "data": [
+        "🍰",
+        "🧁",
+        "🍩",
+        "🍪",
+        "🍫",
+        "🍬",
+        "🍭",
+        "🍮",
+        "🍯",
+        "🍨",
+        "🍧",
+        "🍦",
+        "🥧",
+        "🎂",
+        "🥐",
+        "🥞",
+        "🧇",
+        "🧋"
+    ],
+    "colors": {
+        "bg": "#fdf2f8",
+        "border": "#fbcfe8",
+        "text": "#ec4899",
+        "accent": "#ec4899",
+        "buttonActive": "#e11d48"
+    },
+    "background": null,
+    "logo": null,
+    "preview": null,
+    "tilesDir": "tiles",
+    "menuDir": "menu"
+}

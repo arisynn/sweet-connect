@@ -1,0 +1,40 @@
+{
+    "id": "flowers",
+    "name": "Taman Bunga",
+    "desc": "Bunga-bunga cantik bermekaran.",
+    "category": "standar",
+    "price": 5000,
+    "currency": "coins",
+    "data": [
+        "🌷",
+        "🌸",
+        "🌹",
+        "🌺",
+        "🌻",
+        "🌼",
+        "💮",
+        "🪷",
+        "💐",
+        "🪻",
+        "🪴",
+        "🍀",
+        "🌿",
+        "🌾",
+        "🌲",
+        "🌳",
+        "🌴",
+        "🌵"
+    ],
+    "colors": {
+        "bg": "#fff1f2",
+        "border": "#fecdd3",
+        "text": "#e11d48",
+        "accent": "#f43f5e",
+        "buttonActive": "#e11d48"
+    },
+    "background": null,
+    "logo": null,
+    "preview": null,
+    "tilesDir": "tiles",
+    "menuDir": "menu"
+}

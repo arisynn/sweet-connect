@@ -1,0 +1,40 @@
+{
+    "id": "fruits",
+    "name": "Buah Segar",
+    "desc": "Buah-buahan segar penuh vitamin.",
+    "category": "standar",
+    "price": 5000,
+    "currency": "coins",
+    "data": [
+        "🍏",
+        "🍎",
+        "🍐",
+        "🍊",
+        "🍋",
+        "🍌",
+        "🍉",
+        "🍇",
+        "🍓",
+        "🫐",
+        "🍈",
+        "🍒",
+        "🍑",
+        "🥭",
+        "🍍",
+        "🥥",
+        "🥝",
+        "🍅"
+    ],
+    "colors": {
+        "bg": "#f0fdf4",
+        "border": "#bbf7d0",
+        "text": "#059669",
+        "accent": "#10b981",
+        "buttonActive": "#059669"
+    },
+    "background": null,
+    "logo": null,
+    "preview": null,
+    "tilesDir": "tiles",
+    "menuDir": "menu"
+}

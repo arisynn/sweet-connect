@@ -1,0 +1,10 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/public",
+  "crons": [
+    {
+      "path": "/api/push?action=cron_affirmations",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

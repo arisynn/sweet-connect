@@ -1,0 +1,40 @@
+{
+    "id": "ocean",
+    "name": "Laut Biru",
+    "desc": "Penghuni laut dalam yang misterius.",
+    "category": "standar",
+    "price": 5000,
+    "currency": "coins",
+    "data": [
+        "🐟",
+        "🐠",
+        "🐡",
+        "🦈",
+        "🐙",
+        "🦑",
+        "🦀",
+        "🦞",
+        "🦐",
+        "🐢",
+        "🐋",
+        "🐬",
+        "🦭",
+        "🐚",
+        "🪸",
+        "🌊",
+        "🫧",
+        "💧"
+    ],
+    "colors": {
+        "bg": "#f0f9ff",
+        "border": "#bae6fd",
+        "text": "#0284c7",
+        "accent": "#0ea5e9",
+        "buttonActive": "#0284c7"
+    },
+    "background": null,
+    "logo": null,
+    "preview": null,
+    "tilesDir": "tiles",
+    "menuDir": "menu"
+}

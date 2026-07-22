@@ -1,0 +1,43 @@
+{
+    "id": "animals",
+    "name": "Hewan Lucu",
+    "desc": "Kumpulan hewan imut yang menggemaskan.",
+    "category": "standar",
+    "price": 5000,
+    "currency": "coins",
+    "data": [
+        "🐶",
+        "🐱",
+        "🐭",
+        "🐹",
+        "🐰",
+        "🦊",
+        "🐻",
+        "🐼",
+        "🐻‍❄️",
+        "🐨",
+        "🐯",
+        "🦁",
+        "🐮",
+        "🐷",
+        "🐸",
+        "🐵",
+        "🐔",
+        "🐧",
+        "🐦",
+        "🐤"
+    ],
+    "colors": {
+        "bg": "#fffbeb",
+        "border": "#fde68a",
+        "text": "#d97706",
+        "accent": "#f59e0b",
+        "buttonActive": "#d97706"
+    },
+    "hideBackground": true,
+    "background": null,
+    "logo": null,
+    "preview": null,
+    "tilesDir": "tiles",
+    "menuDir": "menu"
+}
