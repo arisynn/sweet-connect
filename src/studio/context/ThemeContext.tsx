@@ -5,28 +5,38 @@ interface ThemeContextType {
   theme: StudioTheme;
   updateMetadata: (key: keyof StudioTheme['metadata'], value: string) => void;
   updateColor: (key: keyof StudioTheme['colors'], value: string) => void;
-  updateAsset: (category: 'tiles' | 'ui', key: string, file: File | string) => void;
-  updateRootAsset: (key: 'logo' | 'background' | 'thumbnail', file: File | string) => void;
+  updateStyle: (key: keyof StudioTheme['styles'], value: string) => void;
+  updateAsset: (category: 'tiles' | 'ui' | 'audio', key: string, file: File | string) => void;
+  updateRootAsset: (key: 'logo' | 'background' | 'thumbnail' | 'particles', file: File | string) => void;
   getAssetUrl: (fileOrString?: File | string) => string;
 }
 
 const defaultTheme: StudioTheme = {
   metadata: {
-    id: 'my-new-theme',
-    name: 'My New Theme',
+    id: 'sweet-candy',
+    name: 'Sweet Candy',
     author: 'Studio User',
     version: '1.0.0'
   },
   colors: {
-    primary: '#ec4899', // pink-500
-    secondary: '#8b5cf6', // violet-500
-    background: '#0f172a', // slate-900
-    text: '#f8fafc', // slate-50
-    accent: '#f59e0b', // amber-500
+    primary: '#f472b6', // pink-400
+    secondary: '#a78bfa', // violet-400
+    background: '#fdf2f8', // pink-50
+    surface: '#ffffff', // white
+    text: '#334155', // slate-700
+    textInverse: '#ffffff',
+    accent: '#fbbf24', // amber-400
+  },
+  styles: {
+    borderRadius: '1.5rem',
+    buttonRadius: '9999px',
+    shadowSize: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+    fontFamily: '"Inter", sans-serif',
   },
   assets: {
     tiles: {},
-    ui: {}
+    ui: {},
+    audio: {}
   }
 };
 
@@ -63,8 +73,15 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       colors: { ...prev.colors, [key]: value }
     }));
   };
+  
+  const updateStyle = (key: keyof StudioTheme['styles'], value: string) => {
+    setTheme(prev => ({
+      ...prev,
+      styles: { ...prev.styles, [key]: value }
+    }));
+  };
 
-  const updateAsset = (category: 'tiles' | 'ui', key: string, file: File | string) => {
+  const updateAsset = (category: 'tiles' | 'ui' | 'audio', key: string, file: File | string) => {
     setTheme(prev => ({
       ...prev,
       assets: {
@@ -77,7 +94,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
-  const updateRootAsset = (key: 'logo' | 'background' | 'thumbnail', file: File | string) => {
+  const updateRootAsset = (key: 'logo' | 'background' | 'thumbnail' | 'particles', file: File | string) => {
     setTheme(prev => ({
       ...prev,
       assets: {
@@ -88,7 +105,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, updateMetadata, updateColor, updateAsset, updateRootAsset, getAssetUrl }}>
+    <ThemeContext.Provider value={{ theme, updateMetadata, updateColor, updateStyle, updateAsset, updateRootAsset, getAssetUrl }}>
       {children}
     </ThemeContext.Provider>
   );

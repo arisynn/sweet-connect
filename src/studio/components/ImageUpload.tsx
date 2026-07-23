@@ -20,21 +20,21 @@ export function ImageUpload({ label, value, onChange, previewUrl }: ImageUploadP
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</label>
-      <div className="relative flex items-center justify-center w-full h-24 border-2 border-dashed border-slate-700 rounded-xl bg-slate-900/50 overflow-hidden group hover:border-pink-500 transition-colors">
+      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{label}</label>
+      <div className="relative flex items-center justify-center w-full h-28 border-2 border-dashed border-pink-200 rounded-2xl bg-pink-50/50 overflow-hidden group hover:border-pink-400 hover:bg-pink-100/50 transition-all cursor-pointer">
         {previewUrl ? (
           <>
-            <img src={previewUrl} alt={label} className="w-full h-full object-contain p-2" />
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity gap-2">
+            <img src={previewUrl} alt={label} className="w-full h-full object-contain p-2 drop-shadow-md" />
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity gap-2">
                <button 
-                 onClick={() => fileInputRef.current?.click()}
-                 className="p-2 bg-slate-800 rounded-lg hover:bg-slate-700 text-white"
+                 onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                 className="p-3 bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 text-pink-500 transition-all border border-pink-100"
                >
                  <Upload className="w-4 h-4" />
                </button>
                <button 
-                 onClick={() => onChange(undefined)}
-                 className="p-2 bg-red-900/80 rounded-lg hover:bg-red-800 text-white"
+                 onClick={(e) => { e.stopPropagation(); onChange(undefined); }}
+                 className="p-3 bg-red-50 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 text-red-500 transition-all border border-red-100"
                >
                  <X className="w-4 h-4" />
                </button>
@@ -43,10 +43,10 @@ export function ImageUpload({ label, value, onChange, previewUrl }: ImageUploadP
         ) : (
           <button 
             onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-pink-400 transition-colors"
+            className="flex flex-col items-center justify-center w-full h-full text-pink-300 hover:text-pink-500 transition-colors"
           >
-            <Upload className="w-6 h-6 mb-2 opacity-50" />
-            <span className="text-xs font-medium">Click to upload</span>
+            <Upload className="w-6 h-6 mb-2" />
+            <span className="text-xs font-bold">Select File</span>
           </button>
         )}
         <input 
