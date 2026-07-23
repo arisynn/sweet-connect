@@ -112,21 +112,27 @@ const SettingsPanel = ({ syncStatus, setShowSyncLog, onClose, onLogout, profile,
                             </div>
                             
                             <div className="flex justify-between items-center mt-2">
-                                <button onClick={() => { if(window.initPushManager) window.initPushManager(playerName, true); }} className="text-xs text-pink-500 font-bold hover:underline">
+                                <button onClick={async () => { 
+                                    if(window.initPushManager) {
+                                        const res = await window.initPushManager(playerName, true);
+                                        if (res === true) {
+                                            alert("Izin diberikan & notifikasi uji coba dikirim!");
+                                        } else if (res === false) {
+                                            alert("Gagal mengaktifkan notifikasi. Pastikan browser Anda mendukungnya dan izin tidak diblokir.");
+                                        }
+                                    } 
+                                }} className="text-xs text-pink-500 font-bold hover:underline">
                                     Izinkan Notifikasi Browser
                                 </button>
-                                <button onClick={() => { 
-                                    fetch('/api/push', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ action: 'testPush', playerName })
-                                    }).then(res => res.json()).then(data => {
-                                        if(data.success) {
-                                            alert("Test push berhasil dikirim!");
+                                <button onClick={async () => { 
+                                    if(window.initPushManager) {
+                                        const res = await window.initPushManager(playerName, true);
+                                        if (res === true) {
+                                            alert("Test push sedang dikirim...");
                                         } else {
-                                            alert("Gagal mengirim test push: " + (data.error || "Unknown"));
+                                            alert("Gagal mengirim test push, pastikan notifikasi diizinkan.");
                                         }
-                                    }).catch(e => alert("Error: " + e.message));
+                                    }
                                 }} className="text-xs px-3 py-1 bg-pink-100 text-pink-600 rounded-full font-bold hover:bg-pink-200 transition-colors">
                                     Test Push
                                 </button>

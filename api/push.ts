@@ -39,46 +39,57 @@ export default async function handler(req: Request, res: Response) {
 
         if (action === 'subscribe') {
             const { playerName, subscription } = req.body;
+            console.log(`[Push] Subscribe requested for player: ${playerName}`);
+            
             if (!playerName || !subscription || !subscription.endpoint) {
+                console.error("[Push] Invalid subscription data received", req.body);
                 return res.status(400).json({ error: "Invalid subscription data" });
             }
+
+            const keys = subscription.keys || {};
+            const p256dh = keys.p256dh || '';
+            const auth = keys.auth || '';
 
             try {
                 const supabase = getSupabase();
                 if (!supabase) {
-                    console.warn("Supabase not initialized, mocking subscription save");
+                    console.warn("[Push] Supabase not initialized, mocking subscription save");
                     return res.status(200).json({ success: true, mocked: true });
                 }
 
+                console.log(`[Push] Upserting subscription for ${playerName} to Supabase...`);
                 const { error } = await supabase
                     .from('push_subscriptions')
                     .upsert(
                         { 
                             player_name: playerName, 
                             endpoint: subscription.endpoint,
-                            p256dh: subscription.keys.p256dh,
-                            auth: subscription.keys.auth,
+                            p256dh: p256dh,
+                            auth: auth,
                             updated_at: new Date().toISOString() 
                         },
                         { onConflict: 'endpoint' }
                     );
 
                 if (error) {
-                    console.error("Supabase error saving subscription:", error);
+                    console.error("[Push] Supabase error saving subscription:", error);
                     throw error;
                 }
 
+                console.log(`[Push] Subscription saved successfully for ${playerName}`);
                 return res.status(200).json({ success: true });
             } catch (error: any) {
-                console.error("Error saving subscription:", error);
+                console.error("[Push] Error saving subscription:", error);
                 return res.status(500).json({ error: "Failed to save subscription" });
             }
         } else if (action === 'testPush') {
             const { playerName } = req.body;
+            console.log(`[Push] Test push requested for player: ${playerName}`);
             
             try {
                 const supabase = getSupabase();
                 if (!supabase) {
+                    console.warn("[Push] Supabase not initialized, mocking test push");
                     return res.status(200).json({ success: true, mocked: true });
                 }
 
@@ -90,17 +101,23 @@ export default async function handler(req: Request, res: Response) {
                     url: '/'
                 };
 
+                console.log(`[Push] Fetching subscriptions for ${playerName}...`);
                 const { data: subscriptions, error } = await supabase
                     .from('push_subscriptions')
                     .select('*')
                     .eq('player_name', playerName);
 
-                if (error) throw error;
+                if (error) {
+                    console.error("[Push] Supabase error fetching subscriptions:", error);
+                    throw error;
+                }
 
                 if (!subscriptions || subscriptions.length === 0) {
+                    console.warn(`[Push] No subscriptions found for player: ${playerName}`);
                     return res.status(404).json({ error: "No subscriptions found for player" });
                 }
 
+                console.log(`[Push] Found ${subscriptions.length} subscriptions for ${playerName}. Sending notifications...`);
                 const results = await Promise.all(subscriptions.map(async (sub) => {
                     const pushSubscription = {
                         endpoint: sub.endpoint,
@@ -112,13 +129,14 @@ export default async function handler(req: Request, res: Response) {
 
                     try {
                         await webpush.sendNotification(pushSubscription, JSON.stringify(payload));
+                        console.log(`[Push] Notification sent successfully to endpoint: ${sub.endpoint.substring(0, 30)}...`);
                         return { success: true, endpoint: sub.endpoint };
                     } catch (err: any) {
                         if (err.statusCode === 404 || err.statusCode === 410) {
-                            console.log('Subscription has expired or is no longer valid: ', err);
+                            console.log(`[Push] Subscription expired, deleting from DB: ${sub.endpoint.substring(0, 30)}...`);
                             await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
                         } else {
-                            console.error('Error sending push notification: ', err);
+                            console.error(`[Push] Error sending push notification to ${sub.endpoint.substring(0, 30)}...:`, err);
                         }
                         return { success: false, endpoint: sub.endpoint, error: err.message };
                     }
@@ -126,7 +144,7 @@ export default async function handler(req: Request, res: Response) {
 
                 return res.status(200).json({ success: true, results });
             } catch (error: any) {
-                console.error("Error sending test notification:", error);
+                console.error("[Push] Error sending test notification:", error);
                 return res.status(500).json({ error: "Failed to send test notification", details: error.message || error.toString() });
             }
         } else if (action === 'sendNotification') {
