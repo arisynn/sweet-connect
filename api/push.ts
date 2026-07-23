@@ -180,40 +180,80 @@ export default async function handler(req: Request, res: Response) {
                 else if (timeCategory === 'night') greeting = "Selamat malam!";
                 else greeting = "Masih bangun?";
 
+                const pd = profileObj?.profile_data || {};
+                
                 switch (category) {
                     case 'dailyReward':
                         if (prefs.dailyReward) {
-                            allowSend = true;
-                            title = 'Hadiah Harian Siap!';
-                            body = `${greeting} Hadiah harianmu sudah siap. ${randomAff}`;
+                            const lastDaily = pd.dailyReward?.lastClaimDate;
+                            const today = new Date().toLocaleDateString('en-CA', { timeZone: userTimezone || 'UTC' });
+                            if (lastDaily !== today) {
+                                allowSend = true;
+                                title = 'Hadiah Harian Siap!';
+                                body = `${greeting} Hadiah harianmu sudah siap diklaim. ${randomAff}`;
+                            } else {
+                                console.log(`[Push] User ${playerName} already claimed dailyReward today, skipping.`);
+                            }
                         }
                         break;
                     case 'dailyMission':
                         if (prefs.dailyMission) {
-                            allowSend = true;
-                            title = 'Misi Harian Diperbarui';
-                            body = `${greeting} Misi harian baru sudah menunggumu. ${randomAff}`;
+                            const dMissions = pd.dailyMissions;
+                            const today = new Date().toLocaleDateString('en-CA', { timeZone: userTimezone || 'UTC' });
+                            
+                            if (dMissions?.date !== today) {
+                                // New missions available
+                                allowSend = true;
+                                title = 'Misi Harian Baru';
+                                body = `${greeting} Misi harian baru sudah menunggumu. ${randomAff}`;
+                            } else if (!dMissions?.allClaimed) {
+                                // Have incomplete or unclaimed missions
+                                allowSend = true;
+                                title = 'Misi Harian Belum Selesai';
+                                body = `${greeting} Jangan lupa selesaikan misi harianmu hari ini! ${randomAff}`;
+                            } else {
+                                console.log(`[Push] User ${playerName} already completed daily missions, skipping.`);
+                            }
                         }
                         break;
                     case 'weeklyMission':
                         if (prefs.weeklyMission) {
-                            allowSend = true;
-                            title = 'Misi Mingguan Diperbarui';
-                            body = `${greeting} Ayo selesaikan misi mingguan. ${randomAff}`;
+                            const wMissions = pd.weeklyMissions;
+                            if (wMissions && !wMissions.allClaimed) {
+                                allowSend = true;
+                                title = 'Misi Mingguan Menunggu';
+                                body = `${greeting} Ada misi mingguan yang belum kamu selesaikan nih. ${randomAff}`;
+                            } else {
+                                console.log(`[Push] User ${playerName} already completed weekly missions, skipping.`);
+                            }
                         }
                         break;
                     case 'chestReady':
                         if (prefs.chestReady) {
-                            allowSend = true;
-                            title = 'Peti Siap Dibuka!';
-                            body = `${greeting} Peti hadiahmu sudah siap dibuka. ${randomAff}`;
+                            const slots = pd.chestSlots || [];
+                            const now = Date.now();
+                            const hasReadyChest = slots.some((c: any) => c && c.unlockTime <= now);
+                            if (hasReadyChest) {
+                                allowSend = true;
+                                title = 'Peti Siap Dibuka!';
+                                body = `${greeting} Peti hadiahmu sudah siap dibuka. ${randomAff}`;
+                            } else {
+                                console.log(`[Push] User ${playerName} has no ready chests, skipping.`);
+                            }
                         }
                         break;
                     case 'comeBack':
                         if (prefs.comeBack) {
-                            allowSend = true;
-                            title = 'Kangen Main Sweet Connect?';
-                            body = `${greeting} Sweet Connect merindukanmu. Yuk main sebentar. ${randomAff}`;
+                            const lastUpdate = pd.lastUpdated || Date.now();
+                            const hoursSinceLastActive = (Date.now() - lastUpdate) / (1000 * 60 * 60);
+                            
+                            if (hoursSinceLastActive >= 24 && hoursSinceLastActive <= 72) {
+                                allowSend = true;
+                                title = 'Kangen Main Sweet Connect?';
+                                body = `${greeting} Sweet Connect merindukanmu. Yuk main sebentar. ${randomAff}`;
+                            } else {
+                                console.log(`[Push] User ${playerName} active recently or too long ago (${hoursSinceLastActive}h), skipping comeBack.`);
+                            }
                         }
                         break;
                     case 'affirmation':
