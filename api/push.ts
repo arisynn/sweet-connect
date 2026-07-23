@@ -182,26 +182,31 @@ export default async function handler(req: Request, res: Response) {
 
                 const pd = profileObj?.profile_data || {};
                 
+                // Get the current date in the user's timezone
+                const userDate = new Date(new Date().toLocaleString('en-US', { timeZone: userTimezone || 'UTC' }));
+                const userDateString = userDate.toDateString(); // Matches new Date().toDateString() format on client
+                
+                const pad = (n: number) => String(n).padStart(2, '0');
+                const userDateYMD = `${userDate.getFullYear()}-${pad(userDate.getMonth() + 1)}-${pad(userDate.getDate())}`;
+
                 switch (category) {
                     case 'dailyReward':
                         if (prefs.dailyReward) {
-                            const lastDaily = pd.dailyReward?.lastClaimDate;
-                            const today = new Date().toLocaleDateString('en-CA', { timeZone: userTimezone || 'UTC' });
-                            if (lastDaily !== today) {
+                            const lastDaily = pd.loginReward?.date;
+                            if (lastDaily !== userDateString) {
                                 allowSend = true;
                                 title = 'Hadiah Harian Siap!';
                                 body = `${greeting} Hadiah harianmu sudah siap diklaim. ${randomAff}`;
                             } else {
-                                console.log(`[Push] User ${playerName} already claimed dailyReward today, skipping.`);
+                                console.log(`[Push] User ${playerName} already claimed dailyReward today (${lastDaily}), skipping.`);
                             }
                         }
                         break;
                     case 'dailyMission':
                         if (prefs.dailyMission) {
                             const dMissions = pd.dailyMissions;
-                            const today = new Date().toLocaleDateString('en-CA', { timeZone: userTimezone || 'UTC' });
                             
-                            if (dMissions?.date !== today) {
+                            if (dMissions?.date !== userDateYMD) {
                                 // New missions available
                                 allowSend = true;
                                 title = 'Misi Harian Baru';
