@@ -17,6 +17,31 @@ async function initApp() {
             });
             // Ensure custom theme is always present
             loadedThemes.custom = getFallbackThemes().custom;
+            
+            // Merge all themes with the default 'sweets' theme to ensure missing assets fallback
+            const defaultTheme = loadedThemes['sweets'] || getFallbackThemes().sweets;
+            
+            function deepMerge(target, source) {
+                if (!source) return target;
+                if (!target) return source;
+                const output = Object.assign({}, target);
+                for (const key of Object.keys(source)) {
+                    if (source[key] instanceof Object && key !== 'data' && !Array.isArray(source[key])) {
+                        if (!(key in target)) Object.assign(output, { [key]: source[key] });
+                        else output[key] = deepMerge(target[key], source[key]);
+                    } else {
+                        output[key] = source[key];
+                    }
+                }
+                return output;
+            }
+            
+            for (const key in loadedThemes) {
+                if (key !== 'sweets' && key !== 'custom') {
+                    loadedThemes[key] = deepMerge(defaultTheme, loadedThemes[key]);
+                }
+            }
+
             THEMES = loadedThemes;
         } else {
             throw new Error('Failed to load themes from API');

@@ -14,11 +14,41 @@ const StartupScreen = ({
 }) => {
     const themeObj = THEMES[activeTheme] || THEMES['sweets'];
     const bgUrl = themeObj.menuBackgrounds?.home || '';
-    const logoUrl = "/logo.png"; 
     const primaryColor = themeObj.primary || '#ec4899';
     
     // Fallback illustration: use the first emoji of the theme if no specific illustration exists
     const centerIllustration = themeObj.data ? themeObj.data[0] : "🍬";
+
+    const renderLogo = () => {
+        if (themeObj.logo && typeof themeObj.logo === 'object' && themeObj.logo.sprite) {
+            const { x, y, w, h, bgSize } = themeObj.logo.sprite;
+            const src = themeObj.logo.url || themeObj.logo.src;
+            return (
+                <div 
+                    className="drop-shadow-xl mb-4"
+                    style={{
+                        backgroundImage: `url(${src})`,
+                        backgroundPosition: `-${x}px -${y}px`,
+                        backgroundSize: bgSize || 'auto',
+                        width: `${w}px`,
+                        height: `${h}px`,
+                        backgroundRepeat: 'no-repeat'
+                    }}
+                    title="Sweet Connect"
+                />
+            );
+        }
+        
+        const logoUrl = (themeObj.logo && typeof themeObj.logo === 'string') ? themeObj.logo : "/logo.png";
+        return (
+            <img 
+                src={logoUrl} 
+                onError={(e) => { e.target.onerror = null; e.target.src="/logo.png"; }} 
+                alt="Logo" 
+                className="w-28 h-28 object-contain drop-shadow-xl mb-4" 
+            />
+        );
+    };
     
     return (
         <div className="absolute inset-0 bg-[#F2F2F7] flex flex-col items-center justify-between z-[100] px-8 py-12 overflow-hidden animate-fade-in">
@@ -30,12 +60,7 @@ const StartupScreen = ({
 
             {/* TOP: Logo & Title */}
             <div className="relative z-10 flex flex-col items-center animate-logo-enter mt-4">
-                <img 
-                    src={logoUrl} 
-                    onError={(e) => { e.target.onerror = null; e.target.src="logo.png"; }} 
-                    alt="Logo" 
-                    className="w-28 h-28 object-contain drop-shadow-xl mb-4" 
-                />
+                {renderLogo()}
                 <h1 className="text-3xl font-black text-gray-800 tracking-tight drop-shadow-sm text-center">Sweet Connect</h1>
                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2 bg-gray-100/80 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm">v1.0.1</span>
             </div>

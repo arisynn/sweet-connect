@@ -77,6 +77,25 @@ async function generate() {
                         themeData.menuBackgrounds = {};
                     }
                     
+                    // Scan generic modular directories
+                    const genericDirs = ['ui', 'icons', 'effects', 'backgrounds'];
+                    for (const d of genericDirs) {
+                        try {
+                            const dirPath = path.join(themesDir, folder.name, d);
+                            const files = await fs.readdir(dirPath);
+                            const assetMap = {};
+                            files.forEach(f => {
+                                const match = f.match(/^(.*)\.(png|jpg|jpeg|svg|webp)$/i);
+                                if (match) {
+                                    assetMap[match[1]] = `/assets/themes/${folder.name}/${d}/${f}`;
+                                }
+                            });
+                            themeData[d] = assetMap;
+                        } catch (e) {
+                            themeData[d] = {};
+                        }
+                    }
+                    
                     themes.push(themeData);
                 } catch (err) {
                     console.warn(`Could not read theme.json in ${folder.name}`);

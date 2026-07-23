@@ -27,14 +27,28 @@ public/assets/themes/nama_tema/
 │   ├── icon_shop.png
 │   └── ...
 │
-└── background/                (OPSIONAL) - Folder artwork full background untuk menu.
-    ├── home.png
-    ├── shop.png
-    ├── gacha.png
-    ├── mission.png
-    ├── achievement.png
-    ├── statistics.png
-    └── theme.png
+├── background/           (OPSIONAL) - Folder artwork full background untuk menu.
+│   ├── home.png
+│   ├── shop.png
+│   ├── gacha.png
+│   ├── mission.png
+│   ├── achievement.png
+│   ├── statistics.png
+│   └── theme.png
+│
+├── ui/                   (OPSIONAL) - Folder aset UI modular (panel, button, frame).
+│   ├── button_primary.png
+│   ├── panel_main.png
+│   └── ...
+│
+├── icons/                (OPSIONAL) - Folder aset ikon modular (currency, chest, gacha item).
+│   ├── coin.png
+│   ├── gem.png
+│   └── ...
+│
+└── effects/              (OPSIONAL) - Folder efek visual modular (particle, dll).
+    ├── sparkle.png
+    └── ...
 ```
 
 ### Penjelasan Fungsi & Status:
@@ -54,6 +68,12 @@ Berikut adalah penjelasan detail fungsi setiap aset di dalam folder tema:
 *   **`tiles/`**: Kumpulan gambar item yang menjadi inti permainan (objek yang akan di-link/di-match oleh pemain).
 *   **`menu/`**: Ikon kustom untuk tombol navigasi UI (seperti Play, Shop, Leaderboard, Misi) yang mengubah tampilan keseluruhan UI agar selaras dengan tema.
 *   **`background/`**: Gambar ilustrasi penuh (full background artwork) yang menjadi background dan identitas masing-masing menu. Engine akan merendernya sebagai layer paling bawah.
+*   **`ui/`**: Kumpulan aset grafis UI modular (contoh: `button_primary.png`, `panel_bg.png`, `frame.png`).
+*   **`icons/`**: Kumpulan ikon dalam game non-menu (contoh: ikon mata uang `coin.png`, piala `badge.png`, `chest.png`).
+*   **`effects/`**: Aset partikel dan efek visual (contoh: efek debu, percikan bintang `sparkle.png`).
+
+**Fitur Smart Fallback (Deep Merge):**
+Theme Engine mendukung fallback cerdas. Apabila Anda membuat tema baru, Anda tidak perlu menggambar ulang semua aset `ui/`, `icons/`, atau `effects/`. Engine secara otomatis akan melakukan _deep merge_ (penggabungan mendalam) antara tema Anda dengan tema default (`sweets`). Jika tema Anda tidak memiliki aset tertentu, game akan otomatis memuat aset tersebut dari tema default. Hal ini menjamin tidak ada _blank screen_ atau error.
 
 ---
 
