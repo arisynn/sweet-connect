@@ -24,6 +24,12 @@ window.NotificationManager = {
         this.initialized = true;
     },
     
+    reset: function() {
+        Object.values(this.timers).forEach(t => clearTimeout(t));
+        this.timers = {};
+        this.notified = { chest: false, login: false };
+    },
+    
     send: function(title, options) {
         if (!('Notification' in window) || this.permission !== 'granted') return;
         

@@ -14,7 +14,7 @@ const GameUI = () => {
         }
     }, [ctx.profile]);
     const {
-        gameState, setGameState, activeTheme, activeThemeRef, gameStateRef, board, score, hp, hints, shuffles, level, progress, showTimerAdd, wrongConnectionPenalty, activePath, wrongTile, hintActiveTiles, matchedTiles, selectedTile, isMuted, setIsMuted, isStandalone, deferredPrompt, playerName, setPlayerName, loginError, setLoginError, lobbyBadgeText, isLoadingProfile, syncStatus, showSyncLog, setShowSyncLog, syncLogs, startupStep, startupMessage, startupProgress, showCloudRecovery, localRecoveryProfile, setShowCloudRecovery, setSelectedTile, setActiveTheme, setBoard, getDefaultProfile, finishStartup, profile, setProfile, isNewRecord, countdown, setCountdown, comboDisplay, setComboDisplay, showBoardClear, setShowBoardClear, showTimeoutFlash, setShowTimeoutFlash, sweetMessage, setSweetMessage,  showSettings, setShowSettings, showCustomThemeEditor, setShowCustomThemeEditor, splashText, handleLoginSubmit, handleBuyHpInGame, handleHintClick, handleShuffleClick, handleTileClick, getSecondsLeft, handleBuyStore, handleSellStore, handleClaimDaily, handleClaimAchievement, handleClaimMilestone, handleMysteryGiftComplete, prepareLevel, handleClaimLoginReward, THEMES, formatNumber, calculateCoinReward, AudioEngine, saveProfile, window, saveCurrentSession, flushStats
+        gameState, setGameState, activeTheme, activeThemeRef, gameStateRef, board, score, hp, hints, shuffles, level, progress, showTimerAdd, wrongConnectionPenalty, activePath, wrongTile, hintActiveTiles, matchedTiles, selectedTile, isMuted, setIsMuted, isStandalone, deferredPrompt, playerName, setPlayerName, loginError, setLoginError, lobbyBadgeText, isLoadingProfile, syncStatus, showSyncLog, setShowSyncLog, syncLogs, startupStep, startupMessage, startupProgress, showCloudRecovery, localRecoveryProfile, setShowCloudRecovery, setSelectedTile, setActiveTheme, setBoard, getDefaultProfile, finishStartup, profile, setProfile, isNewRecord, countdown, setCountdown, comboDisplay, setComboDisplay, showBoardClear, setShowBoardClear, showTimeoutFlash, setShowTimeoutFlash, sweetMessage, setSweetMessage,  showSettings, setShowSettings, showCustomThemeEditor, setShowCustomThemeEditor, splashText, handleLoginSubmit, handleLogout, handleBuyHpInGame, handleHintClick, handleShuffleClick, handleTileClick, getSecondsLeft, handleBuyStore, handleSellStore, handleClaimDaily, handleClaimAchievement, handleClaimMilestone, handleMysteryGiftComplete, prepareLevel, handleClaimLoginReward, THEMES, formatNumber, calculateCoinReward, AudioEngine, saveProfile, window, saveCurrentSession, flushStats
     } = ctx;
 
     const [showNotificationPrompt, setShowNotificationPrompt] = React.useState(false);
@@ -189,8 +189,9 @@ const GameUI = () => {
                 
                 {gameState === 'LOGIN' && (
                     <div className="absolute inset-0 bg-[#F2F2F7] flex flex-col items-center justify-center z-[100] px-8 overflow-hidden animate-fade-in">
-                        {THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home'] && (
-                            <img src={THEMES[activeThemeRef.current || activeTheme].menuBackgrounds['home']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0 opacity-30 blur-[2px]" alt=""/>
+                        {/* Always use default Sweet background for isolation */}
+                        {THEMES['sweets']?.menuBackgrounds?.['home'] && (
+                            <img src={THEMES['sweets'].menuBackgrounds['home']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0 opacity-30 blur-[2px]" alt=""/>
                         )}
                         <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse pointer-events-none"></div>
                         <div className="absolute bottom-[-10%] left-[-10%] w-64 h-64 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse pointer-events-none" style={{animationDelay: '1s'}}></div>
@@ -204,9 +205,16 @@ const GameUI = () => {
                             </p>
                             
                             {!navigator.onLine && (
-                                <div className="mb-5 bg-gray-100 border border-gray-200 text-gray-500 text-xs font-bold px-3 py-1.5 rounded-full flex items-center shadow-sm">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5 mr-1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18M9.9 9.9a9.043 9.043 0 00-6.263 2.59A1.5 1.5 0 004 15.35M14.1 14.1a9.043 9.043 0 016.263-2.59 1.5 1.5 0 01.363 2.86" /></svg>
-                                    Mode Offline Aktif
+                                <div className="mb-4 bg-gray-100 border border-gray-200 text-gray-500 text-xs font-bold px-4 py-2 rounded-xl flex items-center shadow-sm w-full">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 mr-2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18M9.9 9.9a9.043 9.043 0 00-6.263 2.59A1.5 1.5 0 004 15.35M14.1 14.1a9.043 9.043 0 016.263-2.59 1.5 1.5 0 01.363 2.86" /></svg>
+                                    Mode Offline Aktif. Cloud tidak tersedia.
+                                </div>
+                            )}
+
+                            {loginError && (
+                                <div className="mb-4 bg-red-50 border border-red-100 text-red-600 text-xs font-bold px-4 py-3 rounded-xl flex items-center shadow-sm w-full animate-fade-in">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 mr-2 flex-shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                    <span className="flex-1">{loginError}</span>
                                 </div>
                             )}
 
@@ -216,16 +224,15 @@ const GameUI = () => {
                                     value={playerName} onChange={e => { setPlayerName(e.target.value); setLoginError(''); }}
                                     onKeyDown={e => e.key === 'Enter' && handleLoginSubmit()} disabled={isLoadingProfile}
                                 />
-                                {loginError && <p className="absolute -bottom-6 left-0 right-0 text-red-500 text-xs font-bold text-center animate-fade-in">{loginError}</p>}
                             </div>
                             
-                            <button onClick={handleLoginSubmit} disabled={isLoadingProfile || !playerName.trim()} className="mt-4 flex items-center justify-center bg-gray-900 text-white w-full py-4 text-base font-bold rounded-3xl shadow-lg hover:bg-gray-800 active:bg-black active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:active:scale-100 disabled:cursor-not-allowed">
+                            <button onClick={handleLoginSubmit} disabled={isLoadingProfile || !playerName.trim()} className="flex items-center justify-center bg-gray-900 text-white w-full py-4 text-base font-bold rounded-3xl shadow-lg hover:bg-gray-800 active:bg-black active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:active:scale-100 disabled:cursor-not-allowed">
                                 {isLoadingProfile ? (
                                     <>
                                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
                                         Menghubungkan...
                                     </>
-                                ) : 'Mulai Bermain'}
+                                ) : loginError ? 'Coba Lagi' : 'Mulai Bermain'}
                             </button>
                         </div>
                         <style dangerouslySetInnerHTML={{__html: `
@@ -285,15 +292,7 @@ const GameUI = () => {
                             {/* Hero Card / Play Button */}
                             <div className="relative w-full shrink-0">
                                 <button onClick={() => {
-                                    const savedSessionStr = localStorage.getItem(`pkmnActiveSession_${playerName}`);
-                                    let session = null;
-                                    try {
-                                        if (savedSessionStr) session = JSON.parse(savedSessionStr);
-                                    } catch(e) {}
-                                    
-                                    if (!session && profile.activeSession) {
-                                        session = profile.activeSession;
-                                    }
+                                    let session = profile.activeSession;
 
                                     // Check if session board is corrupted (all tiles same)
                                     let isCorrupted = false;
@@ -347,7 +346,7 @@ const GameUI = () => {
                                     <div className="theme-text-active bg-white p-2.5 rounded-xl mb-3 shadow-sm relative z-10">
                                         <IconPlay className="w-5 h-5"/>
                                     </div>
-                                    <span className="text-white text-xl font-bold mb-0.5 tracking-wide relative z-10">{profile.currentLevel > 1 || localStorage.getItem(`pkmnActiveSession_${playerName}`) ? 'Lanjutkan Main' : 'Main Sekarang'}</span>
+                                    <span className="text-white text-xl font-bold mb-0.5 tracking-wide relative z-10">{profile.currentLevel > 1 || profile.activeSession ? 'Lanjutkan Main' : 'Main Sekarang'}</span>
                                     <span className="text-pink-100 text-sm font-medium relative z-10">Level {profile.currentLevel}</span>
                                     
                                     <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20 z-10">{lobbyBadgeText}</div>
@@ -420,9 +419,10 @@ const GameUI = () => {
                         </div>
                     </div>
                 )}
-                {gameState === 'SHOP' && <Shop profile={profile} activeTheme={activeTheme} onThemeSelect={(t) => { setActiveTheme(t); setProfile(p => { const newP = {...p, activeTheme: t}; saveProfile(playerName, newP); return newP; }); localStorage.setItem('pkmnTheme', t); }} onBuy={handleBuyStore} onSell={handleSellStore} onClose={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} />}
-                {gameState === 'THEMES' && <ThemeScreen profile={profile} setProfile={setProfile} saveProfile={saveProfile} playerName={playerName} activeTheme={activeTheme} onThemeSelect={(t) => { setActiveTheme(t); setProfile(p => { const newP = {...p, activeTheme: t}; saveProfile(playerName, newP); return newP; }); localStorage.setItem('pkmnTheme', t); }} onClose={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} />}
-                                {gameState === 'ROULETTE' && <MysteryGift onThemeSelect={(t) => { setActiveTheme(t); setProfile(p => { const newP = {...p, activeTheme: t}; saveProfile(playerName, newP); return newP; }); localStorage.setItem('pkmnTheme', t); }} activeTheme={activeThemeRef.current || activeTheme} profile={profile} onOpenComplete={handleMysteryGiftComplete} onClose={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} onActivateTrial={(t) => {
+                {gameState === 'SHOP' && <Shop profile={profile} activeTheme={activeTheme} onThemeSelect={(t) => { setActiveTheme(t); setProfile(p => { const newP = {...p, activeTheme: t}; saveProfile(playerName, newP); return newP; }); }} onBuy={handleBuyStore} onSell={handleSellStore} onClose={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} />}
+                {gameState === 'THEMES' && <ThemeScreen profile={profile} setProfile={setProfile} saveProfile={saveProfile} playerName={playerName} activeTheme={activeTheme} onThemeSelect={(t) => { setActiveTheme(t); setProfile(p => { const newP = {...p, activeTheme: t}; saveProfile(playerName, newP); return newP; }); }} onClose={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} />}
+                
+                {gameState === 'ROULETTE' && <MysteryGift onThemeSelect={(t) => { setActiveTheme(t); setProfile(p => { const newP = {...p, activeTheme: t}; saveProfile(playerName, newP); return newP; }); }} activeTheme={activeThemeRef.current || activeTheme} profile={profile} onOpenComplete={handleMysteryGiftComplete} onClose={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} onActivateTrial={(t) => {
     let p = { ...profile };
     p.themeTrials = p.themeTrials || {};
     p.themeTrials[t] = Date.now();
@@ -552,9 +552,7 @@ const GameUI = () => {
                         playerName={playerName}
                         onClose={() => setShowSettings(false)} 
                         onLogout={() => {
-                            localStorage.removeItem('pkmnPlayerName'); 
-                            setPlayerName(''); 
-                            setGameState('LOGIN');
+                            if (handleLogout) handleLogout();
                             setShowSettings(false);
                         }} 
                     />

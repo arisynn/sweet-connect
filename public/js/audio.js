@@ -11,17 +11,8 @@ const AudioEngine = (() => {
         muteSfx: false
     };
 
-    try {
-        const saved = localStorage.getItem('sweet_connect_audio_settings');
-        if (saved) {
-            settings = { ...settings, ...JSON.parse(saved) };
-        }
-    } catch (e) {}
-
     const saveSettings = () => {
-        try {
-            localStorage.setItem('sweet_connect_audio_settings', JSON.stringify(settings));
-        } catch (e) {}
+        // CLOUD-ONLY: Audio settings are managed via the profile system
     };
 
     const getCtx = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); return ctx; };

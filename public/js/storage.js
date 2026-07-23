@@ -118,8 +118,8 @@ const validateAndMigrateProfile = (parsed) => {
         parsed.profileVersion = 5;
     }
     if (parsed.profileVersion < 6) {
-        if (!parsed.activeTheme) parsed.activeTheme = localStorage.getItem('pkmnTheme') || 'sweets';
-        if (!parsed.settings) parsed.settings = { isMuted: localStorage.getItem('pkmnMuted') === 'true', audio: JSON.parse(localStorage.getItem('sweet_connect_audio_settings') || '{"music":0.5,"sfx":1}') };
+        if (!parsed.activeTheme) parsed.activeTheme = 'sweets';
+        if (!parsed.settings) parsed.settings = { isMuted: false, audio: { music: 0.5, sfx: 1 } };
         parsed.profileVersion = 6;
     }
     
@@ -137,11 +137,7 @@ const getLocalProfile = (name) => {
 };
 
 const setLocalProfile = (name, profile) => {
-    try {
-        localStorage.setItem(LOCAL_STORAGE_PREFIX + name, JSON.stringify(profile));
-    } catch(e) {
-        console.error("Local storage write error", e);
-    }
+    // CLOUD-ONLY: Local storage write is disabled to prevent conflicts.
 };
 
 const emitSyncLog = (status, action, result) => {
@@ -238,13 +234,19 @@ const triggerSave = async () => {
     } catch(e) {}
 
     profileToSave.lastUpdated = Date.now();
-    setLocalProfile(nameToSave, profileToSave); // Cache to local
     
     try {
         await saveCloudProfile(nameToSave, profileToSave);
         emitSyncLog('Connected', 'Upload Cloud Save', 'Sync Complete');
     } catch (e) {
         emitSyncLog('Offline', 'Upload failed', e.message || 'Timeout');
+        // Retry logic: if nothing new was queued, put this back in the queue and retry later
+        if (!pendingSaveProfile) {
+            pendingSaveName = nameToSave;
+            pendingSaveProfile = profileToSave;
+            if (saveQueueTimeout) clearTimeout(saveQueueTimeout);
+            saveQueueTimeout = setTimeout(() => { triggerSave(); }, 10000); // retry in 10s
+        }
     }
 };
 
@@ -284,7 +286,6 @@ const saveProfileKeepalive = (name, profile) => {
     try {
         const p = JSON.parse(JSON.stringify(profile));
         p.lastUpdated = Date.now();
-        setLocalProfile(name, p);
         fetch(`${PROFILE_API_URL}?name=${encodeURIComponent(name)}`, { 
             method: 'POST', 
             keepalive: true, 

@@ -43,8 +43,10 @@ const App = () => {
     
     // Profile sekarang menyimpan semua state progres agar tidak hilang
     const [profile, setProfile] = useState(() => getDefaultProfile());
+    const profileRef = useRef(profile);
+    useEffect(() => { profileRef.current = profile; }, [profile]);
     
-    const [activeTheme, setActiveTheme] = useState(() => localStorage.getItem('pkmnTheme') || 'sweets');
+    const [activeTheme, setActiveTheme] = useState('sweets');
     const [board, setBoard] = useState([]);
     
     // State in-game
@@ -61,11 +63,10 @@ const App = () => {
     const [activePath, setActivePath] = useState(null); 
     const [wrongTile, setWrongTile] = useState(null);
     const [wrongConnectionPenalty, setWrongConnectionPenalty] = useState(null);
-
     const [showTimerAdd, setShowTimerAdd] = useState(false);
     const [showTimeoutFlash, setShowTimeoutFlash] = useState(false);
     const [showBoardClear, setShowBoardClear] = useState(false);
-    const [isMuted, setIsMuted] = useState(() => localStorage.getItem('pkmnMuted') === 'true');
+    const [isMuted, setIsMuted] = useState(false);
     const [isNewRecord, setIsNewRecord] = useState(false);
     const [levelStartTime, setLevelStartTime] = useState(0);
     const [countdown, setCountdown] = useState(null);
@@ -114,8 +115,6 @@ const App = () => {
 
     const saveCurrentSession = useCallback((returnSession = false) => {
         if (gameStateRef.current !== 'PLAYING' && gameStateRef.current !== 'PAUSED') return null;
-        const name = localStorage.getItem('pkmnPlayerName');
-        if (!name) return null;
         const sessionData = {
             level: levelRef.current,
             score: scoreRef.current,
@@ -130,13 +129,11 @@ const App = () => {
             lastMatchTime: lastMatchTimeRef.current,
             activeTheme: activeThemeRef.current,
         };
-        localStorage.setItem(`pkmnActiveSession_${name}`, JSON.stringify(sessionData));
-        return returnSession ? sessionData : null;
+        // CLOUD-ONLY: sessionData is returned to be saved directly to the profile object
+        return sessionData;
     }, []);
 
     const clearActiveSession = useCallback(() => {
-        const name = localStorage.getItem('pkmnPlayerName');
-        if (name) localStorage.removeItem(`pkmnActiveSession_${name}`);
         setProfile(p => {
             if(!p) return p;
             const newP = { ...p, activeSession: null };
@@ -185,9 +182,17 @@ const App = () => {
     // Save immediately after important state changes
     useEffect(() => {
         if (gameState === 'PLAYING') {
-            saveCurrentSession();
+            const sessionData = saveCurrentSession();
+            if (sessionData && playerName) {
+                setProfile(p => {
+                    if (!p) return p;
+                    const newP = { ...p, activeSession: sessionData };
+                    saveProfile(playerName, newP);
+                    return newP;
+                });
+            }
         }
-    }, [board, score, hp, hints, shuffles, matchedTiles, selectedTile, gameState, saveCurrentSession]);
+    }, [board, score, hp, hints, shuffles, matchedTiles, selectedTile, gameState, saveCurrentSession, playerName]);
 
     // Rolls up matches/playtime tracked since the last save into the profile's statistics,
     // resetting the counters. Used at every point the profile is persisted.
@@ -276,7 +281,6 @@ const App = () => {
     }, [gameState]);
     useEffect(() => { 
     AudioEngine.updateSettings({ muteMusic: isMuted, muteSfx: isMuted }); 
-    localStorage.setItem('pkmnMuted', isMuted); 
     setProfile(p => { 
         if(!p) return p;
         const newSettings = { ...(p.settings || {}), isMuted };
@@ -340,29 +344,25 @@ const App = () => {
         let finalProfile = null;
         let isNewAccount = false;
         
+        if (!isOnline) {
+            setLoginError('Tidak ada koneksi internet. Cloud tidak tersedia.');
+            setGameState('LOGIN');
+            return;
+        }
+
+        if (fetchError) {
+            setLoginError('Server sedang tidak tersedia atau gagal memuat data.');
+            setGameState('LOGIN');
+            return;
+        }
+
         if (cloudProfile) {
             // Cloud-First: Always use cloud if available
             finalProfile = cloudProfile;
         } else {
-            if (localProfile && (!isOnline || fetchError)) {
-                // Offline fallback
-                finalProfile = localProfile;
-                logSync('Offline', 'Load Local', 'Using local cache');
-            } else if (localProfile && !fetchError) {
-                // Cloud is empty but local exists (e.g., cleared cloud DB)
-                // New recovery flow to prevent overwrite
-                setLocalRecoveryProfile(localProfile);
-                setShowCloudRecovery(true);
-                return;
-            } else if (!localProfile && fetchError) {
-                setLoginError('Koneksi internet bermasalah. Gagal memuat data dari Cloud. Harap periksa koneksi Anda dan coba lagi.');
-                setGameState('LOGIN');
-                return;
-            } else {
-                // Brand new profile
-                isNewAccount = true;
-                finalProfile = getDefaultProfile();
-            }
+            // Brand new profile
+            isNewAccount = true;
+            finalProfile = getDefaultProfile();
         }
         await new Promise(r => setTimeout(r, 500));
         
@@ -393,11 +393,11 @@ const App = () => {
         if (finalProfile.customEmojis && finalProfile.customEmojis.length > 0) {
             THEMES.custom.data = finalProfile.customEmojis;
         }
-        if (finalProfile.activeSession) {
-            localStorage.setItem(`pkmnActiveSession_${name}`, JSON.stringify(finalProfile.activeSession));
-        } else {
+        
+        try {
             localStorage.removeItem(`pkmnActiveSession_${name}`);
-        }
+        } catch(e) {}
+        
         setProfile(finalProfile);
         await new Promise(r => setTimeout(r, 500));
         
@@ -534,6 +534,37 @@ const handleLoginSubmit = async () => {
             setLoginError(''); 
             runStartup(name);
         } else setLoginError('Nama tidak boleh kosong!');
+    };
+
+    const handleLogout = () => {
+        AudioEngine.stopBgm();
+        if (window.NotificationManager) window.NotificationManager.reset();
+        localStorage.removeItem('pkmnPlayerName');
+        try { localStorage.removeItem('pkmnActiveSession_' + playerName); } catch(e) {}
+        setPlayerName('');
+        setGameState('LOGIN');
+        setProfile(getDefaultProfile());
+        setActiveTheme('sweets');
+        if (THEMES && THEMES.custom) THEMES.custom.data = [];
+        setBoard([]);
+        setLevel(1);
+        setScore(0);
+        setHp(3);
+        setHints(3);
+        setShuffles(3);
+        setProgress(100);
+        setSelectedTile(null);
+        setMatchedTiles([]);
+        setHintActiveTiles([]);
+        setActivePath(null);
+        setWrongTile(null);
+        setLoginError('');
+        setSyncLogs([]);
+        setSyncStatus('idle');
+        
+        try {
+            document.querySelectorAll('link[rel="preload"]').forEach(el => el.remove());
+        } catch(e) {}
     };
 
     const triggerLevelEndStats = useCallback(async (isGameOver = false) => {
@@ -749,7 +780,8 @@ const handleLoginSubmit = async () => {
                 const gained = 10 + (comboBonus || 0); missionProgressRef.current.score += gained; setProfile(p => updateMissions(p, "score", gained));
 
                 setScore(s => {
-                    const { newScore, isNewRecord } = applyMatchScore(s, comboBonus);
+                    const currentBest = profileRef.current?.statistics?.highestScore || 0;
+                    const { newScore, isNewRecord } = applyMatchScore(s, comboBonus, currentBest);
                     if (isNewRecord) setIsNewRecord(true);
                     return newScore;
                 });
@@ -1013,7 +1045,7 @@ const handleLoginSubmit = async () => {
 
     
     const ctxValue = {
-        gameState, setGameState, activeTheme, activeThemeRef, gameStateRef, board, score, hp, hints, shuffles, level, progress, showTimerAdd, wrongConnectionPenalty, activePath, wrongTile, hintActiveTiles, matchedTiles, selectedTile, isMuted, setIsMuted, isStandalone, deferredPrompt, playerName, setPlayerName, loginError, setLoginError, lobbyBadgeText, isLoadingProfile, syncStatus, showSyncLog, setShowSyncLog, syncLogs, startupStep, startupMessage, startupProgress, showCloudRecovery, localRecoveryProfile, setShowCloudRecovery, setSelectedTile, setActiveTheme, setBoard, finishStartup, getDefaultProfile, profile, setProfile, isNewRecord, countdown, setCountdown, comboDisplay, setComboDisplay, showBoardClear, setShowBoardClear, showTimeoutFlash, setShowTimeoutFlash, sweetMessage, setSweetMessage,  showSettings, setShowSettings, showCustomThemeEditor, setShowCustomThemeEditor, splashText, handleLoginSubmit, handleBuyHpInGame, handleHintClick, handleShuffleClick, handleTileClick, getSecondsLeft, handleBuyStore, handleSellStore, handleClaimDaily, handleClaimAchievement, handleClaimMilestone, handleMysteryGiftComplete, prepareLevel, handleClaimLoginReward, THEMES, formatNumber, calculateCoinReward, AudioEngine, saveProfile, window, saveCurrentSession, flushStats
+        gameState, setGameState, activeTheme, activeThemeRef, gameStateRef, board, score, hp, hints, shuffles, level, progress, showTimerAdd, wrongConnectionPenalty, activePath, wrongTile, hintActiveTiles, matchedTiles, selectedTile, isMuted, setIsMuted, isStandalone, deferredPrompt, playerName, setPlayerName, loginError, setLoginError, lobbyBadgeText, isLoadingProfile, syncStatus, showSyncLog, setShowSyncLog, syncLogs, startupStep, startupMessage, startupProgress, showCloudRecovery, localRecoveryProfile, setShowCloudRecovery, setSelectedTile, setActiveTheme, setBoard, finishStartup, getDefaultProfile, profile, setProfile, isNewRecord, countdown, setCountdown, comboDisplay, setComboDisplay, showBoardClear, setShowBoardClear, showTimeoutFlash, setShowTimeoutFlash, sweetMessage, setSweetMessage,  showSettings, setShowSettings, showCustomThemeEditor, setShowCustomThemeEditor, splashText, handleLoginSubmit, handleLogout, handleBuyHpInGame, handleHintClick, handleShuffleClick, handleTileClick, getSecondsLeft, handleBuyStore, handleSellStore, handleClaimDaily, handleClaimAchievement, handleClaimMilestone, handleMysteryGiftComplete, prepareLevel, handleClaimLoginReward, THEMES, formatNumber, calculateCoinReward, AudioEngine, saveProfile, window, saveCurrentSession, flushStats
     };
 
     return (
