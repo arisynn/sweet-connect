@@ -3,10 +3,10 @@
   "name": "Kucing",
   "desc": "Koleksi eksklusif kucing kreator.",
   "price": 0,
-  "currency": "rainbow_candy",
-  "type": "premium",
+  "currency": "coins",
+  "type": "standar",
 
-  "splashFrames": 1,
+  "splashFrames": 6,
   "splashFps": 8,
   "splashLoop": true,
 
