@@ -519,11 +519,10 @@ const App = () => {
         }
         
         setProfile(newProfile);
-        saveProfile(playerName, newProfile);
-        
-        // Trigger save to cloud immediately
-        if (!isStandalone) {
-             window.saveCloudProfile(playerName, newProfile).catch(e => console.log('background sync failed', e));
+        if (window.forceSaveProfileNow) {
+             window.forceSaveProfileNow(playerName, newProfile);
+        } else {
+             saveProfile(playerName, newProfile);
         }
 
         setGameState('LOBBY_MAIN');

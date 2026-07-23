@@ -20,6 +20,20 @@ const GameUI = () => {
     const [showNotificationPrompt, setShowNotificationPrompt] = React.useState(false);
 
     React.useEffect(() => {
+        if (gameState === 'LOBBY_MAIN' && profile) {
+            const check = () => {
+                const loginStatus = window.checkLoginRewardStatus(profile);
+                if (loginStatus.canClaim) {
+                    setGameState('LOGIN_REWARD');
+                }
+            };
+            check(); // Check immediately when entering lobby
+            const checkMidnight = setInterval(check, 60000); // And check every minute
+            return () => clearInterval(checkMidnight);
+        }
+    }, [gameState, profile, setGameState]);
+
+    React.useEffect(() => {
         if (gameState === 'LOBBY' && profile && window.checkNotificationPromptNeeded && window.checkNotificationPromptNeeded()) {
             const lastPrompt = profile.lastNotificationPermissionPrompt || 0;
             const now = Date.now();
