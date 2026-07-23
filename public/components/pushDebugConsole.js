@@ -58,11 +58,22 @@ const PushDebugConsole = ({ playerName, onClose }) => {
             addLog("Service Worker didukung", "success");
 
             // 2. Service worker active
-            const registration = await navigator.serviceWorker.getRegistration();
+            let registration = await navigator.serviceWorker.getRegistration('/');
             if (!registration) {
-                throw new Error("Service Worker not registered");
+                addLog("Service worker belum ter-register, mencoba mendaftarkan sekarang...", "warning");
+                try {
+                    registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+                    addLog(`Registrasi berhasil dengan scope: ${registration.scope}`, "success");
+                } catch (regError) {
+                    throw new Error(`Gagal mendaftarkan Service Worker: ${regError.message} \nStack: ${regError.stack}`);
+                }
+            } else {
+                addLog(`Service Worker ditemukan dengan scope: ${registration.scope}`, "success");
             }
-            addLog("Service Worker ditemukan", "success");
+            
+            if (!registration) {
+                 throw new Error("Service Worker still not registered after attempt");
+            }
             
             if (registration.active) {
                 addLog(`Service Worker aktif (${registration.active.state})`, "success");

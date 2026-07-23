@@ -1,8 +1,21 @@
 // ===================== PWA SETUP (service worker) =====================
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
-    });
+    const registerSW = () => {
+        console.log('[SW] Attempting to register service worker at /sw.js');
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(registration => {
+                console.log('[SW] Service Worker registered with scope:', registration.scope);
+            })
+            .catch((error) => {
+                console.error('[SW] Service Worker registration failed:', error);
+            });
+    };
+
+    if (document.readyState === 'complete') {
+        registerSW();
+    } else {
+        window.addEventListener('load', registerSW);
+    }
 }
 
 // ===================== MOUNT =====================
