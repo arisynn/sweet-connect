@@ -406,7 +406,9 @@
       "type": "standar",
       "folder": "sweets",
       "menuIcons": {},
-      "menuBackgrounds": {}
+      "menuBackgrounds": {
+        "continue": "/assets/themes/sweets/cards/continue.png"
+      }
     }
   ]
 }

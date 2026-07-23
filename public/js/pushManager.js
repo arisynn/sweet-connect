@@ -53,7 +53,9 @@ window.initPushManager = async function(playerName, forcePrompt = false) {
             return 'needs_prompt';
         }
         
+        console.log('Requesting push notification permission...');
         const permission = await Notification.requestPermission();
+        console.log('Permission status:', permission);
         if (permission !== 'granted') {
             console.log('Push notification permission denied.');
             return false;
@@ -64,30 +66,38 @@ window.initPushManager = async function(playerName, forcePrompt = false) {
     }
 
     try {
+        console.log('Waiting for service worker ready...');
         const registration = await navigator.serviceWorker.ready;
+        console.log('Service worker is ready.');
         let subscription = await registration.pushManager.getSubscription();
+        let isNewSubscription = false;
         
         if (!subscription) {
+            console.log('No subscription found, fetching VAPID public key from backend...');
             // Get public VAPID key from backend
             const response = await fetch('/api/push');
             const data = await response.json();
             
             if (!data.publicKey) {
                 console.error('Failed to retrieve VAPID public key');
-                return;
+                return false;
             }
             
             const convertedVapidKey = urlBase64ToUint8Array(data.publicKey);
-            
+            console.log('Subscribing to push manager...');
             subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: convertedVapidKey
             });
-            console.log('Subscribed to push notifications');
+            console.log('Successfully subscribed to push notifications.');
+            isNewSubscription = true;
+        } else {
+            console.log('Existing push subscription found.');
         }
 
+        console.log('Sending subscription to backend to save in Supabase...');
         // Send subscription to backend
-        await fetch('/api/push', {
+        const saveRes = await fetch('/api/push', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -98,7 +108,29 @@ window.initPushManager = async function(playerName, forcePrompt = false) {
                 subscription
             })
         });
-        return true;
+
+        const saveData = await saveRes.json();
+        if (saveData.success) {
+            console.log('Subscription saved successfully in backend.');
+            
+            // If it's a new subscription or forced prompt, send a test/welcome notification
+            if (isNewSubscription || forcePrompt) {
+                console.log('Triggering welcome notification...');
+                await fetch('/api/push', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'testPush',
+                        playerName: playerName
+                    })
+                }).catch(e => console.error('Failed to trigger test push:', e));
+            }
+            
+            return true;
+        } else {
+            console.error('Backend failed to save subscription:', saveData.error);
+            return false;
+        }
 
     } catch (error) {
         console.error('Error during push manager initialization:', error);

@@ -111,9 +111,26 @@ const SettingsPanel = ({ syncStatus, setShowSyncLog, onClose, onLogout, profile,
                                 </button>
                             </div>
                             
-                            <button onClick={() => { if(window.initPushManager) window.initPushManager(playerName, true); }} className="mt-2 text-xs text-pink-500 font-bold hover:underline self-start">
-                                Izinkan Notifikasi Browser
-                            </button>
+                            <div className="flex justify-between items-center mt-2">
+                                <button onClick={() => { if(window.initPushManager) window.initPushManager(playerName, true); }} className="text-xs text-pink-500 font-bold hover:underline">
+                                    Izinkan Notifikasi Browser
+                                </button>
+                                <button onClick={() => { 
+                                    fetch('/api/push', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ action: 'testPush', playerName })
+                                    }).then(res => res.json()).then(data => {
+                                        if(data.success) {
+                                            alert("Test push berhasil dikirim!");
+                                        } else {
+                                            alert("Gagal mengirim test push: " + (data.error || "Unknown"));
+                                        }
+                                    }).catch(e => alert("Error: " + e.message));
+                                }} className="text-xs px-3 py-1 bg-pink-100 text-pink-600 rounded-full font-bold hover:bg-pink-200 transition-colors">
+                                    Test Push
+                                </button>
+                            </div>
                         </div>
                     </div>
                     

@@ -73,6 +73,62 @@ export default async function handler(req: Request, res: Response) {
                 console.error("Error saving subscription:", error);
                 return res.status(500).json({ error: "Failed to save subscription" });
             }
+        } else if (action === 'testPush') {
+            const { playerName } = req.body;
+            
+            try {
+                const supabase = getSupabase();
+                if (!supabase) {
+                    return res.status(200).json({ success: true, mocked: true });
+                }
+
+                const payload = {
+                    title: '🎉 Notifikasi berhasil diaktifkan',
+                    body: 'Terima kasih telah mengaktifkan notifikasi Sweet Connect. Kami akan memberi tahu saat ada hadiah, event, atau fitur menarik.',
+                    icon: '/logo.png',
+                    badge: '/logo.png',
+                    url: '/'
+                };
+
+                const { data: subscriptions, error } = await supabase
+                    .from('push_subscriptions')
+                    .select('*')
+                    .eq('player_name', playerName);
+
+                if (error) throw error;
+
+                if (!subscriptions || subscriptions.length === 0) {
+                    return res.status(404).json({ error: "No subscriptions found for player" });
+                }
+
+                const results = await Promise.all(subscriptions.map(async (sub) => {
+                    const pushSubscription = {
+                        endpoint: sub.endpoint,
+                        keys: {
+                            p256dh: sub.p256dh,
+                            auth: sub.auth
+                        }
+                    };
+
+                    try {
+                        await webpush.sendNotification(pushSubscription, JSON.stringify(payload));
+                        return { success: true, endpoint: sub.endpoint };
+                    } catch (err: any) {
+                        if (err.statusCode === 404 || err.statusCode === 410) {
+                            console.log('Subscription has expired or is no longer valid: ', err);
+                            await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+                        } else {
+                            console.error('Error sending push notification: ', err);
+                        }
+                        return { success: false, endpoint: sub.endpoint, error: err.message };
+                    }
+                }));
+
+                return res.status(200).json({ success: true, results });
+            } catch (error: any) {
+                console.error("Error sending test notification:", error);
+                return res.status(500).json({ error: "Failed to send test notification", details: error.message || error.toString() });
+            }
         } else if (action === 'sendNotification') {
             // This endpoint is for testing or triggered internally.
             const { playerName, category } = req.body;
