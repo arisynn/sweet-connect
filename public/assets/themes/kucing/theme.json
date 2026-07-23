@@ -2,7 +2,7 @@
   "id": "kucing",
   "name": "Kucing",
   "desc": "Koleksi eksklusif kucing kreator.",
-  "price": 0,
+  "price": 100,
   "currency": "coins",
   "type": "standar",
 
