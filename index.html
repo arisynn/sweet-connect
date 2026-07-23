@@ -27,6 +27,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        // Paksa viewport menggunakan lebar layar asli pada perangkat mobile 
+        // untuk mencegah "Situs Desktop" merusak layout PWA.
+        if (window.screen && window.screen.width < 768) {
+            var meta = document.querySelector('meta[name="viewport"]');
+            if (meta) {
+                meta.setAttribute('content', 'width=' + window.screen.width + ', initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+            }
+        }
+    </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
@@ -91,7 +102,6 @@
             "/components/comboOverlay.js",
             "/components/rewardProgressBar.js",
             "/components/notificationPrompt.js",
-            "/components/pushDebugConsole.js",
             "/game/GameContext.js",
             "/game/board.js",
             "/game/timer.js",

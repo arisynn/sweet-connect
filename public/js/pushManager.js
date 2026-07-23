@@ -112,20 +112,6 @@ window.initPushManager = async function(playerName, forcePrompt = false) {
         const saveData = await saveRes.json();
         if (saveData.success) {
             console.log('Subscription saved successfully in backend.');
-            
-            // If it's a new subscription or forced prompt, send a test/welcome notification
-            if (isNewSubscription || forcePrompt) {
-                console.log('Triggering welcome notification...');
-                await fetch('/api/push', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'testPush',
-                        playerName: playerName
-                    })
-                }).catch(e => console.error('Failed to trigger test push:', e));
-            }
-            
             return true;
         } else {
             console.error('Backend failed to save subscription:', saveData.error);

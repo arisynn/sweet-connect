@@ -476,8 +476,8 @@ const GameUI = () => {
                         {isNewRecord && <div className="bg-yellow-400 text-white font-black px-6 py-2 rounded-full mb-6 text-sm shadow-md uppercase tracking-wider">Rekor Baru!</div>}
                         <p className="text-xs text-red-500 font-bold mb-1">Yah, nyawanya habis sayang, mulai dari level 1 lagi ya.</p>
                         <p className="text-[11px] text-gray-400 font-medium mb-4">Tenang cintaku, item, koin, gem & tema kamu tetap aman kok.</p>
-                        <button onClick={() => prepareLevel(1)} className="btn-modern bg-pink-500 text-white w-full max-w-[300px] py-4 rounded-xl font-bold shadow-md mb-4">Main Lagi Buat Aku (Level 1)</button>
-                        <button onClick={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} className="text-gray-400 font-bold text-sm">Kembali ke Menu</button>
+                        <button onClick={() => prepareLevel(1)} className="btn-modern bg-pink-500 text-white w-full max-w-[300px] py-4 rounded-xl font-bold shadow-md mb-3">Main Lagi (Level 1)</button>
+                        <button onClick={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} className="btn-modern bg-gray-100 text-gray-600 w-full max-w-[300px] py-4 rounded-xl font-bold">Kembali ke Menu</button>
                     </div>
                 )}
 
@@ -515,8 +515,11 @@ const GameUI = () => {
                             const newB = generateBoard(activeThemeRef.current, nextLevel);
                             prepareLevel(nextLevel, newB, activeThemeRef.current, score, hp, hints, shuffles);
                             AudioEngine.uiStartGame(); setGameState('PLAYING');
-                        }} className="btn-modern bg-pink-500 text-white w-full max-w-[300px] py-4 rounded-xl font-bold shadow-md text-lg">
+                        }} className="btn-modern bg-pink-500 text-white w-full max-w-[300px] py-4 rounded-xl font-bold shadow-md text-lg mb-3">
                             Lanjut ke Level {level + 1}
+                        </button>
+                        <button onClick={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} className="btn-modern bg-gray-100 text-gray-600 w-full max-w-[300px] py-4 rounded-xl font-bold">
+                            Kembali ke Menu
                         </button>
                     </div>
                 )}

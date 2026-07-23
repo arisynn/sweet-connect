@@ -1,8 +1,7 @@
 
 const SettingsPanel = ({ syncStatus, setShowSyncLog, onClose, onLogout, profile, setProfile, saveProfile, playerName }) => {
     const [settings, setSettings] = useState(() => AudioEngine.getSettings());
-
-    const [showDebugConsole, setShowDebugConsole] = React.useState(false);
+    const [isNotifExpanded, setIsNotifExpanded] = useState(false);
 
     const updateSetting = (key, value) => {
         const newSettings = { ...settings, [key]: value };
@@ -74,63 +73,67 @@ const SettingsPanel = ({ syncStatus, setShowSyncLog, onClose, onLogout, profile,
                     
                     {/* Notifikasi */}
                     <div className="flex flex-col gap-3 pt-3 border-t border-gray-200">
-                        <span className="font-bold text-gray-700">Notifikasi</span>
-                        <div className="flex flex-col gap-2">
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-gray-600">Daily Reward</span>
-                                <button onClick={() => updateNotif('dailyReward', !notifPrefs.dailyReward)} className={`w-10 h-5 rounded-full relative transition-colors ${!notifPrefs.dailyReward ? 'bg-gray-300' : 'bg-pink-500'}`}>
-                                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${!notifPrefs.dailyReward ? 'left-0.5' : 'left-5'}`}></div>
-                                </button>
+                        <button onClick={() => { AudioEngine.uiClick(); setIsNotifExpanded(!isNotifExpanded); }} className="flex justify-between items-center w-full focus:outline-none">
+                            <span className="font-bold text-gray-700">Notifikasi</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`w-5 h-5 text-gray-500 transition-transform ${isNotifExpanded ? 'rotate-180' : ''}`}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                        </button>
+                        
+                        {isNotifExpanded && (
+                            <div className="flex flex-col gap-4 pl-2 border-l-2 border-pink-100">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-600">Daily Reward</span>
+                                    <button onClick={() => updateNotif('dailyReward', !notifPrefs.dailyReward)} className={`w-10 h-5 rounded-full relative transition-colors ${!notifPrefs.dailyReward ? 'bg-gray-300' : 'bg-pink-500'}`}>
+                                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${!notifPrefs.dailyReward ? 'left-0.5' : 'left-5'}`}></div>
+                                    </button>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-600">Daily Mission</span>
+                                    <button onClick={() => updateNotif('dailyMission', !notifPrefs.dailyMission)} className={`w-10 h-5 rounded-full relative transition-colors ${!notifPrefs.dailyMission ? 'bg-gray-300' : 'bg-pink-500'}`}>
+                                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${!notifPrefs.dailyMission ? 'left-0.5' : 'left-5'}`}></div>
+                                    </button>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-600">Weekly Mission</span>
+                                    <button onClick={() => updateNotif('weeklyMission', !notifPrefs.weeklyMission)} className={`w-10 h-5 rounded-full relative transition-colors ${!notifPrefs.weeklyMission ? 'bg-gray-300' : 'bg-pink-500'}`}>
+                                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${!notifPrefs.weeklyMission ? 'left-0.5' : 'left-5'}`}></div>
+                                    </button>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-600">Peti Siap Dibuka</span>
+                                    <button onClick={() => updateNotif('chestReady', !notifPrefs.chestReady)} className={`w-10 h-5 rounded-full relative transition-colors ${!notifPrefs.chestReady ? 'bg-gray-300' : 'bg-pink-500'}`}>
+                                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${!notifPrefs.chestReady ? 'left-0.5' : 'left-5'}`}></div>
+                                    </button>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-600">Pengingat Kembali</span>
+                                    <button onClick={() => updateNotif('comeBack', !notifPrefs.comeBack)} className={`w-10 h-5 rounded-full relative transition-colors ${!notifPrefs.comeBack ? 'bg-gray-300' : 'bg-pink-500'}`}>
+                                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${!notifPrefs.comeBack ? 'left-0.5' : 'left-5'}`}></div>
+                                    </button>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-gray-600">Pesan Penyemangat</span>
+                                    <button onClick={() => updateNotif('affirmation', notifPrefs.affirmation !== false ? false : true)} className={`w-10 h-5 rounded-full relative transition-colors ${notifPrefs.affirmation === false ? 'bg-gray-300' : 'bg-pink-500'}`}>
+                                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${notifPrefs.affirmation === false ? 'left-0.5' : 'left-5'}`}></div>
+                                    </button>
+                                </div>
+                                
+                                <div className="mt-2 pt-3 border-t border-gray-100 flex justify-center">
+                                    <button onClick={async () => { 
+                                        if(window.initPushManager) {
+                                            const res = await window.initPushManager(playerName, true);
+                                            if (res === true) {
+                                                alert("Notifikasi browser berhasil diaktifkan.");
+                                            } else if (res === false) {
+                                                alert("Gagal mengaktifkan notifikasi. Pastikan browser mendukung dan izin tidak diblokir.");
+                                            }
+                                        } 
+                                    }} className="text-xs px-4 py-2 bg-pink-50 text-pink-500 rounded-lg font-bold hover:bg-pink-100 transition-colors flex items-center gap-2">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                                        Aktifkan Notifikasi Browser
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-gray-600">Daily Mission</span>
-                                <button onClick={() => updateNotif('dailyMission', !notifPrefs.dailyMission)} className={`w-10 h-5 rounded-full relative transition-colors ${!notifPrefs.dailyMission ? 'bg-gray-300' : 'bg-pink-500'}`}>
-                                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${!notifPrefs.dailyMission ? 'left-0.5' : 'left-5'}`}></div>
-                                </button>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-gray-600">Weekly Mission</span>
-                                <button onClick={() => updateNotif('weeklyMission', !notifPrefs.weeklyMission)} className={`w-10 h-5 rounded-full relative transition-colors ${!notifPrefs.weeklyMission ? 'bg-gray-300' : 'bg-pink-500'}`}>
-                                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${!notifPrefs.weeklyMission ? 'left-0.5' : 'left-5'}`}></div>
-                                </button>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-gray-600">Peti Siap Dibuka</span>
-                                <button onClick={() => updateNotif('chestReady', !notifPrefs.chestReady)} className={`w-10 h-5 rounded-full relative transition-colors ${!notifPrefs.chestReady ? 'bg-gray-300' : 'bg-pink-500'}`}>
-                                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${!notifPrefs.chestReady ? 'left-0.5' : 'left-5'}`}></div>
-                                </button>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-gray-600">Pengingat Kembali (24 Jam)</span>
-                                <button onClick={() => updateNotif('comeBack', !notifPrefs.comeBack)} className={`w-10 h-5 rounded-full relative transition-colors ${!notifPrefs.comeBack ? 'bg-gray-300' : 'bg-pink-500'}`}>
-                                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${!notifPrefs.comeBack ? 'left-0.5' : 'left-5'}`}></div>
-                                </button>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium text-gray-600">Pesan Penyemangat</span>
-                                <button onClick={() => updateNotif('affirmation', notifPrefs.affirmation !== false ? false : true)} className={`w-10 h-5 rounded-full relative transition-colors ${notifPrefs.affirmation === false ? 'bg-gray-300' : 'bg-pink-500'}`}>
-                                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${notifPrefs.affirmation === false ? 'left-0.5' : 'left-5'}`}></div>
-                                </button>
-                            </div>
-                            
-                            <div className="flex justify-between items-center mt-2">
-                                <button onClick={async () => { 
-                                    if(window.initPushManager) {
-                                        const res = await window.initPushManager(playerName, true);
-                                        if (res === true) {
-                                            alert("Izin diberikan & notifikasi uji coba dikirim!");
-                                        } else if (res === false) {
-                                            alert("Gagal mengaktifkan notifikasi. Pastikan browser Anda mendukungnya dan izin tidak diblokir.");
-                                        }
-                                    } 
-                                }} className="text-xs text-pink-500 font-bold hover:underline">
-                                    Izinkan Notifikasi Browser
-                                </button>
-                                <button onClick={() => setShowDebugConsole(true)} className="text-xs px-3 py-1 bg-pink-100 text-pink-600 rounded-full font-bold hover:bg-pink-200 transition-colors">
-                                    Debug Console
-                                </button>
-                            </div>
-                        </div>
+                        )}
                     </div>
                     
                     {/* Cloud Sync Status */}
@@ -159,9 +162,6 @@ const SettingsPanel = ({ syncStatus, setShowSyncLog, onClose, onLogout, profile,
                     </button>
                 </div>
             </div>
-            {showDebugConsole && (
-                <PushDebugConsole playerName={playerName} onClose={() => setShowDebugConsole(false)} />
-            )}
         </div>
     );
 };

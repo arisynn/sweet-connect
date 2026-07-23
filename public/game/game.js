@@ -659,6 +659,11 @@ const handleLoginSubmit = async () => {
             setProfile(dmProfile); saveProfile(playerName, dmProfile);
         }
         setMatchedTiles(startMatchedTiles || []);
+        setWrongTile(null);
+        setWrongConnectionPenalty(null);
+        setComboDisplay(null);
+        setHintActiveTiles([]);
+        setActivePath(null);
         
         setGameState('LOADING_BOARD'); setProgress(0); 
         let p = 0; const interval = setInterval(() => { p += 25; setProgress(p); }, 100);
@@ -791,8 +796,12 @@ const handleLoginSubmit = async () => {
                 const newProfile = { ...statsProfile, hp: hp - 1 };
                 setProfile(newProfile); saveProfile(playerName, newProfile);
                 
-                setProgress(100);
-                runCountdownThenPlay(Date.now() + 3700, selectedTile);
+                // Reset statistik level karena ini percobaan ulang
+                missionProgressRef.current = { combo: 0, addCombo: 0, match: 0, hints: 0, shuffles: 0, score: 0, wrong: 0 };
+                
+                // Buat ulang papan dan reset state
+                const newB = generateBoard(activeThemeRef.current, level);
+                prepareLevel(level, newB, activeThemeRef.current, score, hp - 1, hints, shuffles, 100, [], null, 0, 0);
             } 
             else {
                 triggerLevelEndStats(true);

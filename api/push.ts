@@ -82,71 +82,6 @@ export default async function handler(req: Request, res: Response) {
                 console.error("[Push] Error saving subscription:", error);
                 return res.status(500).json({ error: "Failed to save subscription" });
             }
-        } else if (action === 'testPush') {
-            const { playerName } = req.body;
-            console.log(`[Push] Test push requested for player: ${playerName}`);
-            
-            try {
-                const supabase = getSupabase();
-                if (!supabase) {
-                    console.warn("[Push] Supabase not initialized, mocking test push");
-                    return res.status(200).json({ success: true, mocked: true });
-                }
-
-                const payload = {
-                    title: '🎉 Notifikasi berhasil diaktifkan',
-                    body: 'Terima kasih telah mengaktifkan notifikasi Sweet Connect. Kami akan memberi tahu saat ada hadiah, event, atau fitur menarik.',
-                    icon: '/logo.png',
-                    badge: '/logo.png',
-                    url: '/'
-                };
-
-                console.log(`[Push] Fetching subscriptions for ${playerName}...`);
-                const { data: subscriptions, error } = await supabase
-                    .from('push_subscriptions')
-                    .select('*')
-                    .eq('player_name', playerName);
-
-                if (error) {
-                    console.error("[Push] Supabase error fetching subscriptions:", error);
-                    throw error;
-                }
-
-                if (!subscriptions || subscriptions.length === 0) {
-                    console.warn(`[Push] No subscriptions found for player: ${playerName}`);
-                    return res.status(404).json({ error: "No subscriptions found for player" });
-                }
-
-                console.log(`[Push] Found ${subscriptions.length} subscriptions for ${playerName}. Sending notifications...`);
-                const results = await Promise.all(subscriptions.map(async (sub) => {
-                    const pushSubscription = {
-                        endpoint: sub.endpoint,
-                        keys: {
-                            p256dh: sub.p256dh,
-                            auth: sub.auth
-                        }
-                    };
-
-                    try {
-                        await webpush.sendNotification(pushSubscription, JSON.stringify(payload));
-                        console.log(`[Push] Notification sent successfully to endpoint: ${sub.endpoint.substring(0, 30)}...`);
-                        return { success: true, endpoint: sub.endpoint };
-                    } catch (err: any) {
-                        if (err.statusCode === 404 || err.statusCode === 410) {
-                            console.log(`[Push] Subscription expired, deleting from DB: ${sub.endpoint.substring(0, 30)}...`);
-                            await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
-                        } else {
-                            console.error(`[Push] Error sending push notification to ${sub.endpoint.substring(0, 30)}...:`, err);
-                        }
-                        return { success: false, endpoint: sub.endpoint, error: err.message };
-                    }
-                }));
-
-                return res.status(200).json({ success: true, results });
-            } catch (error: any) {
-                console.error("[Push] Error sending test notification:", error);
-                return res.status(500).json({ error: "Failed to send test notification", details: error.message || error.toString() });
-            }
         } else if (action === 'sendNotification') {
             // This endpoint is for testing or triggered internally.
             const { playerName, category } = req.body;
@@ -200,6 +135,17 @@ export default async function handler(req: Request, res: Response) {
                 };
 
                 const timeCategory = getTimeCategory(currentHour);
+                
+                const todayStr = new Date().toISOString().split('T')[0];
+                let affSentToday = prefs.affSentToday || 0;
+                let affLastDate = prefs.affLastDate || '';
+                let affLastCategory = prefs.affLastCategory || '';
+                
+                if (affLastDate !== todayStr) {
+                    affSentToday = 0;
+                    affLastDate = todayStr;
+                    affLastCategory = '';
+                }
 
                 // Check preference for the requested category
                 let allowSend = false;
@@ -225,13 +171,6 @@ export default async function handler(req: Request, res: Response) {
                         newAff = affirmations[Math.floor(Math.random() * affirmations.length)];
                     }
                     randomAff = newAff;
-                }
-
-                // Update profile with the new lastAffirmationSent
-                if (profileObj?.profile_data) {
-                    const updatedPrefs = { ...prefs, lastAffirmationSent: randomAff };
-                    const updatedProfile = { ...profileObj.profile_data, notificationPrefs: updatedPrefs };
-                    await supabase.from('profiles').update({ profile_data: updatedProfile }).eq('player_name', playerName);
                 }
 
                 let greeting = "";
@@ -279,9 +218,21 @@ export default async function handler(req: Request, res: Response) {
                         break;
                     case 'affirmation':
                         if (prefs.affirmation !== false) {
-                            allowSend = true;
-                            title = greeting;
-                            body = randomAff;
+                            // Smart scheduling rules:
+                            // 1. Max 2 affirmations per day
+                            // 2. Do not send if we already sent one for this timeCategory today
+                            // 3. 50% chance to skip even if eligible, to make it feel organic (unless it's the first one of the day)
+                            const isFirstToday = affSentToday === 0;
+                            const hitChance = isFirstToday ? true : (Math.random() > 0.5);
+                            
+                            if (affLastCategory !== timeCategory && affSentToday < 2 && hitChance) {
+                                allowSend = true;
+                                title = greeting;
+                                body = randomAff;
+                                
+                                affSentToday++;
+                                affLastCategory = timeCategory;
+                            }
                         }
                         break;
                     default:
@@ -290,7 +241,20 @@ export default async function handler(req: Request, res: Response) {
                 }
 
                 if (!allowSend) {
-                    return res.status(200).json({ success: false, reason: 'User disabled this category' });
+                    return res.status(200).json({ success: false, reason: 'User disabled or smart scheduling skipped' });
+                }
+
+                // Update profile with the new preferences state
+                if (profileObj?.profile_data) {
+                    const updatedPrefs = { 
+                        ...prefs, 
+                        lastAffirmationSent: randomAff,
+                        affSentToday,
+                        affLastDate,
+                        affLastCategory
+                    };
+                    const updatedProfile = { ...profileObj.profile_data, notificationPrefs: updatedPrefs };
+                    await supabase.from('profiles').update({ profile_data: updatedProfile }).eq('player_name', playerName);
                 }
 
                 const payload = {
