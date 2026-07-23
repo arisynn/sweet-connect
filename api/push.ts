@@ -318,7 +318,11 @@ export default async function handler(req: Request, res: Response) {
                 
                 return res.status(200).json({ success: true, players: playerNames.length, sent: successCount });
             } catch(e) {
-                return res.status(500).json({ error: e.message });
+                if (e instanceof Error) {
+                    return res.status(500).json({ error: e.message });
+                } else {
+                    return res.status(500).json({ error: String(e) });
+                }
             }
         }
 

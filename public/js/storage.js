@@ -297,3 +297,4 @@ const saveProfileKeepalive = (name, profile) => {
 window.saveCloudProfile = saveCloudProfile;
 window.forceSaveProfileNow = forceSaveProfileNow;
 window.saveProfileKeepalive = saveProfileKeepalive;
+window.setStartupComplete = setStartupComplete;
