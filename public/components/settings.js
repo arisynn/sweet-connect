@@ -2,6 +2,8 @@
 const SettingsPanel = ({ syncStatus, setShowSyncLog, onClose, onLogout, profile, setProfile, saveProfile, playerName }) => {
     const [settings, setSettings] = useState(() => AudioEngine.getSettings());
 
+    const [showDebugConsole, setShowDebugConsole] = React.useState(false);
+
     const updateSetting = (key, value) => {
         const newSettings = { ...settings, [key]: value };
         setSettings(newSettings);
@@ -124,17 +126,8 @@ const SettingsPanel = ({ syncStatus, setShowSyncLog, onClose, onLogout, profile,
                                 }} className="text-xs text-pink-500 font-bold hover:underline">
                                     Izinkan Notifikasi Browser
                                 </button>
-                                <button onClick={async () => { 
-                                    if(window.initPushManager) {
-                                        const res = await window.initPushManager(playerName, true);
-                                        if (res === true) {
-                                            alert("Test push sedang dikirim...");
-                                        } else {
-                                            alert("Gagal mengirim test push, pastikan notifikasi diizinkan.");
-                                        }
-                                    }
-                                }} className="text-xs px-3 py-1 bg-pink-100 text-pink-600 rounded-full font-bold hover:bg-pink-200 transition-colors">
-                                    Test Push
+                                <button onClick={() => setShowDebugConsole(true)} className="text-xs px-3 py-1 bg-pink-100 text-pink-600 rounded-full font-bold hover:bg-pink-200 transition-colors">
+                                    Debug Console
                                 </button>
                             </div>
                         </div>
@@ -166,6 +159,9 @@ const SettingsPanel = ({ syncStatus, setShowSyncLog, onClose, onLogout, profile,
                     </button>
                 </div>
             </div>
+            {showDebugConsole && (
+                <PushDebugConsole playerName={playerName} onClose={() => setShowDebugConsole(false)} />
+            )}
         </div>
     );
 };
