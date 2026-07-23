@@ -187,7 +187,7 @@ const GameUI = () => {
 
                 {/* ===================== SCREENS ===================== */}
                 
-                {gameState === 'LOGIN' && (
+                {(gameState === 'LOGIN' || gameState === 'LOGIN_LOADING') && (
                     <div className="absolute inset-0 bg-[#F2F2F7] flex flex-col items-center justify-center z-[100] px-8 overflow-hidden animate-page-enter">
                         {/* Always use default Sweet background for isolation */}
                         {THEMES['sweets']?.menuBackgrounds?.['home'] && (
@@ -222,15 +222,15 @@ const GameUI = () => {
                                 <input type="text" placeholder="Nama Panggilan" maxLength={15}
                                     className="bg-white border border-gray-100 shadow-[0_4px_12px_rgba(0,0,0,0.05)] rounded-3xl px-6 py-4 text-center text-lg font-bold text-gray-800 w-full focus:outline-none focus:border-pink-400 focus:shadow-[0_4px_16px_rgba(236,72,153,0.15)] transition-all duration-300"
                                     value={playerName} onChange={e => { setPlayerName(e.target.value); setLoginError(''); }}
-                                    onKeyDown={e => e.key === 'Enter' && handleLoginSubmit()} disabled={isLoadingProfile}
+                                    onKeyDown={e => e.key === 'Enter' && handleLoginSubmit(false)} disabled={isLoadingProfile || gameState === 'LOGIN_LOADING'}
                                 />
                             </div>
                             
-                            <button onClick={handleLoginSubmit} disabled={isLoadingProfile || !playerName.trim()} className="flex items-center justify-center bg-gray-900 text-white w-full py-4 text-base font-bold rounded-3xl shadow-lg hover:bg-gray-800 active:bg-black active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:active:scale-100 disabled:cursor-not-allowed">
-                                {isLoadingProfile ? (
+                            <button onClick={() => handleLoginSubmit(false)} disabled={isLoadingProfile || gameState === 'LOGIN_LOADING' || !playerName.trim()} className="flex items-center justify-center bg-gray-900 text-white w-full py-4 text-base font-bold rounded-3xl shadow-lg hover:bg-gray-800 active:bg-black active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:active:scale-100 disabled:cursor-not-allowed">
+                                {isLoadingProfile || gameState === 'LOGIN_LOADING' ? (
                                     <>
                                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
-                                        Menghubungkan...
+                                        Menyiapkan Tema...
                                     </>
                                 ) : loginError ? 'Coba Lagi' : 'Mulai Bermain'}
                             </button>

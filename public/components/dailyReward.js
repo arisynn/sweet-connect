@@ -104,21 +104,21 @@ const MissionCard = ({ id, icon, title, desc, progress, target, isClaimed, rewar
 
 const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
     const [tab, setTab] = useState('daily');
-    const [touchStart, setTouchStart] = useState(null);
-    const [touchEnd, setTouchEnd] = useState(null);
+    const touchStartRef = useRef(null);
+    const touchEndRef = useRef(null);
 
     const onTouchStart = (e) => {
-        setTouchEnd(null);
-        setTouchStart(e.targetTouches[0].clientX);
+        touchEndRef.current = null;
+        touchStartRef.current = e.targetTouches[0].clientX;
     };
 
     const onTouchMove = (e) => {
-        setTouchEnd(e.targetTouches[0].clientX);
+        touchEndRef.current = e.targetTouches[0].clientX;
     };
 
     const onTouchEnd = () => {
-        if (!touchStart || !touchEnd) return;
-        const distance = touchStart - touchEnd;
+        if (touchStartRef.current === null || touchEndRef.current === null) return;
+        const distance = touchStartRef.current - touchEndRef.current;
         const minSwipeDistance = 50;
 
         if (distance > minSwipeDistance) {
@@ -284,54 +284,64 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
             </div>
 
             <div className="p-4 flex flex-col gap-4 pb-8 max-w-lg mx-auto w-full relative z-10">
-                {tab === 'daily' ? renderDailyProgress() : renderWeeklyProgress()}
+                <div style={{ display: tab === 'daily' ? 'block' : 'none' }}>
+                    {renderDailyProgress()}
+                </div>
+                <div style={{ display: tab === 'weekly' ? 'block' : 'none' }}>
+                    {renderWeeklyProgress()}
+                </div>
                 
-                <div className="flex flex-col gap-3">
-                    {tab === 'daily' ? sortMissions(getActiveDailyMissionsConfig(profile), dm.progress, dm.claimed).map((m, idx) => {
-                        const current = dm.progress[m.id] || 0;
-                        const claimed = dm.claimed[m.id] || false;
-                        return (
-                            <MissionCard 
-                                key={m.id}
-                                id={m.id} 
-                                icon={getIconForMission(m.id)}
-                                title={m.title} 
-                                desc={m.desc} 
-                                progress={current} 
-                                target={m.target} 
-                                isClaimed={claimed}
-                                rewardType={m.rewardType}
-                                rewardAmount={m.rewardAmount}
-                                difficulty={m.difficulty}
-                                isWeekly={false}
-                                idx={idx}
-                                claimingId={claimingId}
-                                handleClaim={handleClaim}
-                            />
-                        );
-                    }) : sortMissions(getActiveWeeklyMissionsConfig(profile), wm.progress, wm.claimed).map((m, idx) => {
-                        const current = wm.progress[m.id] || 0;
-                        const claimed = wm.claimed[m.id] || false;
-                        return (
-                            <MissionCard 
-                                key={m.id}
-                                id={m.id} 
-                                icon={getIconForMission(m.id)}
-                                title={m.title} 
-                                desc={m.desc} 
-                                progress={current} 
-                                target={m.target} 
-                                isClaimed={claimed}
-                                rewardType={m.rewardType}
-                                rewardAmount={m.rewardAmount}
-                                difficulty={m.difficulty}
-                                isWeekly={true}
-                                idx={idx}
-                                claimingId={claimingId}
-                                handleClaim={handleClaim}
-                            />
-                        );
-                    })}
+                <div className="flex flex-col gap-3 relative">
+                    <div className="flex flex-col gap-3" style={{ display: tab === 'daily' ? 'flex' : 'none' }}>
+                        {React.useMemo(() => sortMissions(getActiveDailyMissionsConfig(profile), dm.progress, dm.claimed), [profile, dm.progress, dm.claimed]).map((m, idx) => {
+                            const current = dm.progress[m.id] || 0;
+                            const claimed = dm.claimed[m.id] || false;
+                            return (
+                                <MissionCard 
+                                    key={m.id}
+                                    id={m.id} 
+                                    icon={getIconForMission(m.id)}
+                                    title={m.title} 
+                                    desc={m.desc} 
+                                    progress={current} 
+                                    target={m.target} 
+                                    isClaimed={claimed}
+                                    rewardType={m.rewardType}
+                                    rewardAmount={m.rewardAmount}
+                                    difficulty={m.difficulty}
+                                    isWeekly={false}
+                                    idx={idx}
+                                    claimingId={claimingId}
+                                    handleClaim={handleClaim}
+                                />
+                            );
+                        })}
+                    </div>
+                    <div className="flex flex-col gap-3" style={{ display: tab === 'weekly' ? 'flex' : 'none' }}>
+                        {React.useMemo(() => sortMissions(getActiveWeeklyMissionsConfig(profile), wm.progress, wm.claimed), [profile, wm.progress, wm.claimed]).map((m, idx) => {
+                            const current = wm.progress[m.id] || 0;
+                            const claimed = wm.claimed[m.id] || false;
+                            return (
+                                <MissionCard 
+                                    key={m.id}
+                                    id={m.id} 
+                                    icon={getIconForMission(m.id)}
+                                    title={m.title} 
+                                    desc={m.desc} 
+                                    progress={current} 
+                                    target={m.target} 
+                                    isClaimed={claimed}
+                                    rewardType={m.rewardType}
+                                    rewardAmount={m.rewardAmount}
+                                    difficulty={m.difficulty}
+                                    isWeekly={true}
+                                    idx={idx}
+                                    claimingId={claimingId}
+                                    handleClaim={handleClaim}
+                                />
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
                     </div>

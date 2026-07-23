@@ -2,13 +2,27 @@
 const SPLASH_TEXTS = ["Senyum terus ya", "Kamu hebat hari ini", "Bisa karena terbiasa", "I'm proud of you", "Cantik banget hari ini", "Jangan lupa istirahat", "Dunia lebih indah ada kamu", "Tetap semangat manis", "You are my sunshine", "Bahagia selalu ya"];
 const BADGE_TEXTS = ["Semangat sayang", "I love you", "Kamu pasti bisa", "Miss you", "Pinter banget", "Have fun sayang", "Kangen kamu", "My only one", "Ayo main"];
 
+const getInitialTheme = () => {
+    const name = localStorage.getItem('pkmnPlayerName');
+    if (!name) return 'sweets';
+    try {
+        const raw = localStorage.getItem(`SC_BACKUP_${name}`);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            const data = parsed.data || parsed;
+            if (data && data.activeTheme) return data.activeTheme;
+        }
+    } catch(e) {}
+    return 'sweets';
+};
+
 const App = () => {
     const [isStandalone, setIsStandalone] = useState(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     
     const [playerName, setPlayerName] = useState(() => localStorage.getItem('pkmnPlayerName') || '');
     const [loginError, setLoginError] = useState('');
-    const [gameState, setGameState] = useState('LOGIN'); 
+    const [gameState, setGameState] = useState(() => localStorage.getItem('pkmnPlayerName') ? 'STARTUP' : 'LOGIN'); 
     
     const lobbyBadgeText = useMemo(() => {
         if (gameState === 'LOBBY_MAIN') {
@@ -46,7 +60,7 @@ const App = () => {
     const profileRef = useRef(profile);
     useEffect(() => { profileRef.current = profile; }, [profile]);
     
-    const [activeTheme, setActiveTheme] = useState('sweets');
+    const [activeTheme, setActiveTheme] = useState(() => getInitialTheme());
     const [board, setBoard] = useState([]);
     
     // State in-game
@@ -329,21 +343,19 @@ const App = () => {
     }, [gameState]);
     
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => { if(playerName && gameState === 'LOGIN') handleLoginSubmit(); }, []);
+    useEffect(() => { if(playerName && gameState === 'STARTUP') handleLoginSubmit(true); }, []);
 
 
         const logSync = (status, action, result) => {
         window.dispatchEvent(new CustomEvent('syncLog', { detail: { status, action, result } }));
     };
 
-    const runStartup = async (name) => {
-        setGameState('STARTUP');
+    const runStartup = async (name, isColdStart = false) => {
+        if (!isColdStart) {
+            setGameState('LOGIN_LOADING');
+        }
         if (window.setStartupComplete) window.setStartupComplete(false);
         
-        setStartupStep(1); setStartupMessage('Memulai...'); setStartupProgress(5);
-        await new Promise(r => setTimeout(r, 400));
-
-        setStartupStep(2); setStartupMessage('Menghubungkan ke Save Engine...'); setStartupProgress(25);
         const isOnline = navigator.onLine;
 
         if (!isOnline) {
@@ -352,7 +364,6 @@ const App = () => {
             return;
         }
 
-        setStartupStep(3); setStartupMessage('Memuat dan Validasi Profil...'); setStartupProgress(40);
         let finalProfile = null;
         let isNewAccount = false;
         
@@ -373,7 +384,23 @@ const App = () => {
             return;
         }
 
-        await new Promise(r => setTimeout(r, 500));
+        // Apply theme before showing Startup Screen to prevent flicker
+        if (!isColdStart) {
+            const themeToApply = finalProfile.activeTheme || 'sweets';
+            setActiveTheme(themeToApply);
+            setGameState('STARTUP');
+            // Give a tiny delay so React has time to render STARTUP before changing steps
+            await new Promise(r => setTimeout(r, 50));
+        }
+
+        setStartupStep(1); setStartupMessage('Memulai...'); setStartupProgress(5);
+        await new Promise(r => setTimeout(r, 300));
+
+        setStartupStep(2); setStartupMessage('Menghubungkan ke Save Engine...'); setStartupProgress(25);
+        await new Promise(r => setTimeout(r, 200));
+
+        setStartupStep(3); setStartupMessage('Memuat dan Validasi Profil...'); setStartupProgress(40);
+        await new Promise(r => setTimeout(r, 300));
         
         finishStartup(name, finalProfile, isNewAccount, null);
     };
@@ -429,6 +456,34 @@ const App = () => {
             '/js/audio.js',
             '/js/app.js'
         ];
+        
+        // Ensure theme assets are fully loaded and decoded in memory before entering Main Menu
+        if (window.THEMES && window.THEMES[finalProfile.activeTheme]) {
+            const themeObj = window.THEMES[finalProfile.activeTheme];
+            const themeUrls = [];
+            if (themeObj.splash) themeUrls.push(themeObj.splash);
+            if (themeObj.background) themeUrls.push(themeObj.background);
+            if (themeObj.logo) themeUrls.push(themeObj.logo);
+            if (themeObj.menuBackgrounds) {
+                Object.values(themeObj.menuBackgrounds).forEach(url => themeUrls.push(url));
+            }
+            if (themeObj.menuIcons) {
+                Object.values(themeObj.menuIcons).forEach(url => themeUrls.push(url));
+            }
+            
+            // Add to cache list
+            themeUrls.forEach(url => assets.push(url));
+            
+            // Pre-decode images to prevent flickering
+            setStartupMessage('Memuat Asset Tema...');
+            await Promise.all(themeUrls.map(url => new Promise(resolve => {
+                const img = new Image();
+                img.onload = resolve;
+                img.onerror = resolve;
+                img.src = url;
+            })));
+        }
+
         await new Promise(r => setTimeout(r, 400));
         
         setStartupStep(8); setStartupMessage('Menyiapkan Cache...'); setStartupProgress(80);
@@ -531,12 +586,12 @@ const App = () => {
 
         setGameState('LOBBY_MAIN');
     };
-const handleLoginSubmit = async () => {
+const handleLoginSubmit = async (isColdStart = false) => {
         if (playerName.trim()) {
             const name = playerName.trim();
             localStorage.setItem('pkmnPlayerName', name); 
             setLoginError(''); 
-            runStartup(name);
+            runStartup(name, isColdStart);
         } else setLoginError('Nama tidak boleh kosong!');
     };
 
@@ -546,30 +601,9 @@ const handleLoginSubmit = async () => {
         if (window.NotificationManager) window.NotificationManager.reset();
         localStorage.removeItem('pkmnPlayerName');
         try { localStorage.removeItem('pkmnActiveSession_' + playerName); } catch(e) {}
-        setPlayerName('');
-        setGameState('LOGIN');
-        setProfile(window.getDefaultProfile());
-        setActiveTheme('sweets');
-        if (THEMES && THEMES.custom) THEMES.custom.data = [];
-        setBoard([]);
-        setLevel(1);
-        setScore(0);
-        setHp(3);
-        setHints(3);
-        setShuffles(3);
-        setProgress(100);
-        setSelectedTile(null);
-        setMatchedTiles([]);
-        setHintActiveTiles([]);
-        setActivePath(null);
-        setWrongTile(null);
-        setLoginError('');
-        setSyncLogs([]);
-        setSyncStatus('idle');
         
-        try {
-            document.querySelectorAll('link[rel="preload"]').forEach(el => el.remove());
-        } catch(e) {}
+        // Full reset of memory, theme assets, and runtime state
+        window.location.reload();
     };
 
     const triggerLevelEndStats = useCallback(async (isGameOver = false) => {
