@@ -1,3 +1,107 @@
+const formatK = (num) => {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(num % 1000 !== 0 ? 1 : 0) + 'k';
+    }
+    return num;
+};
+
+const getIconForMission = (id) => {
+    if (id === 'login') return <IconPlay className="w-6 h-6 text-indigo-500" />;
+    if (id.includes('clear')) return <IconTrophy className="w-6 h-6 text-amber-500" />;
+    if (id.includes('score')) return <IconChart className="w-6 h-6 text-emerald-500" />;
+    if (id.includes('combo')) return <IconTarget className="w-6 h-6 text-rose-500" />;
+    if (id.includes('useHint')) return <IconSearch className="w-6 h-6 text-cyan-500" />;
+    if (id.includes('useShuffle')) return <IconRefresh className="w-6 h-6 text-purple-500" />;
+    if (id.includes('Mystery')) return <IconGift className="w-6 h-6 text-pink-500" />;
+    if (id.includes('chest')) return <IconGift className="w-6 h-6 text-amber-500" />;
+    if (id.includes('match')) return <IconChart className="w-6 h-6 text-emerald-500" />;
+    if (id.includes('flawless')) return <IconTrophy className="w-6 h-6 text-yellow-500" />;
+    return <IconTarget className="w-6 h-6 text-indigo-500" />;
+};
+
+const RewardBadge = ({ type, amount }) => {
+    const getIcon = () => {
+        switch(type) {
+            case 'gems': return <IconGem className="w-3.5 h-3.5" />;
+            case 'gacha_vouchers': return <IconGift className="w-3.5 h-3.5 text-sky-500" />;
+            case 'hints': return <IconSearch className="w-3.5 h-3.5 text-cyan-500" />;
+            case 'shuffles': return <IconRefresh className="w-3.5 h-3.5 text-orange-500" />;
+            case 'hp': return <IconHeart className="w-3.5 h-3.5 text-rose-500" />;
+            case 'rainbow_candy': return <IconRainbowCandy className="w-3.5 h-3.5 text-fuchsia-500" />;
+            default: return <IconCoin className="w-3.5 h-3.5" />;
+        }
+    };
+    return (
+        <div className="flex items-center gap-1">
+            {getIcon()}
+            <span>x{formatK(amount)}</span>
+        </div>
+    );
+};
+
+const MissionCard = ({ id, icon, title, desc, progress, target, isClaimed, rewardType, rewardAmount, difficulty, isWeekly, idx, claimingId, handleClaim }) => {
+    let displayProgress = progress;
+    const isFinished = isClaimed;
+    const canClaim = !isClaimed && displayProgress >= target;
+    const percent = Math.min(100, Math.floor((displayProgress / target) * 100));
+
+    let diffClass = "text-gray-400 border-gray-200";
+    if (difficulty === 'Mudah') diffClass = "text-emerald-500 border-emerald-200 bg-emerald-50";
+    if (difficulty === 'Menengah') diffClass = "text-amber-500 border-amber-200 bg-amber-50";
+    if (difficulty === 'Sulit') diffClass = "text-rose-500 border-rose-200 bg-rose-50";
+    if (difficulty === 'Epic') diffClass = "text-purple-500 border-purple-200 bg-purple-50";
+    if (difficulty === 'Legendary') diffClass = "text-amber-600 border-amber-300 bg-amber-100";
+
+    return (
+        <div className={`w-full ${isWeekly ? 'bg-indigo-50/30 border-indigo-100' : 'bg-white border-gray-100'} border rounded-[1.25rem] p-3 shadow-sm transition-all duration-300 flex flex-col gap-2 ${isFinished ? 'opacity-70 scale-[0.98]' : ''} animate-card-enter origin-center ${claimingId === id ? 'scale-95 opacity-50' : ''}`} style={{animationDelay: `${(idx || 0) * 50}ms`}}>
+            <div className="flex justify-between items-start gap-2">
+                <div className="flex items-center gap-3">
+                    <div className={`shrink-0 w-12 h-12 rounded-[1rem] flex items-center justify-center text-2xl shadow-inner ${isFinished ? 'bg-gradient-to-br from-emerald-100 to-teal-50 grayscale opacity-50' : 'bg-gradient-to-br from-indigo-50 to-pink-50'}`}>
+                        {icon}
+                    </div>
+                    <div className="flex flex-col">
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                            <span className="font-black theme-text text-[13px] leading-tight">{title}</span>
+                            {difficulty && (
+                                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border uppercase tracking-wider ${diffClass}`}>
+                                    {difficulty}
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-[11px] text-gray-500 font-medium leading-snug pr-2">{desc}</p>
+                    </div>
+                </div>
+                <div className={`shrink-0 flex items-center justify-center font-black text-xs px-2.5 py-1.5 rounded-xl shadow-sm ${isFinished ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gradient-to-br from-pink-500 to-rose-500 text-white border border-pink-400'}`}>
+                    <RewardBadge type={rewardType} amount={rewardAmount} />
+                </div>
+            </div>
+
+            {!isFinished && (
+                <div className="flex items-center gap-3 mt-1">
+                    <div className="flex-1 bg-gray-100/80 rounded-full h-3.5 overflow-hidden relative shadow-inner">
+                        <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 rounded-full transition-all duration-500 ease-out flex items-center justify-end pr-2" style={{ width: `${Math.max(5, percent)}%` }}>
+                            {percent > 15 && <span className="text-[9px] text-white font-black opacity-90">{percent}%</span>}
+                        </div>
+                    </div>
+                    
+                </div>
+            )}
+
+            {isFinished ? (
+                <div className="w-full py-2 bg-emerald-50 text-emerald-600 font-black rounded-xl text-[13px] flex items-center justify-center gap-2 border border-emerald-100 mt-1">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    Selesai
+                </div>
+            ) : canClaim ? (
+                <button onClick={() => handleClaim(id, isWeekly)} className="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black rounded-xl text-[13px] shadow-[0_4px_12px_-2px_rgba(244,63,94,0.4)] active:scale-95 transition-transform flex justify-center items-center gap-2 mt-1 relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>
+                    <span className="relative z-10">Klaim Hadiah</span>
+                </button>
+            ) : null}
+        </div>
+    );
+};
+
 const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
     const [tab, setTab] = useState('daily');
     const [touchStart, setTouchStart] = useState(null);
@@ -35,12 +139,6 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
     const dm = getDailyMissions(profile);
     const wm = getWeeklyMissions(profile);
     const [claimingId, setClaimingId] = useState(null);
-    const formatK = (num) => {
-        if (num >= 1000) {
-            return (num / 1000).toFixed(num % 1000 !== 0 ? 1 : 0) + 'k';
-        }
-        return num;
-    };
 
     const handleClaim = (missionId, isWeekly) => {
         setClaimingId(missionId);
@@ -48,103 +146,6 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
             onClaim(missionId, isWeekly);
             setClaimingId(null);
         }, 300);
-    };
-
-    const getIconForMission = (id) => {
-        if (id === 'login') return <IconPlay className="w-6 h-6 text-indigo-500" />;
-        if (id.includes('clear')) return <IconTrophy className="w-6 h-6 text-amber-500" />;
-        if (id.includes('score')) return <IconChart className="w-6 h-6 text-emerald-500" />;
-        if (id.includes('combo')) return <IconTarget className="w-6 h-6 text-rose-500" />;
-        if (id.includes('useHint')) return <IconSearch className="w-6 h-6 text-cyan-500" />;
-        if (id.includes('useShuffle')) return <IconRefresh className="w-6 h-6 text-purple-500" />;
-        if (id.includes('Mystery')) return <IconGift className="w-6 h-6 text-pink-500" />;
-        if (id.includes('chest')) return <IconGift className="w-6 h-6 text-amber-500" />;
-        if (id.includes('match')) return <IconChart className="w-6 h-6 text-emerald-500" />;
-        if (id.includes('flawless')) return <IconTrophy className="w-6 h-6 text-yellow-500" />;
-        return <IconTarget className="w-6 h-6 text-indigo-500" />;
-    };
-
-    const RewardBadge = ({ type, amount }) => {
-        const getIcon = () => {
-            switch(type) {
-                case 'gems': return <IconGem className="w-3.5 h-3.5" />;
-                case 'gacha_vouchers': return <IconGift className="w-3.5 h-3.5 text-sky-500" />;
-                case 'hints': return <IconSearch className="w-3.5 h-3.5 text-cyan-500" />;
-                case 'shuffles': return <IconRefresh className="w-3.5 h-3.5 text-orange-500" />;
-                case 'hp': return <IconHeart className="w-3.5 h-3.5 text-rose-500" />;
-                case 'rainbow_candy': return <IconRainbowCandy className="w-3.5 h-3.5 text-fuchsia-500" />;
-                default: return <IconCoin className="w-3.5 h-3.5" />;
-            }
-        };
-        return (
-            <div className="flex items-center gap-1">
-                {getIcon()}
-                <span>x{formatK(amount)}</span>
-            </div>
-        );
-    };
-
-    const MissionCard = ({ id, icon, title, desc, progress, target, isClaimed, rewardType, rewardAmount, difficulty, isWeekly }) => {
-        let displayProgress = progress;
-        const isFinished = isClaimed;
-        const canClaim = !isClaimed && displayProgress >= target;
-        const percent = Math.min(100, Math.floor((displayProgress / target) * 100));
-
-        let diffClass = "text-gray-400 border-gray-200";
-        if (difficulty === 'Mudah') diffClass = "text-emerald-500 border-emerald-200 bg-emerald-50";
-        if (difficulty === 'Menengah') diffClass = "text-amber-500 border-amber-200 bg-amber-50";
-        if (difficulty === 'Sulit') diffClass = "text-rose-500 border-rose-200 bg-rose-50";
-        if (difficulty === 'Epic') diffClass = "text-purple-500 border-purple-200 bg-purple-50";
-        if (difficulty === 'Legendary') diffClass = "text-amber-600 border-amber-300 bg-amber-100";
-
-        return (
-            <div className={`w-full ${isWeekly ? 'bg-indigo-50/30 border-indigo-100' : 'bg-white border-gray-100'} border rounded-[1.25rem] p-3 shadow-sm transition-all duration-300 flex flex-col gap-2 ${isFinished ? 'opacity-70 scale-[0.98]' : ''} animate-card-enter origin-center ${claimingId === id ? 'scale-95 opacity-50' : ''}`} style={{animationDelay: `${(idx || 0) * 50}ms`}}>
-                <div className="flex justify-between items-start gap-2">
-                    <div className="flex items-center gap-3">
-                        <div className={`shrink-0 w-12 h-12 rounded-[1rem] flex items-center justify-center text-2xl shadow-inner ${isFinished ? 'bg-gradient-to-br from-emerald-100 to-teal-50 grayscale opacity-50' : 'bg-gradient-to-br from-indigo-50 to-pink-50'}`}>
-                            {icon}
-                        </div>
-                        <div className="flex flex-col">
-                            <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                                <span className="font-black theme-text text-[13px] leading-tight">{title}</span>
-                                {difficulty && (
-                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border uppercase tracking-wider ${diffClass}`}>
-                                        {difficulty}
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-[11px] text-gray-500 font-medium leading-snug pr-2">{desc}</p>
-                        </div>
-                    </div>
-                    <div className={`shrink-0 flex items-center justify-center font-black text-xs px-2.5 py-1.5 rounded-xl shadow-sm ${isFinished ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gradient-to-br from-pink-500 to-rose-500 text-white border border-pink-400'}`}>
-                        <RewardBadge type={rewardType} amount={rewardAmount} />
-                    </div>
-                </div>
-
-                {!isFinished && (
-                    <div className="flex items-center gap-3 mt-1">
-                        <div className="flex-1 bg-gray-100/80 rounded-full h-3.5 overflow-hidden relative shadow-inner">
-                            <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 rounded-full transition-all duration-500 ease-out flex items-center justify-end pr-2" style={{ width: `${Math.max(5, percent)}%` }}>
-                                {percent > 15 && <span className="text-[9px] text-white font-black opacity-90">{percent}%</span>}
-                            </div>
-                        </div>
-                        
-                    </div>
-                )}
-
-                {isFinished ? (
-                    <div className="w-full py-2 bg-emerald-50 text-emerald-600 font-black rounded-xl text-[13px] flex items-center justify-center gap-2 border border-emerald-100 mt-1">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                        Selesai
-                    </div>
-                ) : canClaim ? (
-                    <button onClick={() => handleClaim(id, isWeekly)} className="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black rounded-xl text-[13px] shadow-[0_4px_12px_-2px_rgba(244,63,94,0.4)] active:scale-95 transition-transform flex justify-center items-center gap-2 mt-1 relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>
-                        <span className="relative z-10">Klaim Hadiah</span>
-                    </button>
-                ) : null}
-            </div>
-        );
     };
 
     const renderDailyProgress = () => {
@@ -304,6 +305,8 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
                                 difficulty={m.difficulty}
                                 isWeekly={false}
                                 idx={idx}
+                                claimingId={claimingId}
+                                handleClaim={handleClaim}
                             />
                         );
                     }) : sortMissions(getActiveWeeklyMissionsConfig(profile), wm.progress, wm.claimed).map((m, idx) => {
@@ -324,6 +327,8 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
                                 difficulty={m.difficulty}
                                 isWeekly={true}
                                 idx={idx}
+                                claimingId={claimingId}
+                                handleClaim={handleClaim}
                             />
                         );
                     })}

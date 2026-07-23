@@ -44,7 +44,6 @@ export default async function handler(req: Request, res: Response) {
             } else {
                 res.status(200).json({ result: null });
             }
-
         } catch (error: any) {
             console.error("Error fetching profile:", error.message);
             return res.status(500).json({ error: "Failed to fetch profile from cloud database" });
@@ -60,6 +59,37 @@ export default async function handler(req: Request, res: Response) {
                  return res.status(400).json({ error: "Invalid profile data format" });
             }
 
+            // OPTIMISTIC CONCURRENCY CONTROL (Conflict Resolver Backend)
+            // Only apply this logic if the incoming payload is using V2 Engine format.
+            if (profileData._engine && profileData._engine.revision) {
+                const incomingRev = profileData._engine.revision;
+                
+                // Fetch current cloud data to compare
+                const { data: currentData, error: fetchError } = await supabase
+                    .from('profiles')
+                    .select('profile_data')
+                    .eq('player_name', name)
+                    .maybeSingle();
+
+                if (!fetchError && currentData && currentData.profile_data) {
+                    const cloudProfile = currentData.profile_data;
+                    
+                    if (cloudProfile._engine && cloudProfile._engine.revision) {
+                        const cloudRev = cloudProfile._engine.revision;
+                        
+                        // If incoming revision is older or equal (and not initial save), reject with 409
+                        if (incomingRev <= cloudRev) {
+                            console.log(`[SaveEngine] Conflict detected for ${name}. Cloud: ${cloudRev}, Incoming: ${incomingRev}`);
+                            return res.status(409).json({ 
+                                error: "CONFLICT", 
+                                cloudData: cloudProfile 
+                            });
+                        }
+                    }
+                }
+            }
+
+            // No conflict, proceed with Upsert
             const { error } = await supabase
                 .from('profiles')
                 .upsert(
@@ -73,6 +103,7 @@ export default async function handler(req: Request, res: Response) {
             }
 
             res.status(200).json({ result: "OK" });
+
         } catch (error: any) {
             console.error("Error saving profile:", error.message);
             return res.status(500).json({ error: "Failed to save profile to cloud database" });

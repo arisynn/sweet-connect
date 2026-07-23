@@ -334,9 +334,9 @@ export default async function handler(req: Request, res: Response) {
                         await webpush.sendNotification(pushSubscription, JSON.stringify(payload));
                         return { success: true, endpoint: sub.endpoint };
                     } catch (err: any) {
-                        if (err.statusCode === 404 || err.statusCode === 410) {
+                        if (err.statusCode === 404 || err.statusCode === 410 || err.statusCode === 400 || err.statusCode === 401 || err.statusCode === 403) {
                             // Subscription has expired or is no longer valid, delete it
-                            console.log('Subscription has expired or is no longer valid: ', err);
+                            console.log('Subscription has expired or is no longer valid: ', err.statusCode);
                             await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
                         } else {
                             console.error('Error sending push notification: ', err);

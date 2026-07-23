@@ -1,3 +1,19 @@
+const _rpb_formatK = (num) => {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(num % 1000 !== 0 ? 1 : 0) + 'k';
+    }
+    return num;
+};
+
+const _rpb_RewardBadge = ({ type, amount }) => {
+    return (
+        <div className="flex items-center gap-0.5">
+            {type === 'gems' ? <IconGem className="w-3 h-3" /> : type === 'gacha_vouchers' ? <IconGift className="w-3 h-3" /> : <IconCoin className="w-3 h-3" />}
+            <span className="text-[10px]">x{_rpb_formatK(amount)}</span>
+        </div>
+    );
+};
+
 const RewardProgressBar = ({ profile, onClaimRepeatable }) => {
     const dm = getDailyMissions(profile);
     const repMission = window.REPEATABLE_MISSIONS_CONFIG[dm.repeatable.typeIndex];
@@ -10,22 +26,6 @@ const RewardProgressBar = ({ profile, onClaimRepeatable }) => {
     
     let displayProgress = progress;
     const percent = Math.min(100, Math.floor((displayProgress / target) * 100));
-    const formatK = (num) => {
-        if (num >= 1000) {
-            return (num / 1000).toFixed(num % 1000 !== 0 ? 1 : 0) + 'k';
-        }
-        return num;
-    };
-
-
-    const RewardBadge = ({ type, amount }) => {
-        return (
-            <div className="flex items-center gap-0.5">
-                {type === 'gems' ? <IconGem className="w-3 h-3" /> : type === 'gacha_vouchers' ? <IconGift className="w-3 h-3" /> : <IconCoin className="w-3 h-3" />}
-                <span className="text-[10px]">x{formatK(amount)}</span>
-            </div>
-        );
-    };
 
     return (
         <div className="w-full bg-white border border-indigo-50 rounded-[1rem] p-2 shadow-sm relative overflow-hidden flex flex-col gap-1.5">
@@ -40,7 +40,7 @@ const RewardProgressBar = ({ profile, onClaimRepeatable }) => {
                     </div>
                 </div>
                 <div className="shrink-0 flex items-center justify-center font-black text-[10px] px-1.5 py-0.5 rounded shadow-sm bg-gradient-to-br from-pink-500 to-rose-500 text-white border border-pink-400">
-                    <RewardBadge type={repMission.rewardType} amount={repMission.rewardAmount} />
+                    <_rpb_RewardBadge type={repMission.rewardType} amount={repMission.rewardAmount} />
                 </div>
             </div>
 
@@ -48,7 +48,7 @@ const RewardProgressBar = ({ profile, onClaimRepeatable }) => {
                 <div className="flex-1 bg-gray-100/80 rounded-full h-1.5 overflow-hidden relative shadow-inner">
                     <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 rounded-full transition-all duration-500 ease-out" style={{ width: `${Math.max(5, percent)}%` }} />
                 </div>
-                <span className="text-[9px] font-black text-gray-400 whitespace-nowrap text-right min-w-[2.5rem]">{formatK(displayProgress)}/{formatK(target)}</span>
+                <span className="text-[9px] font-black text-gray-400 whitespace-nowrap text-right min-w-[2.5rem]">{_rpb_formatK(displayProgress)}/{_rpb_formatK(target)}</span>
             </div>
 
             {canClaim && (

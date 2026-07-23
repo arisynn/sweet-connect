@@ -69,22 +69,43 @@ window.initPushManager = async function(playerName, forcePrompt = false) {
         console.log('Waiting for service worker ready...');
         const registration = await navigator.serviceWorker.ready;
         console.log('Service worker is ready.');
+        
+        // Get public VAPID key from backend first
+        const response = await fetch('/api/push');
+        const data = await response.json();
+        
+        if (!data.publicKey) {
+            console.error('Failed to retrieve VAPID public key');
+            return false;
+        }
+        
+        const convertedVapidKey = urlBase64ToUint8Array(data.publicKey);
+        
         let subscription = await registration.pushManager.getSubscription();
         let isNewSubscription = false;
         
-        if (!subscription) {
-            console.log('No subscription found, fetching VAPID public key from backend...');
-            // Get public VAPID key from backend
-            const response = await fetch('/api/push');
-            const data = await response.json();
-            
-            if (!data.publicKey) {
-                console.error('Failed to retrieve VAPID public key');
-                return false;
+        if (subscription) {
+            // Check if applicationServerKey matches
+            const currentKey = subscription.options.applicationServerKey;
+            const currentKeyUint8 = new Uint8Array(currentKey);
+            let match = currentKeyUint8.length === convertedVapidKey.length;
+            if (match) {
+                for (let i = 0; i < currentKeyUint8.length; i++) {
+                    if (currentKeyUint8[i] !== convertedVapidKey[i]) {
+                        match = false;
+                        break;
+                    }
+                }
             }
-            
-            const convertedVapidKey = urlBase64ToUint8Array(data.publicKey);
-            console.log('Subscribing to push manager...');
+            if (!match) {
+                console.log('VAPID key changed, unsubscribing...');
+                await subscription.unsubscribe();
+                subscription = null;
+            }
+        }
+        
+        if (!subscription) {
+            console.log('No subscription found or key changed, subscribing to push manager...');
             subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: convertedVapidKey
@@ -92,7 +113,7 @@ window.initPushManager = async function(playerName, forcePrompt = false) {
             console.log('Successfully subscribed to push notifications.');
             isNewSubscription = true;
         } else {
-            console.log('Existing push subscription found.');
+            console.log('Existing push subscription found with matching VAPID key.');
         }
 
         console.log('Sending subscription to backend to save in Supabase...');

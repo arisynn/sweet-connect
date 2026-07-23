@@ -102,9 +102,10 @@ const placeTilesSmartly = (tiles, currentBoard = null, positions = null) => {
 };
 
 const generateBoard = (themeKey, level) => {
-    const fullThemeData = THEMES[themeKey].data;
+    let fullThemeData = THEMES[themeKey] ? THEMES[themeKey].data : [];
+    if (!fullThemeData || fullThemeData.length === 0) fullThemeData = THEMES['sweets'].data;
     const varietyCount = getTileVarietyCount(level || 1, fullThemeData.length);
-    const themeData = [...fullThemeData].sort(() => Math.random() - 0.5).slice(0, varietyCount);
+    const themeData = [...fullThemeData].sort(() => Math.random() - 0.5).slice(0, Math.max(1, varietyCount));
     let selectedIds = []; const requiredPairs = (ROWS * COLS) / 4;
     while (selectedIds.length < requiredPairs) selectedIds.push(...[...themeData].sort(() => Math.random() - 0.5));
     selectedIds = selectedIds.slice(0, requiredPairs);

@@ -42,7 +42,7 @@ const App = () => {
 
     
     // Profile sekarang menyimpan semua state progres agar tidak hilang
-    const [profile, setProfile] = useState(() => getDefaultProfile());
+    const [profile, setProfile] = useState(() => window.getDefaultProfile());
     const profileRef = useRef(profile);
     useEffect(() => { profileRef.current = profile; }, [profile]);
     
@@ -112,6 +112,29 @@ const App = () => {
     useEffect(() => { progressRef.current = progress; }, [progress]);
     useEffect(() => { matchedTilesRef.current = matchedTiles; }, [matchedTiles]);
     useEffect(() => { selectedTileRef.current = selectedTile; }, [selectedTile]);
+
+    useEffect(() => {
+        const handleExternalUpdate = (e) => {
+            const newProfile = e.detail.profile;
+            if (newProfile) {
+                setProfile(newProfile);
+                if (newProfile.activeTheme) setActiveTheme(newProfile.activeTheme);
+                if (newProfile.settings) {
+                    setIsMuted(newProfile.settings.isMuted);
+                    if (window.AudioEngine) {
+                        window.AudioEngine.updateSettings({ 
+                            muteMusic: newProfile.settings.isMuted, 
+                            muteSfx: newProfile.settings.isMuted,
+                            ...newProfile.settings.audio 
+                        });
+                    }
+                }
+                setSweetMessage('Profil diperbarui dari Cloud!');
+            }
+        };
+        window.addEventListener('profileUpdatedExternally', handleExternalUpdate);
+        return () => window.removeEventListener('profileUpdatedExternally', handleExternalUpdate);
+    }, []);
 
     const saveCurrentSession = useCallback((returnSession = false) => {
         if (gameStateRef.current !== 'PLAYING' && gameStateRef.current !== 'PAUSED') return null;
@@ -319,54 +342,40 @@ const App = () => {
         
         setStartupStep(1); setStartupMessage('Memulai...'); setStartupProgress(5);
         await new Promise(r => setTimeout(r, 400));
+
+        setStartupStep(2); setStartupMessage('Menghubungkan ke Save Engine...'); setStartupProgress(25);
         const isOnline = navigator.onLine;
 
-        setStartupStep(2); setStartupMessage('Memuat Profil...'); setStartupProgress(15);
-        const localProfile = getLocalProfile(name);
-        await new Promise(r => setTimeout(r, 400));
-
-        setStartupStep(3); setStartupMessage(isOnline ? 'Sinkronisasi Cloud...' : 'Mode Offline...'); setStartupProgress(25);
-        logSync('Syncing', 'Login', 'Login Success');
-        
-        let cloudProfile = null;
-        let fetchError = null;
-        if (isOnline) {
-            try {
-                cloudProfile = await fetchCloudProfile(name);
-                logSync('Connected', 'Download Cloud', 'Download Success');
-            } catch (e) {
-                fetchError = e;
-                logSync('Offline', 'Download Cloud', e.message || 'Timeout');
-            }
-        }
-
-        setStartupStep(4); setStartupMessage('Memeriksa Data...'); setStartupProgress(40);
-        let finalProfile = null;
-        let isNewAccount = false;
-        
         if (!isOnline) {
             setLoginError('Tidak ada koneksi internet. Cloud tidak tersedia.');
             setGameState('LOGIN');
             return;
         }
 
-        if (fetchError) {
-            setLoginError('Server sedang tidak tersedia atau gagal memuat data.');
+        setStartupStep(3); setStartupMessage('Memuat dan Validasi Profil...'); setStartupProgress(40);
+        let finalProfile = null;
+        let isNewAccount = false;
+        
+        try {
+            // Save Engine handles fetch, migration, conflict resolution, validation, and local backups
+            finalProfile = await window.SaveEngine.loadProfile(name);
+            logSync('Connected', 'Download Cloud', 'Save Engine Load Success');
+            
+            // Check if brand new (SaveEngine returns empty object if new)
+            if (Object.keys(finalProfile).length === 0) {
+                isNewAccount = true;
+                finalProfile = window.getDefaultProfile();
+            }
+        } catch (e) {
+            logSync('Offline', 'Download Cloud', e.message || 'Timeout/Error');
+            setLoginError('Terjadi kesalahan memuat data: ' + e.message);
             setGameState('LOGIN');
             return;
         }
 
-        if (cloudProfile) {
-            // Cloud-First: Always use cloud if available
-            finalProfile = cloudProfile;
-        } else {
-            // Brand new profile
-            isNewAccount = true;
-            finalProfile = getDefaultProfile();
-        }
         await new Promise(r => setTimeout(r, 500));
         
-        finishStartup(name, finalProfile, isNewAccount, fetchError);
+        finishStartup(name, finalProfile, isNewAccount, null);
     };
 
     const finishStartup = async (name, finalProfile, isNewAccount, fetchError) => {
@@ -401,16 +410,11 @@ const App = () => {
         setProfile(finalProfile);
         await new Promise(r => setTimeout(r, 500));
         
-        setStartupStep(6); setStartupMessage('Menyimpan Profil...'); setStartupProgress(65);
-        if (isNewAccount && navigator.onLine && !fetchError) {
-            try {
-                if (window.saveCloudProfile) await window.saveCloudProfile(name, finalProfile);
-                logSync('Connected', 'Upload Cloud', 'Upload Success');
-            } catch(e) {
-                logSync('Offline', 'Upload Cloud', e.message || 'Upload failed');
-            }
+        setStartupStep(6); setStartupMessage('Menyiapkan Sinkronisasi...'); setStartupProgress(65);
+        if (window.setStartupComplete) window.setStartupComplete(true);
+        if (isNewAccount) {
+            if (window.SaveEngine) window.SaveEngine.saveProfile(name, finalProfile);
         }
-        setLocalProfile(name, finalProfile);
         await new Promise(r => setTimeout(r, 400));
         
         setStartupStep(7); setStartupMessage('Memeriksa Asset...'); setStartupProgress(75);
@@ -421,7 +425,7 @@ const App = () => {
             '/manifest.json',
             '/themes.json',
             '/js/config.js',
-            '/js/storage.js',
+            '/engine/SaveEngine.js',
             '/js/audio.js',
             '/js/app.js'
         ];
@@ -537,13 +541,14 @@ const handleLoginSubmit = async () => {
     };
 
     const handleLogout = () => {
+        if (window.SaveEngine) window.SaveEngine.logout();
         AudioEngine.stopBgm();
         if (window.NotificationManager) window.NotificationManager.reset();
         localStorage.removeItem('pkmnPlayerName');
         try { localStorage.removeItem('pkmnActiveSession_' + playerName); } catch(e) {}
         setPlayerName('');
         setGameState('LOGIN');
-        setProfile(getDefaultProfile());
+        setProfile(window.getDefaultProfile());
         setActiveTheme('sweets');
         if (THEMES && THEMES.custom) THEMES.custom.data = [];
         setBoard([]);
@@ -1045,7 +1050,7 @@ const handleLoginSubmit = async () => {
 
     
     const ctxValue = {
-        gameState, setGameState, activeTheme, activeThemeRef, gameStateRef, board, score, hp, hints, shuffles, level, progress, showTimerAdd, wrongConnectionPenalty, activePath, wrongTile, hintActiveTiles, matchedTiles, selectedTile, isMuted, setIsMuted, isStandalone, deferredPrompt, playerName, setPlayerName, loginError, setLoginError, lobbyBadgeText, isLoadingProfile, syncStatus, showSyncLog, setShowSyncLog, syncLogs, startupStep, startupMessage, startupProgress, showCloudRecovery, localRecoveryProfile, setShowCloudRecovery, setSelectedTile, setActiveTheme, setBoard, finishStartup, getDefaultProfile, profile, setProfile, isNewRecord, countdown, setCountdown, comboDisplay, setComboDisplay, showBoardClear, setShowBoardClear, showTimeoutFlash, setShowTimeoutFlash, sweetMessage, setSweetMessage,  showSettings, setShowSettings, showCustomThemeEditor, setShowCustomThemeEditor, splashText, handleLoginSubmit, handleLogout, handleBuyHpInGame, handleHintClick, handleShuffleClick, handleTileClick, getSecondsLeft, handleBuyStore, handleSellStore, handleClaimDaily, handleClaimAchievement, handleClaimMilestone, handleMysteryGiftComplete, prepareLevel, handleClaimLoginReward, THEMES, formatNumber, calculateCoinReward, AudioEngine, saveProfile, window, saveCurrentSession, flushStats
+        gameState, setGameState, activeTheme, activeThemeRef, gameStateRef, board, score, hp, hints, shuffles, level, progress, showTimerAdd, wrongConnectionPenalty, activePath, wrongTile, hintActiveTiles, matchedTiles, selectedTile, isMuted, setIsMuted, isStandalone, deferredPrompt, playerName, setPlayerName, loginError, setLoginError, lobbyBadgeText, isLoadingProfile, syncStatus, showSyncLog, setShowSyncLog, syncLogs, startupStep, startupMessage, startupProgress, showCloudRecovery, localRecoveryProfile, setShowCloudRecovery, setSelectedTile, setActiveTheme, setBoard, finishStartup, getDefaultProfile: window.getDefaultProfile, profile, setProfile, isNewRecord, countdown, setCountdown, comboDisplay, setComboDisplay, showBoardClear, setShowBoardClear, showTimeoutFlash, setShowTimeoutFlash, sweetMessage, setSweetMessage,  showSettings, setShowSettings, showCustomThemeEditor, setShowCustomThemeEditor, splashText, handleLoginSubmit, handleLogout, handleBuyHpInGame, handleHintClick, handleShuffleClick, handleTileClick, getSecondsLeft, handleBuyStore, handleSellStore, handleClaimDaily, handleClaimAchievement, handleClaimMilestone, handleMysteryGiftComplete, prepareLevel, handleClaimLoginReward, THEMES, formatNumber, calculateCoinReward, AudioEngine, saveProfile, window, saveCurrentSession, flushStats
     };
 
     return (

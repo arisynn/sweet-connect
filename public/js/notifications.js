@@ -84,9 +84,8 @@ window.NotificationManager = {
             this.timers.chest = setTimeout(() => {
                 // Re-validate just before sending
                 try {
-                    const latestRaw = localStorage.getItem('sweet_connect_profile');
-                    if (latestRaw) {
-                        const latestProfile = JSON.parse(latestRaw);
+                    const latestProfile = window.SaveEngine && window.SaveEngine.currentPayload ? window.SaveEngine.currentPayload.gameData : null;
+                    if (latestProfile) {
                         if (!latestProfile.chestSlots || !latestProfile.chestSlots.some(c => c && c.unlockTime <= Date.now())) {
                             return; // Chest already opened or state changed
                         }
