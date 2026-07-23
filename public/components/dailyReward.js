@@ -98,7 +98,7 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
         if (difficulty === 'Legendary') diffClass = "text-amber-600 border-amber-300 bg-amber-100";
 
         return (
-            <div className={`w-full ${isWeekly ? 'bg-indigo-50/30 border-indigo-100' : 'bg-white border-gray-100'} border rounded-[1.25rem] p-3 shadow-sm transition-all duration-300 flex flex-col gap-2 ${isFinished ? 'opacity-70 scale-[0.98]' : ''} transition-transform duration-300 origin-center ${claimingId === id ? 'scale-95 opacity-50' : ''}`}>
+            <div className={`w-full ${isWeekly ? 'bg-indigo-50/30 border-indigo-100' : 'bg-white border-gray-100'} border rounded-[1.25rem] p-3 shadow-sm transition-all duration-300 flex flex-col gap-2 ${isFinished ? 'opacity-70 scale-[0.98]' : ''} animate-card-enter origin-center ${claimingId === id ? 'scale-95 opacity-50' : ''}`} style={{animationDelay: `${(idx || 0) * 50}ms`}}>
                 <div className="flex justify-between items-start gap-2">
                     <div className="flex items-center gap-3">
                         <div className={`shrink-0 w-12 h-12 rounded-[1rem] flex items-center justify-center text-2xl shadow-inner ${isFinished ? 'bg-gradient-to-br from-emerald-100 to-teal-50 grayscale opacity-50' : 'bg-gradient-to-br from-indigo-50 to-pink-50'}`}>
@@ -265,7 +265,7 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
     };
 
     return (
-        <div className={`absolute inset-0 z-[100] flex flex-col ${THEMES[activeTheme]?.background ? 'bg-transparent' : 'theme-bg'}`} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        <div className={`absolute inset-0 z-[100] flex flex-col animate-page-enter ${THEMES[activeTheme]?.background ? 'bg-transparent' : 'theme-bg'}`} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
             {THEMES[activeTheme]?.menuBackgrounds?.['mission'] && (
                 <img src={THEMES[activeTheme].menuBackgrounds['mission']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0" alt=""/>
             )}
@@ -286,7 +286,7 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
                 {tab === 'daily' ? renderDailyProgress() : renderWeeklyProgress()}
                 
                 <div className="flex flex-col gap-3">
-                    {tab === 'daily' ? sortMissions(getActiveDailyMissionsConfig(profile), dm.progress, dm.claimed).map(m => {
+                    {tab === 'daily' ? sortMissions(getActiveDailyMissionsConfig(profile), dm.progress, dm.claimed).map((m, idx) => {
                         const current = dm.progress[m.id] || 0;
                         const claimed = dm.claimed[m.id] || false;
                         return (
@@ -303,9 +303,10 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
                                 rewardAmount={m.rewardAmount}
                                 difficulty={m.difficulty}
                                 isWeekly={false}
+                                idx={idx}
                             />
                         );
-                    }) : sortMissions(getActiveWeeklyMissionsConfig(profile), wm.progress, wm.claimed).map(m => {
+                    }) : sortMissions(getActiveWeeklyMissionsConfig(profile), wm.progress, wm.claimed).map((m, idx) => {
                         const current = wm.progress[m.id] || 0;
                         const claimed = wm.claimed[m.id] || false;
                         return (
@@ -322,6 +323,7 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
                                 rewardAmount={m.rewardAmount}
                                 difficulty={m.difficulty}
                                 isWeekly={true}
+                                idx={idx}
                             />
                         );
                     })}

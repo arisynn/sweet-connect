@@ -218,7 +218,7 @@ const MysteryGift = ({ profile, onOpenComplete, onClose, activeTheme, onActivate
     };
 
     return (
-        <div className={`absolute inset-0 z-[100] flex flex-col items-center ${THEMES[activeTheme]?.background ? 'bg-transparent' : 'theme-bg'}`} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        <div className={`absolute inset-0 z-[100] flex flex-col items-center animate-page-enter ${THEMES[activeTheme]?.background ? 'bg-transparent' : 'theme-bg'}`} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
             {THEMES[activeTheme]?.menuBackgrounds?.['gacha'] && (
                 <img src={THEMES[activeTheme].menuBackgrounds['gacha']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0" alt=""/>
             )}

@@ -27,7 +27,7 @@ const StartupScreen = ({
     const centerIllustration = themeObj.data ? themeObj.data[0] : "🍬";
     
     return (
-        <div className="absolute inset-0 bg-[#F2F2F7] flex flex-col items-center justify-between z-[100] px-8 py-12 overflow-hidden animate-fade-in">
+        <div className="absolute inset-0 bg-[#F2F2F7] flex flex-col items-center justify-between z-[100] px-8 py-12 overflow-hidden animate-page-enter">
             {bgUrl && (
                 <img src={bgUrl} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0 opacity-30 blur-[2px]" alt=""/>
             )}

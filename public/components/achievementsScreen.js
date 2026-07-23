@@ -72,7 +72,7 @@ const AchievementsScreen = ({ profile, onClaimAchievement, onClaimMilestone, onC
             return 0;
         });
 
-        return list.map(a => {
+        return list.map((a, idx) => {
             const { isCompleted, currentTier, eligible, tierIdx, progress, target } = a;
             
             // Format Roman Numeral for level
@@ -80,7 +80,7 @@ const AchievementsScreen = ({ profile, onClaimAchievement, onClaimMilestone, onC
             const levelText = isCompleted ? `Maksimal` : `Level ${roman[tierIdx] || tierIdx + 1}`;
 
             return (
-                <div key={a.id} className={`flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border ${eligible ? 'border-pink-300' : 'border-gray-100'} ${isCompleted ? 'opacity-60' : ''}`}>
+                <div key={a.id} className={`flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border animate-card-enter ${eligible ? 'border-pink-300' : 'border-gray-100'} ${isCompleted ? 'opacity-60' : ''}`} style={{animationDelay: `${idx * 50}ms`}}>
                     <div className="flex flex-col pr-2 flex-1">
                         <div className="flex items-center gap-1.5 mb-1">
                             <span className="font-bold theme-text text-sm">{a.title}</span>
@@ -140,10 +140,10 @@ const AchievementsScreen = ({ profile, onClaimAchievement, onClaimMilestone, onC
             return 0;
         });
 
-        return list.map(m => {
+        return list.map((m, idx) => {
             const { claimed, eligible } = m;
             return (
-                <div key={m.level} className={`flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border ${eligible ? 'border-pink-300' : 'border-gray-100'} ${claimed ? 'opacity-60' : ''}`}>
+                <div key={m.level} className={`flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border animate-card-enter ${eligible ? 'border-pink-300' : 'border-gray-100'} ${claimed ? 'opacity-60' : ''}`} style={{animationDelay: `${idx * 50}ms`}}>
                     <div className="flex flex-col pr-2 flex-1">
                         <span className="font-bold theme-text text-sm">Level {m.level}</span>
                         <span className="text-[11px] text-gray-400 mt-0.5">
@@ -178,7 +178,7 @@ const AchievementsScreen = ({ profile, onClaimAchievement, onClaimMilestone, onC
     };
 
     return (
-        <div className={`absolute inset-0 z-[100] flex flex-col items-center ${THEMES[activeTheme]?.background ? 'bg-transparent' : 'theme-bg'}`} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        <div className={`absolute inset-0 z-[100] flex flex-col items-center animate-page-enter ${THEMES[activeTheme]?.background ? 'bg-transparent' : 'theme-bg'}`} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
             {THEMES[activeTheme]?.menuBackgrounds?.['achievement'] && (
                 <img src={THEMES[activeTheme].menuBackgrounds['achievement']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0" alt=""/>
             )}

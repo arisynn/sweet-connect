@@ -2,8 +2,8 @@
 const CustomModal = ({ isOpen, title, content, confirmText, onConfirm, cancelText, onCancel, hideHeader, hideFooter, maxWidthClass = "w-full max-w-[340px]" }) => {
     if (!isOpen) return null;
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm transition-all duration-200">
-            <div className={`bg-white rounded-3xl ${maxWidthClass} shadow-2xl overflow-hidden flex flex-col items-center text-center p-6 modal-enter`}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm modal-enter">
+            <div className={`bg-white rounded-3xl ${maxWidthClass} shadow-2xl overflow-hidden flex flex-col items-center text-center p-6`}>
                 {!hideHeader && (
                     <div className="w-full flex justify-between items-center mb-4">
                         <h3 className="font-bold text-xl text-gray-800">{title}</h3>

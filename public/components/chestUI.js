@@ -173,7 +173,7 @@ const ChestRewardPopup = ({ rewards, onClose }) => {
     const style = styleMap[chestType];
     
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex flex-col items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex flex-col items-center justify-center p-4 modal-enter">
             <div className={`bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border-2 ${style.border} ${style.glow} scale-in-center`}>
                 <div className="bg-gray-900 p-4 shrink-0 flex items-center justify-between relative">
                     <h2 className={`text-xl font-black text-transparent bg-clip-text bg-gradient-to-r ${style.badge} uppercase tracking-wider mx-auto`}>{style.title}</h2>

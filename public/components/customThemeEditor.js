@@ -25,7 +25,7 @@ const CustomThemeEditor = ({ profile, onSave, onClose }) => {
     };
 
     return (
-        <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm z-[250] flex flex-col items-center justify-center p-4">
+        <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm z-[250] flex flex-col items-center justify-center p-4 modal-enter">
             <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-fade-in flex flex-col">
                 <h3 className="font-black text-xl text-pink-500 mb-2">Edit Tema Custom</h3>
                 <p className="text-xs text-gray-500 font-medium mb-4">Masukkan setidaknya beberapa emoji atau karakter favorit untuk mengisi papan permainan. Maksimal 18 karakter.</p>

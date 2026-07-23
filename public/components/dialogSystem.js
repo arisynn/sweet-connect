@@ -72,8 +72,8 @@ const DialogManager = () => {
     const isLoading = dialog.type === 'loading';
 
     return (
-        <div className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-all duration-200 ${isVisible ? 'bg-gray-900/60 backdrop-blur-sm' : 'bg-transparent backdrop-blur-none pointer-events-none'}`}>
-            <div className={`bg-white rounded-3xl w-full max-w-[340px] shadow-2xl overflow-hidden flex flex-col items-center text-center p-6 transition-all duration-200 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
+        <div className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 modal-enter ${isVisible ? 'bg-gray-900/60 backdrop-blur-sm' : 'bg-transparent backdrop-blur-none pointer-events-none'}`}>
+            <div className={`bg-white rounded-3xl w-full max-w-[340px] shadow-2xl overflow-hidden flex flex-col items-center text-center p-6 modal-enter ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
                 
                 {getIcon()}
                 

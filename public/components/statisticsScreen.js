@@ -40,7 +40,7 @@ const StatisticsScreen = ({ profile, onClose, activeTheme }) => {
     ];
 
     return (
-        <div className={`absolute inset-0 z-[100] flex flex-col items-center ${THEMES[activeTheme]?.background ? 'bg-transparent' : 'theme-bg'}`}>
+        <div className={`absolute inset-0 z-[100] flex flex-col items-center animate-page-enter ${THEMES[activeTheme]?.background ? 'bg-transparent' : 'theme-bg'}`}>
             {THEMES[activeTheme]?.menuBackgrounds?.['statistics'] && (
                 <img src={THEMES[activeTheme].menuBackgrounds['statistics']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0" alt=""/>
             )}
@@ -54,8 +54,8 @@ const StatisticsScreen = ({ profile, onClose, activeTheme }) => {
                 <div className="w-10"></div>
             </div>
             <div className="w-full max-w-[320px] flex flex-col gap-3 pb-8 relative z-10">
-                {rows.map(r => (
-                    <div key={r.label} className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                {rows.map((r, idx) => (
+                    <div key={r.label} className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100 animate-card-enter" style={{animationDelay: `${idx * 50}ms`}}>
                         <span className="text-sm font-bold text-gray-500">{r.label}</span>
                         <span className="text-sm font-black theme-text">{r.value}</span>
                     </div>

@@ -188,7 +188,7 @@ const GameUI = () => {
                 {/* ===================== SCREENS ===================== */}
                 
                 {gameState === 'LOGIN' && (
-                    <div className="absolute inset-0 bg-[#F2F2F7] flex flex-col items-center justify-center z-[100] px-8 overflow-hidden animate-fade-in">
+                    <div className="absolute inset-0 bg-[#F2F2F7] flex flex-col items-center justify-center z-[100] px-8 overflow-hidden animate-page-enter">
                         {/* Always use default Sweet background for isolation */}
                         {THEMES['sweets']?.menuBackgrounds?.['home'] && (
                             <img src={THEMES['sweets'].menuBackgrounds['home']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0 opacity-30 blur-[2px]" alt=""/>
@@ -263,7 +263,7 @@ const GameUI = () => {
                 )}
                 
                 {gameState === 'LOBBY_MAIN' && (
-                    <div className="absolute inset-0 bg-[#F2F2F7] flex flex-col z-[100] overflow-hidden animate-fade-in">
+                    <div className="absolute inset-0 bg-[#F2F2F7] flex flex-col z-[100] overflow-hidden animate-page-enter">
                         {THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home'] && (
                             <img src={THEMES[activeThemeRef.current || activeTheme].menuBackgrounds['home']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0" alt=""/>
                         )}
@@ -290,7 +290,7 @@ const GameUI = () => {
                         <div className="flex-1 px-4 pb-4 flex flex-col gap-2.5 overflow-y-auto custom-scroll relative z-10">
                             
                             {/* Hero Card / Play Button */}
-                            <div className="relative w-full shrink-0">
+                            <div className="relative w-full shrink-0 animate-card-enter">
                                 <button onClick={() => {
                                     let session = profile.activeSession;
 
@@ -358,10 +358,13 @@ const GameUI = () => {
                             </div>
                             
                             {/* Chest Section */}
-                            <ChestSection activeTheme={activeThemeRef.current || activeTheme} profile={profile} setProfile={setProfile} saveProfile={saveProfile} playerName={playerName} setSweetMessage={setSweetMessage} />
+                            <div className="animate-card-enter stagger-1">
+                                <ChestSection activeTheme={activeThemeRef.current || activeTheme} profile={profile} setProfile={setProfile} saveProfile={saveProfile} playerName={playerName} setSweetMessage={setSweetMessage} />
+                            </div>
+
                             {/* Menu Grid */}
                             <div className="grid grid-cols-2 gap-2.5">
-                                <button onClick={() => setGameState('ROULETTE')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative">
+                                <button onClick={() => setGameState('ROULETTE')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative animate-card-enter stagger-2">
                                     <div className="bg-pink-50 theme-text-active p-2.5 rounded-xl mb-2">
                                         {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['gacha'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['gacha']} className="w-5 h-5 object-contain mix-blend-multiply" alt="gacha"/> : <IconGift className="w-5 h-5"/>}
                                     </div>
@@ -374,23 +377,20 @@ const GameUI = () => {
                                         )
                                     )}
                                 </button>
-
-                                <button onClick={() => setGameState('SHOP')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors">
+                                <button onClick={() => setGameState('SHOP')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors animate-card-enter stagger-3">
                                     <div className="bg-amber-50 text-amber-500 p-2.5 rounded-xl mb-2">
                                         {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['toko'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['toko']} className="w-5 h-5 object-contain mix-blend-multiply" alt="toko"/> : <IconStore className="w-5 h-5"/>}
                                     </div>
                                     <span className="theme-text font-bold text-sm">Toko</span>
                                 </button>
-
-                                <button onClick={() => setGameState('DAILY_REWARD')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative">
+                                <button onClick={() => setGameState('DAILY_REWARD')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative animate-card-enter stagger-4">
                                     <div className="bg-indigo-50 text-indigo-500 p-2.5 rounded-xl mb-2">
                                         {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['misi'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['misi']} className="w-5 h-5 object-contain mix-blend-multiply" alt="misi"/> : <IconTarget className="w-5 h-5"/>}
                                     </div>
                                     <span className="theme-text font-bold text-sm">Misi</span>
                                     {canClaimAnyMissionReward(profile) && <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
                                 </button>
-
-                                <button onClick={() => setGameState('ACHIEVEMENTS')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative">
+                                <button onClick={() => setGameState('ACHIEVEMENTS')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative animate-card-enter stagger-5">
                                     <div className="bg-amber-50 text-amber-500 p-2.5 rounded-xl mb-2">
                                         {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['prestasi'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['prestasi']} className="w-5 h-5 object-contain mix-blend-multiply" alt="prestasi"/> : <IconTrophy className="w-5 h-5"/>}
                                     </div>
@@ -398,7 +398,7 @@ const GameUI = () => {
                                     {(getClaimableAchievements(profile).length > 0 || getClaimableMilestones(profile).length > 0) && <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
                                 </button>
                                 
-                                <button onClick={() => setGameState('THEMES')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative">
+                                <button onClick={() => setGameState('THEMES')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative animate-card-enter stagger-6">
                                     <div className="bg-emerald-50 text-emerald-500 p-2.5 rounded-xl mb-2">
                                         {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['tema'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['tema']} className="w-5 h-5 object-contain mix-blend-multiply" alt="tema"/> : <IconBrush className="w-5 h-5"/>}
                                     </div>
@@ -406,7 +406,7 @@ const GameUI = () => {
                                     {profile.newThemes && profile.newThemes.length > 0 && <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
                                 </button>
                                 
-                                <button onClick={() => setGameState('STATISTICS')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors">
+                                <button onClick={() => setGameState('STATISTICS')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors animate-card-enter stagger-7">
                                     <div className="bg-sky-50 text-sky-500 p-2.5 rounded-xl mb-2">
                                         {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['statistik'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['statistik']} className="w-5 h-5 object-contain mix-blend-multiply" alt="statistik"/> : <IconChart className="w-5 h-5"/>}
                                     </div>

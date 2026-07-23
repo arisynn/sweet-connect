@@ -78,7 +78,7 @@ const Shop = ({ profile, activeTheme, onThemeSelect, onBuy, onClose, onSell }) =
         setModalData(null);
     };
 
-    const renderThemeItem = (key) => {
+    const renderThemeItem = (key, idx) => {
         const t = THEMES[key]; 
         const isUnlocked = profile.unlockedThemes.includes(key); 
         const isUsed = activeTheme === key;
@@ -86,7 +86,7 @@ const Shop = ({ profile, activeTheme, onThemeSelect, onBuy, onClose, onSell }) =
         const isPremium = t.type === 'premium';
         
         return (
-            <div key={key} className={`flex flex-col bg-white p-4 rounded-2xl shadow-sm border-2 transition-all ${isUsed ? 'theme-border' : 'border-transparent'}`}>
+            <div key={key} className={`flex flex-col bg-white p-4 rounded-2xl shadow-sm border-2 transition-all animate-card-enter ${isUsed ? 'theme-border' : 'border-transparent'}`} style={{animationDelay: `${idx * 50}ms`}}>
                 <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl relative shrink-0" style={{ backgroundColor: t.preview ? 'transparent' : t.colors.bg }}>
@@ -124,7 +124,7 @@ const Shop = ({ profile, activeTheme, onThemeSelect, onBuy, onClose, onSell }) =
     };
     
     return (
-        <div className={`absolute inset-0 z-[100] flex flex-col items-center ${THEMES[activeTheme]?.background ? 'bg-transparent' : 'theme-bg'}`}>
+        <div className={`absolute inset-0 z-[100] flex flex-col items-center animate-page-enter ${THEMES[activeTheme]?.background ? 'bg-transparent' : 'theme-bg'}`}>
             {THEMES[activeTheme]?.menuBackgrounds?.['shop'] && (
                 <img src={THEMES[activeTheme].menuBackgrounds['shop']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0" alt=""/>
             )}
@@ -182,7 +182,7 @@ const Shop = ({ profile, activeTheme, onThemeSelect, onBuy, onClose, onSell }) =
                             };
                             const IconComp = getIcon(it.iconName);
                             return (
-                                <div key={idx} className={`flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100 ${it.type==='flex'?'border-yellow-300 bg-yellow-50':''}`}>
+                                <div key={idx} className={`flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100 animate-card-enter ${it.type==='flex'?'border-yellow-300 bg-yellow-50':''}`} style={{animationDelay: `${idx * 50}ms`}}>
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 theme-bg rounded-xl flex items-center justify-center text-xl shrink-0">
                                             {IconComp ? <IconComp className={`w-5 h-5 ${it.iconColor || ''}`} /> : null}
@@ -202,7 +202,7 @@ const Shop = ({ profile, activeTheme, onThemeSelect, onBuy, onClose, onSell }) =
                         <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl shadow-sm mb-2 mt-2">
                             <h3 className="font-bold text-amber-600 text-sm mb-2 text-center">Tema Standar</h3>
                             <div className="flex flex-col gap-2">
-                                {themesStandar.map(key => renderThemeItem(key))}
+                                {themesStandar.map((key, idx) => renderThemeItem(key, idx))}
                             </div>
                         </div>
             </div>

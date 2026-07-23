@@ -11,7 +11,7 @@ const ThemeScreen = ({ profile, setProfile, activeTheme, onThemeSelect, onClose,
         }
     }, []);
 
-    const renderThemeItem = (key) => {
+    const renderThemeItem = (key, idx) => {
         const t = THEMES[key];
         if (!t) return null;
         
@@ -20,7 +20,7 @@ const ThemeScreen = ({ profile, setProfile, activeTheme, onThemeSelect, onClose,
         const isActive = activeTheme === key;
 
         return (
-            <div key={key} onClick={() => { onThemeSelect(key); AudioEngine.uiClick(); }} className={`flex flex-col p-3 rounded-2xl border-2 shadow-sm transition-all cursor-pointer ${isActive ? 'bg-pink-50 border-pink-400' : 'bg-white border-transparent hover:border-pink-200'}`}>
+            <div key={key} onClick={() => { onThemeSelect(key); AudioEngine.uiClick(); }} className={`animate-card-enter flex flex-col p-3 rounded-2xl border-2 shadow-sm transition-all cursor-pointer ${isActive ? 'bg-pink-50 border-pink-400' : 'bg-white border-transparent hover:border-pink-200'}`} style={{animationDelay: `${idx * 50}ms`}}>
                 <div className="flex justify-center items-center mb-3">
                     <div className="w-16 h-16 rounded-xl flex items-center justify-center text-3xl relative shrink-0 shadow-sm" style={{ backgroundColor: t.preview ? 'transparent' : (t.colors?.bg || '#f3f4f6') }}>
                         {t.preview ? (
@@ -56,7 +56,7 @@ const ThemeScreen = ({ profile, setProfile, activeTheme, onThemeSelect, onClose,
     const ownedThemes = Object.keys(THEMES).filter(k => profile.unlockedThemes && profile.unlockedThemes.includes(k));
 
     return (
-        <div className={`absolute inset-0 z-[100] flex flex-col items-center ${THEMES[activeTheme]?.background ? 'bg-transparent' : 'theme-bg'}`}>
+        <div className={`absolute inset-0 z-[100] flex flex-col items-center animate-page-enter ${THEMES[activeTheme]?.background ? 'bg-transparent' : 'theme-bg'}`}>
             {THEMES[activeTheme]?.menuBackgrounds?.['theme'] && (
                 <img src={THEMES[activeTheme].menuBackgrounds['theme']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0" alt=""/>
             )}
@@ -75,7 +75,7 @@ const ThemeScreen = ({ profile, setProfile, activeTheme, onThemeSelect, onClose,
                     <div className="text-center text-gray-500 text-sm mt-10">Belum ada tema. Beli di Toko!</div>
                 ) : (
                     <div className="grid grid-cols-2 gap-3">
-                        {ownedThemes.map(key => renderThemeItem(key))}
+                        {ownedThemes.map((key, idx) => renderThemeItem(key, idx))}
                     </div>
                 )}
             </div>
