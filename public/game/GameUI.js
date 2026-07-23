@@ -173,43 +173,16 @@ const GameUI = () => {
 
                 {/* ===================== SCREENS ===================== */}
                 
-                {gameState === 'LOGIN' && (() => {
-                    const currentThemeObj = THEMES[activeThemeRef.current || activeTheme] || THEMES['sweets'];
-                    let logoContent = null;
-                    if (currentThemeObj.logo && typeof currentThemeObj.logo === 'object' && currentThemeObj.logo.sprite) {
-                        const { x, y, w, h, bgSize } = currentThemeObj.logo.sprite;
-                        const src = currentThemeObj.logo.url || currentThemeObj.logo.src;
-                        logoContent = (
-                            <div 
-                                className="drop-shadow-xl mb-6 animate-logo-enter"
-                                style={{
-                                    backgroundImage: `url(${src})`,
-                                    backgroundPosition: `-${x}px -${y}px`,
-                                    backgroundSize: bgSize || 'auto',
-                                    width: `${w}px`,
-                                    height: `${h}px`,
-                                    backgroundRepeat: 'no-repeat'
-                                }}
-                                title="Sweet Connect"
-                            />
-                        );
-                    } else {
-                        const logoUrl = (currentThemeObj.logo && typeof currentThemeObj.logo === 'string') ? currentThemeObj.logo : "/logo.png";
-                        logoContent = (
-                            <img src={logoUrl} alt="Logo" className="w-28 h-28 object-contain drop-shadow-xl mb-6 animate-logo-enter" onError={(e) => { e.target.onerror = null; e.target.src="/logo.png"; }} />
-                        );
-                    }
-
-                    return (
+                {gameState === 'LOGIN' && (
                     <div className="absolute inset-0 bg-[#F2F2F7] flex flex-col items-center justify-center z-[100] px-8 overflow-hidden animate-fade-in">
-                        {currentThemeObj.menuBackgrounds?.['home'] && (
-                            <img src={currentThemeObj.menuBackgrounds['home']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0 opacity-30 blur-[2px]" alt=""/>
+                        {THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home'] && (
+                            <img src={THEMES[activeThemeRef.current || activeTheme].menuBackgrounds['home']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0 opacity-30 blur-[2px]" alt=""/>
                         )}
                         <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse pointer-events-none"></div>
                         <div className="absolute bottom-[-10%] left-[-10%] w-64 h-64 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse pointer-events-none" style={{animationDelay: '1s'}}></div>
                         
                         <div className="relative z-10 w-full max-w-sm mx-auto flex flex-col items-center">
-                            {logoContent}
+                            <img src="/logo.png" alt="Logo" className="w-28 h-28 object-contain drop-shadow-xl mb-6 animate-logo-enter" />
                             
                             <h1 className="text-3xl font-black text-gray-800 mb-2 tracking-tight text-center drop-shadow-sm">Sweet Connect</h1>
                             <p className="text-gray-500 font-medium mb-8 text-center text-sm leading-relaxed px-2">
@@ -251,8 +224,7 @@ const GameUI = () => {
                             }
                         `}} />
                     </div>
-                    );
-                })()}
+                )}
 
                                 {gameState === 'STARTUP' && window.StartupScreen && (
                     <window.StartupScreen 

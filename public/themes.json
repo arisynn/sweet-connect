@@ -47,11 +47,7 @@
       "menuIcons": {},
       "menuBackgrounds": {
         "continue": "/assets/themes/animals/cards/continue.png"
-      },
-      "ui": {},
-      "icons": {},
-      "effects": {},
-      "backgrounds": {}
+      }
     },
     {
       "id": "cute_symbols",
@@ -95,11 +91,7 @@
       "type": "standar",
       "folder": "cute_symbols",
       "menuIcons": {},
-      "menuBackgrounds": {},
-      "ui": {},
-      "icons": {},
-      "effects": {},
-      "backgrounds": {}
+      "menuBackgrounds": {}
     },
     {
       "id": "flowers",
@@ -143,11 +135,7 @@
       "type": "standar",
       "folder": "flowers",
       "menuIcons": {},
-      "menuBackgrounds": {},
-      "ui": {},
-      "icons": {},
-      "effects": {},
-      "backgrounds": {}
+      "menuBackgrounds": {}
     },
     {
       "id": "fruits",
@@ -191,11 +179,7 @@
       "type": "standar",
       "folder": "fruits",
       "menuIcons": {},
-      "menuBackgrounds": {},
-      "ui": {},
-      "icons": {},
-      "effects": {},
-      "backgrounds": {}
+      "menuBackgrounds": {}
     },
     {
       "id": "kucing",
@@ -247,11 +231,7 @@
       "type": "gacha",
       "folder": "kucing",
       "menuIcons": {},
-      "menuBackgrounds": {},
-      "ui": {},
-      "icons": {},
-      "effects": {},
-      "backgrounds": {}
+      "menuBackgrounds": {}
     },
     {
       "id": "neon",
@@ -294,11 +274,7 @@
       "type": "reward",
       "folder": "neon",
       "menuIcons": {},
-      "menuBackgrounds": {},
-      "ui": {},
-      "icons": {},
-      "effects": {},
-      "backgrounds": {}
+      "menuBackgrounds": {}
     },
     {
       "id": "ocean",
@@ -342,11 +318,7 @@
       "type": "standar",
       "folder": "ocean",
       "menuIcons": {},
-      "menuBackgrounds": {},
-      "ui": {},
-      "icons": {},
-      "effects": {},
-      "backgrounds": {}
+      "menuBackgrounds": {}
     },
     {
       "id": "space",
@@ -390,11 +362,7 @@
       "type": "standar",
       "folder": "space",
       "menuIcons": {},
-      "menuBackgrounds": {},
-      "ui": {},
-      "icons": {},
-      "effects": {},
-      "backgrounds": {}
+      "menuBackgrounds": {}
     },
     {
       "id": "sweets",
@@ -438,11 +406,7 @@
       "type": "standar",
       "folder": "sweets",
       "menuIcons": {},
-      "menuBackgrounds": {},
-      "ui": {},
-      "icons": {},
-      "effects": {},
-      "backgrounds": {}
+      "menuBackgrounds": {}
     }
   ]
 }

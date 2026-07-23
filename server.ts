@@ -41,17 +41,12 @@ async function startServer() {
                 middlewareMode: true,
                 hmr: process.env.DISABLE_HMR === 'true' ? false : undefined
             },
-            appType: "mpa",
+            appType: "spa",
         });
         app.use(vite.middlewares);
     } else {
         const distPath = path.join(process.cwd(), 'dist', 'public');
         app.use(express.static(distPath));
-        
-        app.get('/studio*', (req, res) => {
-            res.sendFile(path.join(distPath, 'studio/index.html'));
-        });
-        
         app.get('*all', (req, res) => {
             res.sendFile(path.join(distPath, 'index.html'));
         });
