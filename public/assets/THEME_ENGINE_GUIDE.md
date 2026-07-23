@@ -5,7 +5,6 @@ Dokumentasi ini adalah panduan resmi dan komprehensif untuk pembuatan tema kusto
 ---
 
 ## 1. Struktur Folder
-
 Setiap tema harus diisolasi dalam satu folder tersendiri untuk menjaga kerapian struktur proyek. Folder tema diletakkan di dalam direktori `public/assets/themes/`.
 
 ### Susunan Folder Lengkap:
@@ -14,7 +13,7 @@ public/assets/themes/nama_tema/
 │
 ├── theme.json            (WAJIB) - File konfigurasi utama tema.
 ├── preview.png           (WAJIB) - Gambar pratinjau tema di menu Shop/Gacha.
-├── background.png        (OPSIONAL) - Gambar latar belakang (jika menggunakan gambar, bukan warna solid).
+├── background.png        (OPSIONAL) - Gambar latar belakang papan game.
 ├── logo.png              (OPSIONAL) - Logo spesifik tema untuk layar utama.
 │
 ├── tiles/                (WAJIB) - Folder berisi gambar blok/tile yang akan dicocokkan.
@@ -23,18 +22,15 @@ public/assets/themes/nama_tema/
 │   └── ...
 │
 ├── menu/                 (OPSIONAL) - Folder ikon kustom untuk tombol menu.
-│   ├── icon_play.png
-│   ├── icon_shop.png
+│   ├── gacha.png
+│   ├── toko.png
 │   └── ...
 │
 ├── background/           (OPSIONAL) - Folder artwork full background untuk menu.
 │   ├── home.png
 │   ├── shop.png
 │   ├── gacha.png
-│   ├── mission.png
-│   ├── achievement.png
-│   ├── statistics.png
-│   └── theme.png
+│   └── ...
 │
 ├── ui/                   (OPSIONAL) - Folder aset UI modular (panel, button, frame).
 │   ├── button_primary.png
@@ -46,8 +42,16 @@ public/assets/themes/nama_tema/
 │   ├── gem.png
 │   └── ...
 │
-└── effects/              (OPSIONAL) - Folder efek visual modular (particle, dll).
-    ├── sparkle.png
+├── effects/              (OPSIONAL) - Folder efek visual modular (particle, dll).
+│   ├── sparkle.png
+│   └── ...
+│
+├── sfx/                  (OPSIONAL) - Folder audio efek suara modular (match, win, click).
+│   ├── match.mp3
+│   └── ...
+│
+└── bgm/                  (OPSIONAL) - Folder audio latar musik.
+    ├── lobby.mp3
     └── ...
 ```
 
@@ -58,42 +62,33 @@ public/assets/themes/nama_tema/
 ---
 
 ## 2. Seluruh Asset
-
 Berikut adalah penjelasan detail fungsi setiap aset di dalam folder tema:
 
-*   **`theme.json`**: File sentral yang berisi metadata tema (nama, harga, tipe) dan palet warna (background, border, text, accent, dll). **WAJIB DIBUAT di setiap folder tema.** **Catatan: Anda HANYA perlu menulis metadata dasar (id, name, desc, price, currency, type, colors). Anda TIDAK PERLU menulis path untuk array aset (data, menuIcons, menuBackgrounds, background, logo, preview). Semua path aset akan di-generate otomatis oleh script saat proses build, asalkan file-file tersebut diberi nama yang benar sesuai panduan dan diletakkan di folder yang benar.**
+*   **`theme.json`**: File sentral yang berisi metadata tema (nama, harga, tipe) dan palet warna. **HANYA** tulis metadata (id, name, desc, price, currency, type, colors). Anda **TIDAK PERLU** menulis path array aset secara manual, engine akan memindai (scan) direktori secara otomatis.
 *   **`preview.png`**: Thumbnail tema beresolusi sedang yang ditampilkan di menu Toko Tema, layar Gacha, dan Menu Tema.
-*   **`logo.png`**: Logo judul game yang telah disesuaikan dengan _vibe_ tema (misal: tulisan "Sweet Connect" bergaya es krim untuk tema musim panas).
-*   **`background.png`**: Latar belakang papan permainan utama. Jika tidak diatur, game akan menggunakan warna solid dari `theme.json`.
-*   **`tiles/`**: Kumpulan gambar item yang menjadi inti permainan (objek yang akan di-link/di-match oleh pemain).
-*   **`menu/`**: Ikon kustom untuk tombol navigasi UI (seperti Play, Shop, Leaderboard, Misi) yang mengubah tampilan keseluruhan UI agar selaras dengan tema.
-*   **`background/`**: Gambar ilustrasi penuh (full background artwork) yang menjadi background dan identitas masing-masing menu. Engine akan merendernya sebagai layer paling bawah.
-*   **`ui/`**: Kumpulan aset grafis UI modular (contoh: `button_primary.png`, `panel_bg.png`, `frame.png`).
-*   **`icons/`**: Kumpulan ikon dalam game non-menu (contoh: ikon mata uang `coin.png`, piala `badge.png`, `chest.png`).
-*   **`effects/`**: Aset partikel dan efek visual (contoh: efek debu, percikan bintang `sparkle.png`).
+*   **`logo.png`**: Logo judul game yang telah disesuaikan dengan *vibe* tema.
+*   **`background.png`**: Latar belakang papan permainan utama. Jika tidak diatur, game menggunakan warna solid dari `theme.json`.
+*   **`tiles/`**: Kumpulan gambar item yang menjadi inti permainan (objek yang akan di-link/di-match oleh pemain). Harus berisi minimal beberapa pasang.
+*   **`menu/`**: Ikon kustom untuk tombol navigasi UI (seperti `tema.png`, `gacha.png`, `statistik.png`).
+*   **`background/`**: Gambar ilustrasi penuh (*full background artwork*) yang menjadi background dan identitas masing-masing menu.
+*   **`ui/`, `icons/`, `effects/`, `sfx/`, `bgm/`**: Engine terbaru telah mendukung automasi _Asset Mapping_. Semua gambar/audio dalam folder ini otomatis dipetakan ke property objek tema (contoh: `THEMES['nama'].sfx['match']`).
 
-**Fitur Smart Fallback (Deep Merge):**
-Theme Engine mendukung fallback cerdas. Apabila Anda membuat tema baru, Anda tidak perlu menggambar ulang semua aset `ui/`, `icons/`, atau `effects/`. Engine secara otomatis akan melakukan _deep merge_ (penggabungan mendalam) antara tema Anda dengan tema default (`sweets`). Jika tema Anda tidak memiliki aset tertentu, game akan otomatis memuat aset tersebut dari tema default. Hal ini menjamin tidak ada _blank screen_ atau error.
+**Fitur Smart Asset Scanning:**
+Anda tidak perlu mendeklarasikan aset modular di dalam JSON. Saat proses build, _generateThemes.js_ secara cerdas memindai (`scan`) semua folder modular tersebut.
 
 ---
 
 ## 3. Spesifikasi Asset
+Agar tema berjalan optimal di perangkat seluler kelas bawah hingga atas tanpa pecah atau menyebabkan Memory Leak:
 
-Agar tema berjalan optimal di perangkat seluler kelas bawah hingga atas tanpa pecah atau membuat memory bocor (OOM), gunakan standar berikut:
-
-| Asset | Ukuran Pixel (Rekomendasi) | Aspect Ratio | Format | Ukuran Maksimal | Transparan? | SVG Boleh? |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **preview.png** | 512x512 px | 1:1 (Square) | PNG/WebP | 150 KB | Tidak | Tidak |
-| **logo.png** | 800x400 px | 2:1 | PNG/WebP | 200 KB | **Ya** | Ya |
-| **background.png** | 1080x1920 px | 9:16 (Portrait) | JPG/WebP | 400 KB | Tidak | Tidak |
-| **tiles (semua)** | 128x128 px | 1:1 (Square) | PNG/WebP | 30 KB/tile | **Ya** | Ya |
-| **menu icons** | 96x96 px | 1:1 (Square) | PNG/WebP | 20 KB/icon | **Ya** | Ya |
-| **menu backgrounds** | 1024x1024 px | 1:1 (Square) | PNG/WebP/JPG | 350 KB/image | **Tidak Wajib** | Tidak |
-
-### Safe Area & Padding
-*   **Tiles**: Harus menyisakan padding internal minimal **10%** dari tepi kanvas (misal: dari 128x128, objek utama maksimal berukuran 104x104) agar tidak berhimpitan ekstrim di papan game.
-*   **Margin**: Jangan memberikan bayangan drop-shadow yang terpotong _(clipping)_ di ujung canvas.
-*   **Kualitas Export**: Ekspor WebP pada kualitas 85% untuk hasil terbaik (keseimbangan ketajaman dan ukuran file kecil).
+| Asset | Ukuran Pixel (Rekomendasi) | Aspect Ratio | Format | Ukuran Maksimal | Transparan? |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **preview.png** | 512x512 px | 1:1 (Square) | PNG/WebP | 150 KB | Tidak |
+| **logo.png** | 800x400 px | 2:1 | PNG/WebP | 200 KB | **Ya** |
+| **background.png** | 1080x1920 px | 9:16 (Portrait) | JPG/WebP | 400 KB | Tidak |
+| **tiles (semua)** | 128x128 px | 1:1 (Square) | PNG/WebP | 30 KB/tile | **Ya** |
+| **menu icons** | 96x96 px | 1:1 (Square) | PNG/WebP | 20 KB/icon | **Ya** |
+| **menu backgrounds** | 1024x1024 px | 1:1 (Square) | PNG/WebP/JPG | 350 KB/image | Tidak Wajib |
 
 ---
 
@@ -221,22 +216,43 @@ Game ini menyasar _casual gamers_. Tema visual harus memancarkan nuansa bahagia,
 
 ---
 
-## 12. Naming Convention
+## 12. Naming Convention (Sangat Penting)
 
-Keseragaman penamaan mencegah file gagal dimuat.
+Untuk memastikan sistem *Smart Asset Scanning* bekerja dengan sempurna dan menghindari konflik aset, **penamaan file di luar folder `tiles/` bersifat STRICT (wajib persis sama)**. 
 
-*   Semua nama file dan folder huruf kecil (lowercase).
-*   Tanpa spasi. Gunakan _underscore_ (`_`) atau tanpa spasi.
-*   Ekstensi huruf kecil (`.png` BUKAN `.PNG`).
+### Aturan Umum:
+*   Semua nama file dan folder **harus huruf kecil** (lowercase).
+*   **Tanpa spasi**.
+*   Ekstensi huruf kecil (`.png`, `.mp3` BUKAN `.PNG`).
 
-**Contoh Benar**:
-*   `tile_01.png`
-*   `home.png`
-*   `anjing_lucu/`
+### Daftar Penamaan File Baku (STRICT):
 
-**Contoh Salah**:
-*   `Tile 1 Baru.PNG` (Ada spasi, huruf besar).
-*   `HomeFinal(1).png` (Terdapat simbol khusus kurung).
+**1. Root Folder Tema:**
+*   `theme.json` (Konfigurasi wajib)
+*   `preview.png` (Thumbnail di shop)
+*   `background.png` (Background papan game)
+*   `logo.png` (Logo game utama. **BARU:** Jika berupa sprite animasi, tambahkan properti `"logoFrames": 6` di `theme.json`)
+
+**2. Folder `background/` (Menu Backgrounds):**
+*   `home.png` (Layar utama)
+*   `shop.png` (Toko)
+*   `gacha.png` (Gacha mesin)
+*   `mission.png` (Misi)
+*   `achievement.png` (Prestasi)
+*   `statistics.png` (Statistik)
+*   `theme.png` (Pemilihan tema)
+*   `continue.png` (Layar popup lanjutkan main)
+
+**3. Folder `menu/` (Menu Icons):**
+*   `tema.png`
+*   `gacha.png`
+*   `toko.png`
+*   `misi.png`
+*   `prestasi.png`
+*   `statistik.png`
+
+**4. Folder `tiles/` (Bebas):**
+**Hanya** di dalam folder `tiles/` Anda **bebas** memberikan nama file apapun (contoh: `kucing_1.png`, `beruang.png`, dll). Engine otomatis mendeteksi semua file di dalam folder ini terlepas dari namanya.
 
 ---
 

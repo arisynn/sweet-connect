@@ -1,58 +1,20 @@
 {
-    "id": "kucing",
-    "name": "Kucing (Creator)",
-    "desc": "Koleksi eksklusif kucing kreator.",
-    "category": "standar",
-    "price": 0,
-    "currency": "coins",
-    "rarity": "Rare",
-    "data": [
-        "/assets/themes/kucing/kucing1.png",
-        "/assets/themes/kucing/kucing2.png",
-        "/assets/themes/kucing/kucing3.png",
-        "/assets/themes/kucing/kucing4.png",
-        "/assets/themes/kucing/kucing5.png",
-        "/assets/themes/kucing/kucing6.png",
-        "/assets/themes/kucing/kucing7.png",
-        "/assets/themes/kucing/kucing8.png",
-        "/assets/themes/kucing/kucing9.png",
-        "/assets/themes/kucing/kucing10.png",
-        "/assets/themes/kucing/kucing11.png",
-        "/assets/themes/kucing/kucing12.png"
-    ],
-    "colors": {
-        "bg": "#fffbeb",
-        "border": "#fde68a",
-        "text": "#b45309",
-        "accent": "#d97706",
-        "buttonActive": "#92400e"
-    },
-    "backgroundOptions": [
-        {
-            "bg": "#fffbeb",
-            "border": "#fde68a",
-            "text": "#b45309",
-            "accent": "#d97706",
-            "buttonActive": "#92400e"
-        },
-        {
-            "bg": "#fff1f2",
-            "border": "#fecdd3",
-            "text": "#be123c",
-            "accent": "#f43f5e",
-            "buttonActive": "#9f1239"
-        },
-        {
-            "bg": "#f5f3ff",
-            "border": "#ddd6fe",
-            "text": "#6d28d9",
-            "accent": "#8b5cf6",
-            "buttonActive": "#5b21b6"
-        }
-    ],
-    "background": null,
-    "logo": null,
-    "preview": null,
-    "tilesDir": "tiles",
-    "menuDir": "menu"
+  "id": "kucing",
+  "name": "Kucing",
+  "desc": "Koleksi eksklusif kucing kreator.",
+  "price": 100,
+  "currency": "rainbow_candy",
+  "type": "premium",
+
+  "logoFrames": 6,
+  "logoFps": 8,
+  "logoLoop": true,
+
+  "colors": {
+    "bg": "#fffbeb",
+    "border": "#fde68a",
+    "text": "#b45309",
+    "accent": "#d97706",
+    "buttonActive": "#92400e"
+  }
 }

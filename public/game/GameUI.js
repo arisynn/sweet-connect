@@ -43,6 +43,10 @@ const GameUI = () => {
         }
     }, [gameState, profile]);
 
+    const currentThemeObj = THEMES[activeThemeRef.current || activeTheme] || THEMES['sweets'];
+    const logoUrl = currentThemeObj.logo || "/logo.png";
+    const logoFrames = currentThemeObj.logoFrames || (currentThemeObj.isLogoSprite ? 6 : 1);
+
     return (
         <React.Fragment>
         <div className="w-full h-[100dvh] flex items-center justify-center p-0 sm:p-2 bg-transparent" style={{ "--theme-bg": THEMES[activeThemeRef.current || activeTheme]?.colors.bg || "#fdf2f8", "--theme-border": THEMES[activeThemeRef.current || activeTheme]?.colors.border || "#fbcfe8", "--theme-text": THEMES[activeThemeRef.current || activeTheme]?.colors.text || "#ec4899", "--theme-accent": THEMES[activeThemeRef.current || activeTheme]?.colors.accent || "#ec4899", "--theme-buttonActive": THEMES[activeThemeRef.current || activeTheme]?.colors.buttonActive || "#e11d48", backgroundImage: (THEMES[activeThemeRef.current || activeTheme]?.background || THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home']) ? `url(${THEMES[activeThemeRef.current || activeTheme].background || THEMES[activeThemeRef.current || activeTheme].menuBackgrounds['home']})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center' }}>
@@ -196,7 +200,36 @@ const GameUI = () => {
                         <div className="absolute bottom-[-10%] left-[-10%] w-64 h-64 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse pointer-events-none" style={{animationDelay: '1s'}}></div>
                         
                         <div className="relative z-10 w-full max-w-sm mx-auto flex flex-col items-center">
-                            <img src="/logo.png" alt="Logo" className="w-28 h-28 object-contain drop-shadow-xl mb-6 animate-logo-enter" />
+                            {logoFrames > 1 ? (
+                                <div className="w-28 h-28 mb-6 overflow-hidden drop-shadow-xl relative rounded-xl flex items-center justify-start animate-logo-enter">
+                                    <img 
+                                        src={logoUrl} 
+                                        alt="Logo Sprite" 
+                                        className="absolute top-0 left-0 h-full max-w-none object-contain animate-sprite"
+                                        style={{ 
+                                            width: `${logoFrames * 100}%`,
+                                            animationDuration: `${logoFrames * 0.15}s`,
+                                            animationTimingFunction: `steps(${logoFrames})`,
+                                            animationIterationCount: 'infinite',
+                                            animationName: 'playSprite'
+                                        }}
+                                        onError={(e) => { e.target.onerror = null; e.target.src="logo.png"; }} 
+                                    />
+                                    <style>{`
+                                        @keyframes playSprite {
+                                            from { transform: translateX(0); }
+                                            to { transform: translateX(-100%); }
+                                        }
+                                    `}</style>
+                                </div>
+                            ) : (
+                                <img 
+                                    src={logoUrl} 
+                                    onError={(e) => { e.target.onerror = null; e.target.src="logo.png"; }} 
+                                    alt="Logo" 
+                                    className="w-28 h-28 object-contain drop-shadow-xl mb-6 animate-logo-enter" 
+                                />
+                            )}
                             
                             <h1 className="text-3xl font-black text-gray-800 mb-2 tracking-tight text-center drop-shadow-sm">Sweet Connect</h1>
                             <p className="text-gray-500 font-medium mb-8 text-center text-sm leading-relaxed px-2">

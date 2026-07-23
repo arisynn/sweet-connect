@@ -26,6 +26,13 @@ window.NotificationManager = {
     
     send: function(title, options) {
         if (!('Notification' in window) || this.permission !== 'granted') return;
+        
+        // Mencegah spam notifikasi sistem jika aplikasi sedang dibuka dan terlihat
+        if (document.visibilityState === 'visible') {
+            console.log('[NotificationManager] Skipped OS notification because app is visible:', title);
+            return;
+        }
+
         try {
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.ready.then(registration => {
@@ -69,6 +76,17 @@ window.NotificationManager = {
             if (this.timers.chest) clearTimeout(this.timers.chest);
             this.notified.chest = false;
             this.timers.chest = setTimeout(() => {
+                // Re-validate just before sending
+                try {
+                    const latestRaw = localStorage.getItem('sweet_connect_profile');
+                    if (latestRaw) {
+                        const latestProfile = JSON.parse(latestRaw);
+                        if (!latestProfile.chestSlots || !latestProfile.chestSlots.some(c => c && c.unlockTime <= Date.now())) {
+                            return; // Chest already opened or state changed
+                        }
+                    }
+                } catch(e) {}
+
                 this.send('Peti Siap Dibuka!', {
                     body: 'Peti kamu sudah siap dibuka, ayo cek sekarang!',
                     icon: '/logo.png',
