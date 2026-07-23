@@ -1,5 +1,40 @@
 
 
+const PortalModal = ({ isOpen, children }) => {
+    const [render, setRender] = React.useState(isOpen);
+    const [isClosing, setIsClosing] = React.useState(false);
+
+    React.useEffect(() => {
+        if (isOpen) {
+            setRender(true);
+            setIsClosing(false);
+            document.body.style.overflow = 'hidden';
+        } else if (render) {
+            setIsClosing(true);
+            const timer = setTimeout(() => {
+                setRender(false);
+                setIsClosing(false);
+                document.body.style.overflow = '';
+            }, 300);
+            return () => {
+                clearTimeout(timer);
+                document.body.style.overflow = '';
+            };
+        }
+        
+        return () => {
+            if (isOpen || render) {
+                document.body.style.overflow = '';
+            }
+        };
+    }, [isOpen, render]);
+
+    if (!render) return null;
+
+    const content = typeof children === 'function' ? children({ isClosing }) : children;
+    return ReactDOM.createPortal(content, document.body);
+};
+
 const DynamicSpeedUpButton = ({ chest, onConfirm }) => {
     const [cost, setCost] = useState(0);
 
@@ -141,10 +176,16 @@ const ChestProgress = ({ progress }) => {
     );
 };
 
-const ChestRewardPopup = ({ rewards, onClose }) => {
-    if (!rewards) return null;
+const ChestRewardPopup = ({ rewards, onClose, isClosing }) => {
+    const cachedRewards = React.useRef(rewards);
+    React.useEffect(() => {
+        if (rewards) cachedRewards.current = rewards;
+    }, [rewards]);
+
+    const activeRewards = rewards || cachedRewards.current;
+    if (!activeRewards) return null;
     
-    const chestType = rewards.chestType || 'common';
+    const chestType = activeRewards.chestType || 'common';
     
     const styleMap = {
         epic: { 
@@ -173,8 +214,8 @@ const ChestRewardPopup = ({ rewards, onClose }) => {
     const style = styleMap[chestType];
     
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex flex-col items-center justify-center p-4 modal-enter">
-            <div className={`bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border-2 ${style.border} ${style.glow} scale-in-center`}>
+        <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex flex-col items-center justify-center p-4 ${isClosing ? 'overlay-exit' : 'overlay-enter'}`}>
+            <div className={`bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border-2 ${style.border} ${style.glow} ${isClosing ? 'scale-out-center' : 'scale-in-center'}`}>
                 <div className="bg-gray-900 p-4 shrink-0 flex items-center justify-between relative">
                     <h2 className={`text-xl font-black text-transparent bg-clip-text bg-gradient-to-r ${style.badge} uppercase tracking-wider mx-auto`}>{style.title}</h2>
                     <button onClick={onClose} className="absolute right-4 text-gray-400 hover:text-white p-1">
@@ -183,28 +224,28 @@ const ChestRewardPopup = ({ rewards, onClose }) => {
                 </div>
                 <div className="p-6 flex flex-col gap-4 bg-gray-50 items-center">
                     <div className="flex flex-col gap-2 w-full">
-                        {rewards.coins && (
+                        {activeRewards.coins && (
                             <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center justify-center gap-2 shadow-sm">
                                 <IconCoin className="w-6 h-6 text-amber-500" />
-                                <span className="font-black text-amber-700 text-base">Koin x{rewards.coins}</span>
+                                <span className="font-black text-amber-700 text-base">Koin x{activeRewards.coins}</span>
                             </div>
                         )}
-                        {rewards.hints && (
+                        {activeRewards.hints && (
                             <div className="bg-sky-50 border border-sky-100 rounded-xl p-3 flex items-center justify-center gap-2 shadow-sm">
                                 <IconSearch className="w-6 h-6 text-sky-500" />
-                                <span className="font-black text-sky-700 text-base">Hint x{rewards.hints}</span>
+                                <span className="font-black text-sky-700 text-base">Hint x{activeRewards.hints}</span>
                             </div>
                         )}
-                        {rewards.gacha_vouchers && (
+                        {activeRewards.gacha_vouchers && (
                             <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 flex items-center justify-center gap-2 shadow-sm">
                                 <IconRainbowCandy className="w-6 h-6 text-purple-500" />
-                                <span className="font-black text-purple-700 text-base">Voucher Gacha x{rewards.gacha_vouchers}</span>
+                                <span className="font-black text-purple-700 text-base">Voucher Gacha x{activeRewards.gacha_vouchers}</span>
                             </div>
                         )}
-                        {rewards.gems && (
+                        {activeRewards.gems && (
                             <div className="bg-pink-50 border border-pink-100 rounded-xl p-3 flex items-center justify-center gap-2 shadow-sm">
                                 <IconGem className="w-6 h-6 text-pink-500" />
-                                <span className="font-black text-pink-700 text-base">Gem x{rewards.gems}</span>
+                                <span className="font-black text-pink-700 text-base">Gem x{activeRewards.gems}</span>
                             </div>
                         )}
                     </div>
@@ -314,91 +355,99 @@ const ChestSection = ({ profile, setProfile, saveProfile, playerName, setSweetMe
             </div>
             
             <ChestProgress progress={progress} />
-            {confirmSpeedUp !== null && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex flex-col items-center justify-center p-4 modal-enter">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col relative scale-in-center">
-                        <div className="bg-gray-900 p-4 shrink-0 flex items-center justify-between relative z-10">
-                            <h2 className="text-xl font-black text-white uppercase tracking-wider mx-auto">Percepat Peti</h2>
-                            <button onClick={() => setConfirmSpeedUp(null)} className="absolute right-4 text-gray-400 hover:text-white p-1">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                        </div>
-                        <div className="p-6 flex flex-col gap-4 bg-gray-50 items-center text-center relative z-10">
-                            {THEMES[activeTheme]?.menuBackgrounds?.['chest'] && (
-                                <img src={THEMES[activeTheme].menuBackgrounds['chest']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0 opacity-20" alt=""/>
-                            )}
-                            <div className="relative z-10 w-full">
-                                <p className="text-sm font-medium text-gray-600 mb-6">Gunakan Gem untuk langsung membuka peti ini?</p>
-                                
-                                <div className="flex gap-3">
-                                    <button onClick={() => setConfirmSpeedUp(null)} className="flex-1 bg-gray-200 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-300 transition-colors">Batal</button>
-                                    <DynamicSpeedUpButton chest={slots[confirmSpeedUp]} onConfirm={confirmSpeedUpAction} />
+            
+            <PortalModal isOpen={confirmSpeedUp !== null}>
+                {({ isClosing }) => (
+                    <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex flex-col items-center justify-center p-4 ${isClosing ? 'overlay-exit' : 'overlay-enter'}`}>
+                        <div className={`bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col relative ${isClosing ? 'scale-out-center' : 'scale-in-center'}`}>
+                            <div className="bg-gray-900 p-4 shrink-0 flex items-center justify-between relative z-10">
+                                <h2 className="text-xl font-black text-white uppercase tracking-wider mx-auto">Percepat Peti</h2>
+                                <button onClick={() => setConfirmSpeedUp(null)} className="absolute right-4 text-gray-400 hover:text-white p-1">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            </div>
+                            <div className="p-6 flex flex-col gap-4 bg-gray-50 items-center text-center relative z-10">
+                                {THEMES[activeTheme]?.menuBackgrounds?.['chest'] && (
+                                    <img src={THEMES[activeTheme].menuBackgrounds['chest']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0 opacity-20" alt=""/>
+                                )}
+                                <div className="relative z-10 w-full">
+                                    <p className="text-sm font-medium text-gray-600 mb-6">Gunakan Gem untuk langsung membuka peti ini?</p>
+                                    
+                                    <div className="flex gap-3">
+                                        <button onClick={() => setConfirmSpeedUp(null)} className="flex-1 bg-gray-200 text-gray-600 font-bold py-3 rounded-xl hover:bg-gray-300 transition-colors">Batal</button>
+                                        <DynamicSpeedUpButton chest={slots[confirmSpeedUp]} onConfirm={confirmSpeedUpAction} />
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-            {showInfo && (
-                <div 
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex flex-col items-center justify-center p-4 modal-enter"
-                    onClick={() => setShowInfo(false)}
-                >
-                    <div 
-                        className="bg-white rounded-[1.5rem] shadow-2xl w-full max-w-sm overflow-hidden flex flex-col relative scale-in-center"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {THEMES[activeTheme]?.menuBackgrounds?.['chest'] && (
-                            <img src={THEMES[activeTheme].menuBackgrounds['chest']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0" alt=""/>
-                        )}
-                        <div className="bg-gray-900 p-4 shrink-0 flex items-center justify-between relative z-10">
-                            <h2 className="text-xl font-black text-white uppercase tracking-wider mx-auto">Informasi Peti</h2>
-                            <button onClick={() => setShowInfo(false)} className="absolute right-4 text-gray-400 hover:text-white p-1">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                        </div>
-                        <div className="p-5 flex flex-col gap-4 bg-gray-50 overflow-y-auto max-h-[70vh] text-sm text-gray-700 font-medium">
-                            <div>
-                                <h4 className="font-bold text-gray-900 mb-2">Cara Mendapatkan Progress (Max 5 per peti)</h4>
-                                <ul className="list-disc pl-5 flex flex-col gap-1 text-gray-600 text-xs">
-                                    <li>Selesai Level (Dasar) <strong className="text-gray-800">(+2)</strong></li>
-                                    <li>Selesai tanpa Bantuan (Flawless) <strong className="text-gray-800">(+1)</strong></li>
-                                    <li>Combo x8 / x15+ <strong className="text-gray-800">(+1 / +2)</strong></li>
-                                    <li>Selesai cepat &lt; 45 Detik <strong className="text-gray-800">(+1)</strong></li>
-                                </ul>
-                            </div>
-                            
-                            <div>
-                                <h4 className="font-bold text-gray-900 mb-2">Cara Mendapatkan Peti</h4>
-                                <ul className="list-disc pl-5 flex flex-col gap-1 text-gray-600 text-xs">
-                                    <li>Dapatkan total <strong>5 Poin Progress</strong> untuk mendapatkan 1 peti.</li>
-                                    <li>Jika semua slot peti (3 maksimal) penuh, progress akan ditahan di 5/5.</li>
-                                    <li className="text-rose-600 font-bold">Pastikan membuka peti agar tidak membuang progress sia-sia!</li>
-                                </ul>
-                            </div>
+                )}
+            </PortalModal>
 
-                            <div>
-                                <h4 className="font-bold text-gray-900 mb-2">Jenis Peti & Hadiah</h4>
-                                <p className="text-xs text-gray-600 mb-2 leading-relaxed">
-                                    Peti terdiri dari <strong>Common</strong>, <strong>Rare</strong>, dan <strong>Epic</strong>. Hadiah yang mungkin didapat meliputi <strong>Coin, Gem, Hint, dan Voucher Gacha Gratis</strong>.
-                                </p>
-                                <p className="text-xs text-gray-600 leading-relaxed bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-                                    Semua hadiah dipilih secara acak. Setiap jenis peti memiliki pool hadiah dan peluang yang berbeda. Semakin langka peti, semakin besar peluang memperoleh hadiah bernilai tinggi.
-                                </p>
+            <PortalModal isOpen={showInfo}>
+                {({ isClosing }) => (
+                    <div 
+                        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex flex-col items-center justify-center p-4 ${isClosing ? 'overlay-exit' : 'overlay-enter'}`}
+                        onClick={() => setShowInfo(false)}
+                    >
+                        <div 
+                            className={`bg-white rounded-[1.5rem] shadow-2xl w-full max-w-sm overflow-hidden flex flex-col relative ${isClosing ? 'scale-out-center' : 'scale-in-center'}`}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {THEMES[activeTheme]?.menuBackgrounds?.['chest'] && (
+                                <img src={THEMES[activeTheme].menuBackgrounds['chest']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0" alt=""/>
+                            )}
+                            <div className="bg-gray-900 p-4 shrink-0 flex items-center justify-between relative z-10">
+                                <h2 className="text-xl font-black text-white uppercase tracking-wider mx-auto">Informasi Peti</h2>
+                                <button onClick={() => setShowInfo(false)} className="absolute right-4 text-gray-400 hover:text-white p-1">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
                             </div>
-                        </div>
-                        <div className="p-4 bg-white border-t border-gray-100">
-                            <button onClick={() => setShowInfo(false)} className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">
-                                Mengerti
-                            </button>
+                            <div className="p-5 flex flex-col gap-4 bg-gray-50 overflow-y-auto max-h-[70vh] text-sm text-gray-700 font-medium">
+                                <div>
+                                    <h4 className="font-bold text-gray-900 mb-2">Cara Mendapatkan Progress (Max 5 per peti)</h4>
+                                    <ul className="list-disc pl-5 flex flex-col gap-1 text-gray-600 text-xs">
+                                        <li>Selesai Level (Dasar) <strong className="text-gray-800">(+2)</strong></li>
+                                        <li>Selesai tanpa Bantuan (Flawless) <strong className="text-gray-800">(+1)</strong></li>
+                                        <li>Combo x8 / x15+ <strong className="text-gray-800">(+1 / +2)</strong></li>
+                                        <li>Selesai cepat &lt; 45 Detik <strong className="text-gray-800">(+1)</strong></li>
+                                    </ul>
+                                </div>
+                                
+                                <div>
+                                    <h4 className="font-bold text-gray-900 mb-2">Cara Mendapatkan Peti</h4>
+                                    <ul className="list-disc pl-5 flex flex-col gap-1 text-gray-600 text-xs">
+                                        <li>Dapatkan total <strong>5 Poin Progress</strong> untuk mendapatkan 1 peti.</li>
+                                        <li>Jika semua slot peti (3 maksimal) penuh, progress akan ditahan di 5/5.</li>
+                                        <li className="text-rose-600 font-bold">Pastikan membuka peti agar tidak membuang progress sia-sia!</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-bold text-gray-900 mb-2">Jenis Peti & Hadiah</h4>
+                                    <p className="text-xs text-gray-600 mb-2 leading-relaxed">
+                                        Peti terdiri dari <strong>Common</strong>, <strong>Rare</strong>, dan <strong>Epic</strong>. Hadiah yang mungkin didapat meliputi <strong>Coin, Gem, Hint, dan Voucher Gacha Gratis</strong>.
+                                    </p>
+                                    <p className="text-xs text-gray-600 leading-relaxed bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                        Semua hadiah dipilih secara acak. Setiap jenis peti memiliki pool hadiah dan peluang yang berbeda. Semakin langka peti, semakin besar peluang memperoleh hadiah bernilai tinggi.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="p-4 bg-white border-t border-gray-100">
+                                <button onClick={() => setShowInfo(false)} className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">
+                                    Mengerti
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </PortalModal>
 
-            {rewardPopup && (
-                <ChestRewardPopup rewards={rewardPopup} onClose={handleClaim} />
-            )}
+            <PortalModal isOpen={!!rewardPopup}>
+                {({ isClosing }) => (
+                    <ChestRewardPopup rewards={rewardPopup} onClose={handleClaim} isClosing={isClosing} />
+                )}
+            </PortalModal>
         </div>
     );
 };

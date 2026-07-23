@@ -183,16 +183,14 @@
     },
     {
       "id": "kucing",
-      "name": "Kucing (Creator)",
+      "name": "Kucing",
       "desc": "Koleksi eksklusif kucing kreator.",
-      "category": "gacha",
       "price": 100,
-      "currency": "rainbow_candy",
-      "rarity": "Rare",
-      "data": [
-        "/assets/themes/kucing/tiles/kucing1.png",
-        "/assets/themes/kucing/tiles/kucing2.png"
-      ],
+      "currency": "coins",
+      "type": "standar",
+      "splashFrames": 6,
+      "splashFps": 8,
+      "splashLoop": true,
       "colors": {
         "bg": "#fffbeb",
         "border": "#fde68a",
@@ -200,36 +198,12 @@
         "accent": "#d97706",
         "buttonActive": "#92400e"
       },
-      "backgroundOptions": [
-        {
-          "bg": "#fffbeb",
-          "border": "#fde68a",
-          "text": "#b45309",
-          "accent": "#d97706",
-          "buttonActive": "#92400e"
-        },
-        {
-          "bg": "#fff1f2",
-          "border": "#fecdd3",
-          "text": "#be123c",
-          "accent": "#f43f5e",
-          "buttonActive": "#9f1239"
-        },
-        {
-          "bg": "#f5f3ff",
-          "border": "#ddd6fe",
-          "text": "#6d28d9",
-          "accent": "#8b5cf6",
-          "buttonActive": "#5b21b6"
-        }
-      ],
-      "background": null,
-      "logo": null,
-      "preview": null,
-      "tilesDir": "tiles",
-      "menuDir": "menu",
-      "type": "gacha",
       "folder": "kucing",
+      "splash": "/assets/themes/kucing/splash.png",
+      "data": [
+        "/assets/themes/kucing/tiles/kucing1.png",
+        "/assets/themes/kucing/tiles/kucing2.png"
+      ],
       "menuIcons": {},
       "menuBackgrounds": {}
     },
