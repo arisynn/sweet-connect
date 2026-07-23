@@ -2,13 +2,13 @@
   "id": "kucing",
   "name": "Kucing",
   "desc": "Koleksi eksklusif kucing kreator.",
-  "price": 100,
+  "price": 0,
   "currency": "rainbow_candy",
   "type": "premium",
 
-  "logoFrames": 6,
-  "logoFps": 8,
-  "logoLoop": true,
+  "splashFrames": 1,
+  "splashFps": 8,
+  "splashLoop": true,
 
   "colors": {
     "bg": "#fffbeb",

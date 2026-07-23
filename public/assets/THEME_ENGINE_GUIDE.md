@@ -14,7 +14,7 @@ public/assets/themes/nama_tema/
 ├── theme.json            (WAJIB) - File konfigurasi utama tema.
 ├── preview.png           (WAJIB) - Gambar pratinjau tema di menu Shop/Gacha.
 ├── background.png        (OPSIONAL) - Gambar latar belakang papan game.
-├── logo.png              (OPSIONAL) - Logo spesifik tema untuk layar utama.
+├── splash.png            (OPSIONAL) - Artwork dekoratif untuk Splash Screen.
 │
 ├── tiles/                (WAJIB) - Folder berisi gambar blok/tile yang akan dicocokkan.
 │   ├── tile_1.png
@@ -66,7 +66,7 @@ Berikut adalah penjelasan detail fungsi setiap aset di dalam folder tema:
 
 *   **`theme.json`**: File sentral yang berisi metadata tema (nama, harga, tipe) dan palet warna. **HANYA** tulis metadata (id, name, desc, price, currency, type, colors). Anda **TIDAK PERLU** menulis path array aset secara manual, engine akan memindai (scan) direktori secara otomatis.
 *   **`preview.png`**: Thumbnail tema beresolusi sedang yang ditampilkan di menu Toko Tema, layar Gacha, dan Menu Tema.
-*   **`logo.png`**: Logo judul game yang telah disesuaikan dengan *vibe* tema.
+*   **`splash.png`**: Gambar artwork dekoratif (seperti maskot atau elemen tema) untuk ditampilkan di Splash Screen.
 *   **`background.png`**: Latar belakang papan permainan utama. Jika tidak diatur, game menggunakan warna solid dari `theme.json`.
 *   **`tiles/`**: Kumpulan gambar item yang menjadi inti permainan (objek yang akan di-link/di-match oleh pemain). Harus berisi minimal beberapa pasang.
 *   **`menu/`**: Ikon kustom untuk tombol navigasi UI (seperti `tema.png`, `gacha.png`, `statistik.png`).
@@ -84,7 +84,7 @@ Agar tema berjalan optimal di perangkat seluler kelas bawah hingga atas tanpa pe
 | Asset | Ukuran Pixel (Rekomendasi) | Aspect Ratio | Format | Ukuran Maksimal | Transparan? |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **preview.png** | 512x512 px | 1:1 (Square) | PNG/WebP | 150 KB | Tidak |
-| **logo.png** | 800x400 px | 2:1 | PNG/WebP | 200 KB | **Ya** |
+| **splash.png** | 512x512 px | Bebas | PNG/WebP | 200 KB | **Ya** |
 | **background.png** | 1080x1920 px | 9:16 (Portrait) | JPG/WebP | 400 KB | Tidak |
 | **tiles (semua)** | 128x128 px | 1:1 (Square) | PNG/WebP | 30 KB/tile | **Ya** |
 | **menu icons** | 96x96 px | 1:1 (Square) | PNG/WebP | 20 KB/icon | **Ya** |
@@ -131,12 +131,20 @@ Background papan permainan bertugas memberikan atmosfir tanpa mengganggu _readab
 
 ---
 
-## 7. Logo (logo.png)
+## 7. Splash Artwork (splash.png)
 
-*   **Ukuran**: 800x400 px, resolusi lebar.
+*   **Ukuran**: Fleksibel, proporsi 1:1 direkomendasikan (misal 512x512 px).
 *   **Transparansi**: Latar belakang **wajib 100% transparan**.
-*   **Posisi**: Harus rata tengah _(center alignment)_. Jangan miring ke satu sisi karena akan tidak seimbang di UI Lobby.
-*   **Penggunaan**: Menggantikan text judul "Sweet Connect" standar di layar utama _(Lobby)_.
+*   **Posisi**: Ditampilkan di layar Splash (loading awal) menggantikan ilustrasi emoji default.
+*   **Isi Konten**: Gambar dekoratif seperti karakter tema, maskot, makanan, atau objek utama tema. Ini bukan logo judul game, melainkan artwork estetis.
+*   **Animasi**: Dapat dianimasikan sebagai *horizontal sprite sheet*. Tambahkan konfigurasi di `theme.json` jika berwujud sprite:
+    ```json
+    {
+      "splashFrames": 6, // Jumlah frame
+      "splashFps": 8, // Kecepatan
+      "splashLoop": true // Apakah looping
+    }
+    ```
 
 ---
 
@@ -231,7 +239,8 @@ Untuk memastikan sistem *Smart Asset Scanning* bekerja dengan sempurna dan mengh
 *   `theme.json` (Konfigurasi wajib)
 *   `preview.png` (Thumbnail di shop)
 *   `background.png` (Background papan game)
-*   `logo.png` (Logo game utama. **BARU:** Jika berupa sprite animasi, tambahkan properti `"logoFrames": 6` di `theme.json`)
+*   `logo.png` (Logo game utama - **Tidak digunakan lagi untuk tema**, abaikan. Logo aplikasi bersifat global).
+*   `splash.png` (**BARU**: Artwork Splash Screen. Jika berupa sprite animasi, tambahkan properti `"splashFrames": 6`, `"splashFps": 8`, `"splashLoop": true` di `theme.json`)
 
 **2. Folder `background/` (Menu Backgrounds):**
 *   `home.png` (Layar utama)

@@ -14,10 +14,15 @@ const StartupScreen = ({
 }) => {
     const themeObj = THEMES[activeTheme] || THEMES['sweets'];
     const bgUrl = themeObj.menuBackgrounds?.home || '';
-    const logoUrl = themeObj.logo || "/logo.png"; 
-    const logoFrames = themeObj.logoFrames || (themeObj.isLogoSprite ? 6 : 1);
+    const logoUrl = "/logo.png"; 
     const primaryColor = themeObj.colors?.accent || themeObj.primary || '#ec4899';
     
+    // Splash Asset
+    const splashUrl = themeObj.splash || null;
+    const splashFrames = themeObj.splashFrames || 1;
+    const splashFps = themeObj.splashFps || 8;
+    const splashLoop = themeObj.splashLoop !== false; // Default true
+
     // Fallback illustration: use the first emoji of the theme if no specific illustration exists
     const centerIllustration = themeObj.data ? themeObj.data[0] : "🍬";
     
@@ -31,41 +36,49 @@ const StartupScreen = ({
 
             {/* TOP: Logo & Title */}
             <div className="relative z-10 flex flex-col items-center animate-logo-enter mt-4">
-                {logoFrames > 1 ? (
-                    <div className="w-28 h-28 mb-4 overflow-hidden drop-shadow-xl relative rounded-xl flex items-center justify-start">
-                        <img 
-                            src={logoUrl} 
-                            alt="Logo Sprite" 
-                            className="absolute top-0 left-0 h-full max-w-none object-contain animate-sprite"
-                            style={{ 
-                                width: `${logoFrames * 100}%`,
-                                animationDuration: `${logoFrames * 0.15}s`,
-                                animationTimingFunction: `steps(${logoFrames})`,
-                                animationIterationCount: 'infinite'
-                            }}
-                            onError={(e) => { e.target.onerror = null; e.target.src="logo.png"; }} 
-                        />
-                    </div>
-                ) : (
-                    <img 
-                        src={logoUrl} 
-                        onError={(e) => { e.target.onerror = null; e.target.src="logo.png"; }} 
-                        alt="Logo" 
-                        className="w-28 h-28 object-contain drop-shadow-xl mb-4" 
-                    />
-                )}
+                <img 
+                    src={logoUrl} 
+                    onError={(e) => { e.target.onerror = null; e.target.src="logo.png"; }} 
+                    alt="Logo" 
+                    className="w-28 h-28 object-contain drop-shadow-xl mb-4" 
+                />
                 <h1 className="text-3xl font-black text-gray-800 tracking-tight drop-shadow-sm text-center">Sweet Connect</h1>
                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2 bg-gray-100/80 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm">v1.0.1</span>
             </div>
 
             {/* CENTER: Theme Illustration / Mascot */}
             <div className="relative z-10 flex-1 flex flex-col items-center justify-center animate-fade-in my-8">
-                <div className="relative">
-                    <div className="absolute inset-0 bg-white/40 rounded-full blur-2xl scale-[2] animate-pulse pointer-events-none"></div>
-                    <div className="text-8xl drop-shadow-2xl animate-float relative z-10" style={{ filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.1))' }}>
-                        {centerIllustration}
+                {splashUrl ? (
+                    splashFrames > 1 ? (
+                        <div className="w-48 h-48 overflow-hidden relative drop-shadow-2xl flex items-center justify-start rounded-xl">
+                            <img 
+                                src={splashUrl} 
+                                alt="Splash Artwork" 
+                                className="absolute top-0 left-0 h-full max-w-none object-contain animate-sprite"
+                                style={{ 
+                                    width: `${splashFrames * 100}%`,
+                                    animationDuration: `${splashFrames / splashFps}s`,
+                                    animationTimingFunction: `steps(${splashFrames})`,
+                                    animationIterationCount: splashLoop ? 'infinite' : '1',
+                                    animationFillMode: 'forwards'
+                                }}
+                            />
+                        </div>
+                    ) : (
+                        <img 
+                            src={splashUrl} 
+                            alt="Splash Artwork" 
+                            className="w-48 h-48 object-contain drop-shadow-2xl animate-float" 
+                        />
+                    )
+                ) : (
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-white/40 rounded-full blur-2xl scale-[2] animate-pulse pointer-events-none"></div>
+                        <div className="text-8xl drop-shadow-2xl animate-float relative z-10" style={{ filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.1))' }}>
+                            {centerIllustration}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* BOTTOM: Progress Card */}

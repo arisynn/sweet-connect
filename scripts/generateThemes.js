@@ -22,10 +22,11 @@ async function generate() {
                     
                     const rootFiles = await fs.readdir(path.join(themesDir, folder.name));
 
-                    // Check for background, logo, preview
+                    // Check for background, logo, preview, splash
                     if (rootFiles.includes('background.png')) themeData.background = `/assets/themes/${folder.name}/background.png`;
                     if (rootFiles.includes('logo.png')) themeData.logo = `/assets/themes/${folder.name}/logo.png`;
                     if (rootFiles.includes('preview.png')) themeData.preview = `/assets/themes/${folder.name}/preview.png`;
+                    if (rootFiles.includes('splash.png')) themeData.splash = `/assets/themes/${folder.name}/splash.png`;
                     
                     // Scan tiles (Wajib)
                     try {
