@@ -6,10 +6,10 @@
   "currency": "coins",
   "type": "standar",
 
-  "splashFrames": 6,
-  "splashColumns": 3,
-  "splashRows": 2,
-  "splashFps": 8,
+  "splashFrames": 12,
+  "splashColumns": 4,
+  "splashRows": 3,
+  "splashFps": 12,
   "splashLoop": true,
 
   "colors": {
