@@ -16,6 +16,6 @@
     "buttonActive": "#92400e"
   },
   "continueCard": {
-    "motion": "pingpong"
+    "motion": "loop"
   }
 }
