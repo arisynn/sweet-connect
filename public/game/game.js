@@ -9,8 +9,15 @@ const getInitialTheme = () => {
         const raw = localStorage.getItem(`SC_BACKUP_${name}`);
         if (raw) {
             const parsed = JSON.parse(raw);
-            const data = parsed.data || parsed;
+            const data = parsed.gameData || parsed.data || parsed;
             if (data && data.activeTheme) return data.activeTheme;
+        }
+        
+        // Fallback for legacy format
+        const oldRaw = localStorage.getItem(`sweet_connect_${name}`);
+        if (oldRaw) {
+            const parsed = JSON.parse(oldRaw);
+            if (parsed && parsed.activeTheme) return parsed.activeTheme;
         }
     } catch(e) {}
     return 'sweets';
@@ -426,6 +433,13 @@ const App = () => {
             finalProfile.activeTheme = 'sweets';
             setActiveTheme('sweets');
         }
+        
+        Object.keys(THEMES).forEach(k => {
+            if (THEMES[k].price === 0 && !finalProfile.unlockedThemes.includes(k)) {
+                finalProfile.unlockedThemes.push(k);
+            }
+        });
+
         if (finalProfile.customEmojis && finalProfile.customEmojis.length > 0) {
             THEMES.custom.data = finalProfile.customEmojis;
         }
@@ -665,7 +679,10 @@ const handleLoginSubmit = async (isColdStart = false) => {
                 p = addChestProgress(p, chestPoints);
             }
             
-            p = updateMissions(p, 'winLevel', 1); if (isFlawless) { p = updateMissions(p, 'flawless', 1); }
+            p = updateMissions(p, 'winLevel', 1); 
+            if (isFlawless) { p = updateMissions(p, 'flawless', 1); }
+            if (progress >= 50) { p = updateMissions(p, 'survivor', 1); }
+            if (timeElapsed < 45000) { p = updateMissions(p, 'fast_clear', 1); }
             
             // Real-time mission updates now handle the rest during gameplay
             

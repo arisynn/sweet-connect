@@ -64,62 +64,102 @@ const AchievementsScreen = ({ profile, onClaimAchievement, onClaimMilestone, onC
             };
         });
 
-        list.sort((a, b) => {
-            if (a.eligible && !b.eligible) return -1;
-            if (!a.eligible && b.eligible) return 1;
-            if (a.isCompleted && !b.isCompleted) return 1;
-            if (!a.isCompleted && b.isCompleted) return -1;
-            return 0;
-        });
+        const categories = [
+            { id: 'progression', title: 'PROGRESSION', subtitle: 'Dedikasi dan perjalanan bermainmu' },
+            { id: 'mastery', title: 'MASTERY', subtitle: 'Pembuktian skill dan keahlian' },
+            { id: 'collection', title: 'COLLECTION & WEALTH', subtitle: 'Koleksi tema dan eksplorasi fitur' },
+            { id: 'secret', title: 'SECRET', subtitle: 'Pencapaian tersembunyi yang misterius' }
+        ];
 
-        return list.map((a, idx) => {
-            const { isCompleted, currentTier, eligible, tierIdx, progress, target } = a;
-            
-            // Format Roman Numeral for level
-            const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-            const levelText = isCompleted ? `Maksimal` : `Level ${roman[tierIdx] || tierIdx + 1}`;
+        return categories.map(cat => {
+            const catItems = list.filter(a => a.category === cat.id);
+            if (catItems.length === 0) return null;
+
+            catItems.sort((a, b) => {
+                if (a.eligible && !b.eligible) return -1;
+                if (!a.eligible && b.eligible) return 1;
+                if (a.isCompleted && !b.isCompleted) return 1;
+                if (!a.isCompleted && b.isCompleted) return -1;
+                return 0;
+            });
 
             return (
-                <div key={a.id} className={`flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border animate-card-enter ${eligible ? 'border-pink-300' : 'border-gray-100'} ${isCompleted ? 'opacity-60' : ''}`} style={{animationDelay: `${idx * 50}ms`}}>
-                    <div className="flex flex-col pr-2 flex-1">
-                        <div className="flex items-center gap-1.5 mb-1">
-                            <span className="font-bold theme-text text-sm">{a.title}</span>
-                            <span className="text-[10px] bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full font-bold">{levelText}</span>
-                        </div>
-                        <span className="text-[11px] text-gray-400">{a.desc(target)}</span>
-                        
-                        {!isCompleted && (
-                            <div className="mt-2 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                                <div className="h-full bg-pink-400" style={{ width: `${Math.min(100, (progress / target) * 100)}%` }}></div>
-                            </div>
-                        )}
-                        {!isCompleted && (
-                            <span className="text-[9px] text-gray-400 mt-0.5 font-medium">{formatK(progress)} / {formatK(target)}</span>
-                        )}
-
-                        {!isCompleted && (
-                            <span className="text-[10px] font-bold text-pink-500 mt-1.5">
-                                Hadiah: {[
-                                    currentTier.reward.coins && <span key="c" className="inline-flex items-center gap-0.5"><IconCoin className="w-3 h-3"/>{formatK(currentTier.reward.coins)}</span>,
-                                    currentTier.reward.gems && <span key="g" className="inline-flex items-center gap-0.5"><IconGem className="w-3 h-3"/>{currentTier.reward.gems}</span>,
-                                    currentTier.reward.gacha_vouchers && <span key="v" className="inline-flex items-center gap-0.5"><IconRainbowCandy className="w-3 h-3"/>{currentTier.reward.gacha_vouchers}</span>,
-                                    currentTier.reward.hp && `${currentTier.reward.hp} Nyawa`,
-                                    currentTier.reward.hints && `${currentTier.reward.hints} Hint`,
-                                    currentTier.reward.shuffles && `${currentTier.reward.shuffles} Shuffle`,
-                                    currentTier.reward.theme && `Tema ${THEMES[currentTier.reward.theme]?.name || 'Spesial'}`
-                                ].filter(Boolean).map((item, idx, arr) => <React.Fragment key={idx}>{item}{idx < arr.length - 1 && ', '}</React.Fragment>)}
-                            </span>
-                        )}
+                <div key={cat.id} className="mb-6">
+                    <div className="mb-3 px-1">
+                        <h2 className="text-xs font-black text-gray-400 tracking-widest">{cat.title}</h2>
+                        {cat.subtitle && <p className="text-[10px] text-gray-400/80 font-medium">{cat.subtitle}</p>}
                     </div>
-                    {isCompleted ? (
-                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-3 py-2 rounded-lg whitespace-nowrap ml-2">Selesai</span>
-                    ) : eligible ? (
-                        <button onClick={() => { AudioEngine.uiAchievement(); onClaimAchievement({ id: a.id, tierIdx, tier: currentTier }); }} className="btn-modern bg-pink-500 text-white px-3 py-2 text-xs font-bold rounded-lg whitespace-nowrap ml-2">Klaim</button>
-                    ) : (
-                        <span className="text-[10px] font-bold text-gray-400 theme-bg px-3 py-2 rounded-lg whitespace-nowrap ml-2">
-                            {`${Math.floor(Math.min(100, (progress/target)*100))}%`}
-                        </span>
-                    )}
+                    <div className="flex flex-col gap-3">
+                        {catItems.map((a, idx) => {
+                            const { isCompleted, currentTier, eligible, tierIdx, progress, target, category } = a;
+                            
+                            // Format Roman Numeral for level
+                            const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+                            const levelText = isCompleted ? `Maksimal` : `Level ${roman[tierIdx] || tierIdx + 1}`;
+
+                            // Check if hidden secret
+                            const isSecret = category === 'secret';
+                            const isHidden = isSecret && !eligible && !isCompleted && tierIdx === 0 && progress === 0;
+
+                            if (isHidden) {
+                                return (
+                                    <div key={a.id} className={`flex items-center justify-between bg-gray-50 p-4 rounded-2xl shadow-sm border border-gray-200 animate-card-enter`} style={{animationDelay: `${idx * 50}ms`}}>
+                                        <div className="w-10 h-10 rounded-xl bg-gray-200 flex items-center justify-center text-gray-400 font-black text-xl mr-3">?</div>
+                                        <div className="flex flex-col pr-2 flex-1">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                                <span className="font-bold text-gray-400 text-sm">???</span>
+                                            </div>
+                                            <span className="text-[11px] text-gray-400 italic">Pencapaian rahasia belum ditemukan.</span>
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div key={a.id} className={`flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border animate-card-enter ${eligible ? 'border-pink-300' : 'border-gray-100'} ${isCompleted ? 'opacity-60' : ''}`} style={{animationDelay: `${idx * 50}ms`}}>
+                                    <div className="flex flex-col pr-2 flex-1">
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <span className="font-bold theme-text text-sm">{a.title}</span>
+                                            <span className="text-[10px] bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full font-bold">{levelText}</span>
+                                        </div>
+                                        <span className="text-[11px] text-gray-400">{a.desc(target)}</span>
+                                        
+                                        {!isCompleted && (
+                                            <div className="mt-2 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                                <div className="h-full bg-pink-400" style={{ width: `${Math.min(100, (progress / target) * 100)}%` }}></div>
+                                            </div>
+                                        )}
+                                        {!isCompleted && (
+                                            <span className="text-[9px] text-gray-400 mt-0.5 font-medium">{formatK(progress)} / {formatK(target)}</span>
+                                        )}
+
+                                        {!isCompleted && (
+                                            <span className="text-[10px] font-bold text-pink-500 mt-1.5">
+                                                Hadiah: {[
+                                                    currentTier.reward.coins && <span key="c" className="inline-flex items-center gap-0.5"><IconCoin className="w-3 h-3"/>{formatK(currentTier.reward.coins)}</span>,
+                                                    currentTier.reward.gems && <span key="g" className="inline-flex items-center gap-0.5"><IconGem className="w-3 h-3"/>{currentTier.reward.gems}</span>,
+                                                    currentTier.reward.gacha_vouchers && <span key="v" className="inline-flex items-center gap-0.5"><IconRainbowCandy className="w-3 h-3"/>{currentTier.reward.gacha_vouchers}</span>,
+                                                    currentTier.reward.hp && `${currentTier.reward.hp} Nyawa`,
+                                                    currentTier.reward.hints && `${currentTier.reward.hints} Hint`,
+                                                    currentTier.reward.shuffles && `${currentTier.reward.shuffles} Shuffle`,
+                                                    currentTier.reward.theme && `Tema ${THEMES[currentTier.reward.theme]?.name || 'Spesial'}`
+                                                ].filter(Boolean).map((item, idx, arr) => <React.Fragment key={idx}>{item}{idx < arr.length - 1 && ', '}</React.Fragment>)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {isCompleted ? (
+                                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-3 py-2 rounded-lg whitespace-nowrap ml-2">Selesai</span>
+                                    ) : eligible ? (
+                                        <button onClick={() => { AudioEngine.uiAchievement(); onClaimAchievement({ id: a.id, tierIdx, tier: currentTier }); }} className="btn-modern bg-pink-500 text-white px-3 py-2 text-xs font-bold rounded-lg whitespace-nowrap ml-2">Klaim</button>
+                                    ) : (
+                                        <span className="text-[10px] font-bold text-gray-400 theme-bg px-3 py-2 rounded-lg whitespace-nowrap ml-2">
+                                            {`${Math.floor(Math.min(100, (progress/target)*100))}%`}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             );
         });

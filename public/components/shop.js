@@ -52,8 +52,8 @@ const Shop = ({ profile, activeTheme, onThemeSelect, onBuy, onClose, onSell }) =
 
 
     // Separate themes
-    const themesStandar = Object.keys(THEMES).filter(k => THEMES[k].type === 'standar');
-    const themesPremium = Object.keys(THEMES).filter(k => THEMES[k].type === 'premium');
+    const themesStandar = Object.keys(THEMES).filter(k => THEMES[k].type === 'standar' && THEMES[k].price > 0);
+    const themesPremium = Object.keys(THEMES).filter(k => THEMES[k].type === 'premium' && THEMES[k].price > 0);
 
     const openBuyModal = (item) => {
         setModalData(item);

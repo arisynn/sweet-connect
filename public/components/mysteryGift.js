@@ -206,7 +206,7 @@ const MysteryGift = ({ profile, onOpenComplete, onClose, activeTheme, onActivate
     const canUseVoucher1x = gachaMode === 'item' && (profile.gacha_vouchers || 0) >= 1;
     const canUseVoucher10x = gachaMode === 'item' && (profile.gacha_vouchers || 0) >= 10;
 
-    const gachaThemes = Object.keys(THEMES || {}).filter(k => THEMES[k].type === 'gacha');
+    const gachaThemes = Object.keys(THEMES || {}).filter(k => THEMES[k].type === 'gacha' && THEMES[k].price > 0);
 
     const exchangeTheme = (themeKey, price) => {
         if ((profile.rainbow_candy || 0) < price) return;

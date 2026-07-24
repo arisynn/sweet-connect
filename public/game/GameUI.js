@@ -114,7 +114,7 @@ const GameUI = () => {
                 )}
 
                 {/* ===================== GRID ===================== */}
-                <div className={`flex-1 w-full relative overflow-hidden ${(THEMES[activeThemeRef.current || activeTheme]?.background || THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home']) ? 'bg-transparent' : 'theme-bg'}`} onClick={() => { if (gameStateRef.current === 'PLAYING' && selectedTile) { AudioEngine.uiCancel(); setSelectedTile(null); } }} >
+                <div style={{ visibility: (gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'COUNTDOWN') ? 'visible' : 'hidden' }} className={`flex-1 w-full relative overflow-hidden ${(THEMES[activeThemeRef.current || activeTheme]?.background || THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home']) ? 'bg-transparent' : 'theme-bg'}`} onClick={() => { if (gameStateRef.current === 'PLAYING' && selectedTile) { AudioEngine.uiCancel(); setSelectedTile(null); } }} >
                     {board.length > 0 && (() => {
                         const P = 0.3; // 30% padding instead of full 1 tile padding
                         const getSvgX = (c) => c === 0 ? P / 2 : c === COLS + 1 ? P + COLS + P / 2 : P + (c - 1) + 0.5;
@@ -306,36 +306,7 @@ const GameUI = () => {
                                         let boardToLoad = session.board;
                                         let matchedTilesToLoad = session.matchedTiles || [];
                                         
-                                        let sampleTile = null;
-                                        for(let r=0; r<boardToLoad.length; r++) {
-                                            for(let c=0; c<boardToLoad[r].length; c++) {
-                                                if (boardToLoad[r][c] !== 0) { sampleTile = boardToLoad[r][c]; break; }
-                                            }
-                                            if (sampleTile) break;
-                                        }
-                                        
-                                        const newThemeData = THEMES[activeThemeRef.current].data;
-                                        if (sampleTile && !newThemeData.includes(sampleTile)) {
-                                            let uniqueTiles = new Set();
-                                            boardToLoad.forEach(row => row.forEach(cell => { if (cell !== 0) uniqueTiles.add(cell); }));
-                                            matchedTilesToLoad.forEach(m => uniqueTiles.add(m.id));
-                                            uniqueTiles = Array.from(uniqueTiles);
-                                            
-                                            const tileMap = {};
-                                            for(let i=0; i<uniqueTiles.length; i++) {
-                                                tileMap[uniqueTiles[i]] = newThemeData[i % newThemeData.length];
-                                            }
-                                            
-                                            const mapTile = (cell) => {
-                                                if (cell === 0) return 0;
-                                                return tileMap[cell] || newThemeData[0];
-                                            };
-                                            
-                                            boardToLoad = boardToLoad.map(row => row.map(cell => mapTile(cell)));
-                                            matchedTilesToLoad = matchedTilesToLoad.map(m => ({...m, id: mapTile(m.id)}));
-                                        }
-                                        
-                                        prepareLevel(session.level, boardToLoad, activeThemeRef.current, session.score, profile.hp, profile.hints, profile.shuffles, session.progress, matchedTilesToLoad, session.selectedTile, session.comboCount || 0, session.lastMatchTime || 0);
+                                        prepareLevel(session.level, boardToLoad, session.activeTheme || activeThemeRef.current, session.score, profile.hp, profile.hints, profile.shuffles, session.progress, matchedTilesToLoad, session.selectedTile, session.comboCount || 0, session.lastMatchTime || 0);
                                     } else {
                                         prepareLevel(profile.currentLevel);
                                     }
@@ -372,7 +343,7 @@ const GameUI = () => {
                                     {(profile.gacha_vouchers || 0) > 0 ? (
                                         <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{profile.gacha_vouchers}</span>
                                     ) : (
-                                        Object.keys(THEMES || {}).filter(k => THEMES[k].type === 'gacha' && !(profile.unlockedThemes || []).includes(k) && (profile.rainbow_candy || 0) >= (THEMES[k].price || 100)).length > 0 && (
+                                        Object.keys(THEMES || {}).filter(k => THEMES[k].type === 'gacha' && THEMES[k].price > 0 && !(profile.unlockedThemes || []).includes(k) && (profile.rainbow_candy || 0) >= (THEMES[k].price || 100)).length > 0 && (
                                             <span className="absolute top-2.5 right-2.5 bg-red-500 w-3 h-3 rounded-full border-2 border-white shadow-sm"></span>
                                         )
                                     )}

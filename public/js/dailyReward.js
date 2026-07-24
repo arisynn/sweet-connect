@@ -38,22 +38,14 @@ const getDailyMissions = (profile) => {
     const needsForceReset = dm.activeIds ? (dm.activeIds.length !== 5) : true;
 
     if (dm.date !== today || !dm.activeIds || hasInvalidIds || needsForceReset) {
-        const generated = window.generateDailyMissions();
+        const generated = window.generateDailyMissions(profile);
         const selectedMissions = generated.map(m => m.id);
         
-        let repType = Math.floor(Math.random() * window.REPEATABLE_MISSIONS_CONFIG.length);
-        if (dm.repeatable && dm.repeatable.progress > 0) { 
-            repType = dm.repeatable.typeIndex % window.REPEATABLE_MISSIONS_CONFIG.length;
-        }
-        let repProg = dm.repeatable ? dm.repeatable.progress : 0;
-        let readyCount = dm.repeatable ? dm.repeatable.readyCount : 0;
-
         dm = {
             date: today,
             activeIds: selectedMissions,
             progress: {},
             claimed: {},
-            repeatable: { typeIndex: repType, progress: repProg, readyCount: readyCount },
             allClaimed: false,
             forceResetV2: true
         };
@@ -69,7 +61,7 @@ const getWeeklyMissions = (profile) => {
     const needsForceReset = wm.activeIds ? (wm.activeIds.length !== 5) : true;
 
     if (wm.date !== currentWeek || !wm.activeIds || hasInvalidIds || needsForceReset) {
-        const generated = window.generateWeeklyMissions();
+        const generated = window.generateWeeklyMissions(profile);
         const selectedMissions = generated.map(m => m.id);
         
         wm = {
@@ -97,7 +89,7 @@ const getActiveWeeklyMissionsConfig = (profile) => {
 const updateMissions = (profile, action, amount = 1) => {
     const dm = getDailyMissions(profile);
     const wm = getWeeklyMissions(profile);
-    const newDm = { ...dm, progress: { ...dm.progress }, claimed: { ...dm.claimed }, repeatable: { ...dm.repeatable } };
+    const newDm = { ...dm, progress: { ...dm.progress }, claimed: { ...dm.claimed } };
     const newWm = { ...wm, progress: { ...wm.progress }, claimed: { ...wm.claimed } };
     let updatedDm = false;
     let updatedWm = false;
@@ -128,27 +120,9 @@ const updateMissions = (profile, action, amount = 1) => {
         });
     };
 
-    const handleRepeatable = (actionType, maxVal, amt) => {
-        if (newDm.repeatable) {
-            const repType = window.REPEATABLE_MISSIONS_CONFIG[newDm.repeatable.typeIndex];
-            if (repType && repType.type === actionType) {
-                const current = newDm.repeatable.progress || 0;
-                let next = maxVal !== null ? Math.max(current, maxVal) : current + amt;
-                if (next >= repType.target) {
-                    const claims = Math.floor(next / repType.target);
-                    newDm.repeatable.readyCount += claims;
-                    next %= repType.target;
-                }
-                newDm.repeatable.progress = next;
-                updatedDm = true;
-            }
-        }
-    };
-
     const processAction = (actionType, maxVal, amt) => {
         addDmProgress(actionType, maxVal, amt);
         addWmProgress(actionType, maxVal, amt);
-        handleRepeatable(actionType, maxVal, amt);
     };
 
     if (action === 'winLevel') {
@@ -171,6 +145,14 @@ const updateMissions = (profile, action, amount = 1) => {
         processAction('openChest', null, amount);
     } else if (action === 'flawless') {
         processAction('flawless', null, amount);
+    } else if (action === 'survivor') {
+        processAction('survivor', null, amount);
+    } else if (action === 'fast_clear') {
+        processAction('fast_clear', null, amount);
+    } else if (action === 'complete_daily') {
+        processAction('complete_daily', null, amount);
+    } else if (action === 'complete_daily_all') {
+        processAction('complete_daily_all', null, amount);
     } else if (action === 'play') {
         processAction('play', null, amount);
     }
@@ -216,8 +198,6 @@ const canClaimAnyMissionReward = (profile) => {
         return true;
     }
     
-    if (dm.repeatable.readyCount > 0) return true;
-    
     return false;
 };
 
@@ -231,9 +211,11 @@ const claimMissionReward = (profile, missionId, isWeekly = false) => {
         if (!newDm.allClaimed) {
             newDm.allClaimed = true;
             if (!newProfile.statistics) newProfile.statistics = {};
-            newProfile.gacha_vouchers = (newProfile.gacha_vouchers || 0) + 1;
-            newProfile.gems = (newProfile.gems || 0) + 5;
+            newProfile.gacha_vouchers = (newProfile.gacha_vouchers || 0) + 3;
+            newProfile.gems = (newProfile.gems || 0) + 15;
             rewardLabel = "Bonus Harian!";
+            newProfile.dailyMissions = newDm;
+            return { profile: window.updateMissions(newProfile, 'complete_daily_all', 1), rewardLabel };
         }
         newProfile.dailyMissions = newDm;
     } else if (missionId === 'weekly_all') {
@@ -242,34 +224,11 @@ const claimMissionReward = (profile, missionId, isWeekly = false) => {
         if (!newWm.allClaimed) {
             newWm.allClaimed = true;
             if (!newProfile.statistics) newProfile.statistics = {};
-            newProfile.gacha_vouchers = (newProfile.gacha_vouchers || 0) + 10;
-            newProfile.gems = (newProfile.gems || 0) + 20;
+            newProfile.gacha_vouchers = (newProfile.gacha_vouchers || 0) + 15;
+            newProfile.gems = (newProfile.gems || 0) + 50;
             rewardLabel = "Bonus Mingguan!";
         }
         newProfile.weeklyMissions = newWm;
-    } else if (missionId === 'repeatable') {
-        const dm = getDailyMissions(profile);
-        const newDm = { ...dm, progress: { ...dm.progress }, claimed: { ...dm.claimed }, repeatable: { ...dm.repeatable } };
-        
-        if (newDm.repeatable.readyCount > 0) {
-            newDm.repeatable.readyCount -= 1;
-            const repType = window.REPEATABLE_MISSIONS_CONFIG[newDm.repeatable.typeIndex];
-            if (!newProfile.statistics) newProfile.statistics = {};
-            if (repType.rewardType === 'gems') {
-                newProfile.gems = (newProfile.gems || 0) + repType.rewardAmount;
-            } else if (repType.rewardType === 'gacha_vouchers') {
-                newProfile.gacha_vouchers = (newProfile.gacha_vouchers || 0) + repType.rewardAmount;
-            } else if (repType.rewardType === 'coins') {
-                newProfile.coins = (newProfile.coins || 0) + repType.rewardAmount;
-            }
-            rewardLabel = repType.rewardLabel;
-            
-            if (newDm.repeatable.readyCount === 0) {
-                newDm.repeatable.typeIndex = Math.floor(Math.random() * window.REPEATABLE_MISSIONS_CONFIG.length);
-                newDm.repeatable.progress = 0;
-            }
-        }
-        newProfile.dailyMissions = newDm;
     } else if (isWeekly) {
         const wm = getWeeklyMissions(profile);
         const newWm = { ...wm, progress: { ...wm.progress }, claimed: { ...wm.claimed } };
@@ -293,7 +252,7 @@ const claimMissionReward = (profile, missionId, isWeekly = false) => {
         newProfile.weeklyMissions = newWm;
     } else {
         const dm = getDailyMissions(profile);
-        const newDm = { ...dm, progress: { ...dm.progress }, claimed: { ...dm.claimed }, repeatable: { ...dm.repeatable } };
+        const newDm = { ...dm, progress: { ...dm.progress }, claimed: { ...dm.claimed } };
         const mission = window.DAILY_MISSIONS_POOL.find(m => m.id === missionId);
         if (mission && newDm.activeIds.includes(missionId)) {
             const current = newDm.progress[missionId] || 0;
@@ -310,6 +269,8 @@ const claimMissionReward = (profile, missionId, isWeekly = false) => {
                     newProfile.coins = (newProfile.coins || 0) + mission.rewardAmount;
                 }
                 newProfile.statistics.totalDailyMissionsCompleted = (newProfile.statistics.totalDailyMissionsCompleted || 0) + 1; rewardLabel = mission.rewardLabel;
+                newProfile.dailyMissions = newDm;
+                return { profile: window.updateMissions(newProfile, 'complete_daily', 1), rewardLabel };
             }
         }
         newProfile.dailyMissions = newDm;

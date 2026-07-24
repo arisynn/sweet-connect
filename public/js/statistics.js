@@ -23,6 +23,9 @@ const updateStatistics = (profile, patch) => {
         }
     }
     if (patch.remainingProgress !== undefined) {
+        if (patch.remainingProgress >= 50) {
+            stats.survivorLevels = (stats.survivorLevels || 0) + 1;
+        }
         stats.highestRemainingProgress = Math.max(stats.highestRemainingProgress || 0, Math.floor(patch.remainingProgress));
     }
     

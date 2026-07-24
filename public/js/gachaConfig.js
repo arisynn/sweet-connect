@@ -1,6 +1,8 @@
 // ===================== GACHA CONFIG & RARITY =====================
 const GACHA_PRIZES_COIN = [
-    { id: 'gem10', name: '10 Gem', type: 'item', item: 'gems', val: 10, desc: 'Jackpot Gem (Jarang)!', iconName: 'IconGem' },
+    { id: 'gem50', name: '50 Gem', type: 'item', item: 'gems', val: 50, desc: 'Super Jackpot Gem!', iconName: 'IconGem' },
+    { id: 'gem25', name: '25 Gem', type: 'item', item: 'gems', val: 25, desc: 'Jackpot Gem!', iconName: 'IconGem' },
+    { id: 'gem10', name: '10 Gem', type: 'item', item: 'gems', val: 10, desc: 'Banyak Gem (Jarang)!', iconName: 'IconGem' },
     { id: 'gem5', name: '5 Gem', type: 'item', item: 'gems', val: 5, desc: 'Mantap dapat banyak Gem!', iconName: 'IconGem' },
     { id: 'gem3', name: '3 Gem', type: 'item', item: 'gems', val: 3, desc: 'Mantap dapat Gem!', iconName: 'IconGem' },
     { id: 'gem1', name: '1 Gem', type: 'item', item: 'gems', val: 1, desc: 'Lumayan dapat Gem.', iconName: 'IconGem' },
@@ -15,16 +17,18 @@ const GACHA_PRIZES_COIN = [
 
 const GACHA_RARITY = {
     coin: [
-        { id: 'gem10', chance: 3.0 },
-        { id: 'gem5', chance: 11.0 },
-        { id: 'gem3', chance: 26.0 },
-        { id: 'gem1', chance: 46.0 },
-        { id: 'c1000', chance: 48.0 },
-        { id: 'c500', chance: 53.0 },
-        { id: 'c200', chance: 63.0 },
-        { id: 'c100', chance: 73.0 },
-        { id: 'hint5', chance: 82.0 },
-        { id: 'shuffle5', chance: 91.0 },
+        { id: 'gem50', chance: 0.2 },
+        { id: 'gem25', chance: 1.0 },
+        { id: 'gem10', chance: 4.0 },
+        { id: 'gem5', chance: 12.0 },
+        { id: 'gem3', chance: 22.0 },
+        { id: 'gem1', chance: 37.0 },
+        { id: 'c1000', chance: 40.0 },
+        { id: 'c500', chance: 46.0 },
+        { id: 'c200', chance: 56.0 },
+        { id: 'c100', chance: 66.0 },
+        { id: 'hint5', chance: 78.0 },
+        { id: 'shuffle5', chance: 90.0 },
         { id: 'hp1', chance: 100.0 },
     ]
 };

@@ -168,7 +168,7 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
                         </div>
                     </div>
                     <div className={`shrink-0 flex items-center justify-center font-black text-xs px-2.5 py-1.5 rounded-xl shadow-sm ${claimed ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gradient-to-br from-pink-500 to-rose-500 text-white border border-pink-400'}`}>
-                        <div className="flex gap-1"><RewardBadge type="gacha_vouchers" amount={1} /><RewardBadge type="gems" amount={5} /></div>
+                        <div className="flex gap-1"><RewardBadge type="gacha_vouchers" amount={3} /><RewardBadge type="gems" amount={15} /></div>
                     </div>
                 </div>
                 
@@ -191,7 +191,7 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
                 ) : allCompleted && !claimed ? (
                     <button onClick={() => handleClaim('daily_all', false)} className="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black rounded-xl text-[13px] shadow-[0_4px_12px_-2px_rgba(244,63,94,0.4)] active:scale-95 transition-transform flex justify-center items-center gap-2 relative overflow-hidden group mt-1">
                         <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>
-                        <span className="relative z-10">Klaim 1 Voucher</span>
+                        <span className="relative z-10">Klaim Hadiah</span>
                     </button>
                 ) : null}
             </div>
@@ -218,7 +218,7 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
                         </div>
                     </div>
                     <div className={`shrink-0 flex items-center justify-center font-black text-xs px-2.5 py-1.5 rounded-xl shadow-sm ${claimed ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gradient-to-br from-pink-500 to-rose-500 text-white border border-pink-400'}`}>
-                        <div className="flex gap-1"><RewardBadge type="gacha_vouchers" amount={10} /><RewardBadge type="gems" amount={20} /></div>
+                        <div className="flex gap-1"><RewardBadge type="gacha_vouchers" amount={15} /><RewardBadge type="gems" amount={50} /></div>
                     </div>
                 </div>
                 
@@ -241,7 +241,7 @@ const DailyReward = ({ profile, onClaim, onClose, activeTheme }) => {
                 ) : allCompleted && !claimed ? (
                     <button onClick={() => handleClaim('weekly_all', true)} className="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black rounded-xl text-[13px] shadow-[0_4px_12px_-2px_rgba(244,63,94,0.4)] active:scale-95 transition-transform flex justify-center items-center gap-2 relative overflow-hidden group mt-1">
                         <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>
-                        <span className="relative z-10">Klaim 5 Voucher</span>
+                        <span className="relative z-10">Klaim Hadiah</span>
                     </button>
                 ) : null}
             </div>

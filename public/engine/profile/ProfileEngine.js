@@ -8,7 +8,7 @@ window.ProfileEngine = {
         settings: { isMuted: false, audio: { music: 0.5, sfx: 1 } },
         dailyReward: { lastClaimDate: null }, achievements: {}, milestones: {}, rewardProgress: 0,
         statistics: { totalGames: 0, highestScore: 0, totalCoinsEarned: 0, totalMysteryBoxOpened: 0, totalMatches: 0, totalPlayTimeMs: 0 },
-        dailyMissions: { date: null, login: false, play1: false, clear3: false, progressPlay: 0, progressClear: 0, repeatable: { typeIndex: 0, progress: 0, readyCount: 0 } },
+        dailyMissions: { date: null, login: false, play1: false, clear3: false, progressPlay: 0, progressClear: 0 },
         weeklyMissions: { week: null, activeIds: [], progress: {}, claimed: {}, allClaimed: false, forceResetV2: true },
         profileVersion: 6, lastUpdated: Date.now()
     }),
@@ -33,7 +33,6 @@ window.ProfileEngine = {
         }
         if (gameData.profileVersion < 5) {
             if (!gameData.weeklyMissions) gameData.weeklyMissions = { week: null, activeIds: [], progress: {}, claimed: {}, allClaimed: false, forceResetV2: true };
-            if (gameData.dailyMissions && !gameData.dailyMissions.repeatable) gameData.dailyMissions.repeatable = { typeIndex: 0, progress: 0, readyCount: 0 };
             gameData.profileVersion = 5;
         }
         if (gameData.profileVersion < 6) {

@@ -30,7 +30,6 @@ const getDefaultProfile = () => ({
         activeIds: [],
         progress: {},
         claimed: {},
-        repeatable: { typeIndex: 0, progress: 0, readyCount: 0 },
         allClaimed: false,
         forceResetV2: true
     },
@@ -112,9 +111,6 @@ const validateAndMigrateProfile = (parsed) => {
         if (!parsed.weeklyMissions) parsed.weeklyMissions = {
             week: null, activeIds: [], progress: {}, claimed: {}, allClaimed: false, forceResetV2: true
         };
-        if (parsed.dailyMissions && !parsed.dailyMissions.repeatable) {
-            parsed.dailyMissions.repeatable = { typeIndex: 0, progress: 0, readyCount: 0 };
-        }
         parsed.profileVersion = 5;
     }
     if (parsed.profileVersion < 6) {
