@@ -5,8 +5,8 @@
   "price": 0,
   "currency": "coins",
   "type": "standar",
-  "splashFrames": 8,
-  "splashFps": 4,
+  "splashFrames": 6,
+  "splashFps": 6,
   "splashLoop": true,
   "colors": {
     "bg": "#fffbeb",
