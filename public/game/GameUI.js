@@ -1,3 +1,124 @@
+const PanoramaBackground = ({ src, themeConfig, fallbackOpacity = 0.8 }) => {
+    const [imgWidth, setImgWidth] = React.useState(0);
+    const [imgHeight, setImgHeight] = React.useState(0);
+    const [motionType, setMotionType] = React.useState("static");
+    const [reducedMotion, setReducedMotion] = React.useState(false);
+    const [containerSize, setContainerSize] = React.useState({ w: 400, h: 150 });
+    
+    const containerRef = React.useRef(null);
+    
+    React.useEffect(() => {
+        const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+        setReducedMotion(mediaQuery.matches);
+        const handler = (e) => setReducedMotion(e.matches);
+        mediaQuery.addEventListener("change", handler);
+        
+        const observer = new ResizeObserver((entries) => {
+            if (entries[0]) {
+                setContainerSize({
+                    w: entries[0].contentRect.width,
+                    h: entries[0].contentRect.height
+                });
+            }
+        });
+        
+        if (containerRef.current) {
+            observer.observe(containerRef.current);
+        }
+        
+        return () => {
+            mediaQuery.removeEventListener("change", handler);
+            observer.disconnect();
+        };
+    }, []);
+
+    const handleImageLoad = (e) => {
+        const { naturalWidth, naturalHeight } = e.target;
+        setImgWidth(naturalWidth);
+        setImgHeight(naturalHeight);
+        
+        let type = "static";
+        if (themeConfig?.continueCard?.motion) {
+            type = themeConfig.continueCard.motion;
+        } else {
+            const containerRatio = containerSize.w / (containerSize.h || 1);
+            const imageRatio = naturalWidth / (naturalHeight || 1);
+            if (imageRatio > containerRatio * 1.3) {
+                type = "pingpong";
+            }
+        }
+        setMotionType(type);
+    };
+
+    React.useEffect(() => {
+        if (imgWidth && imgHeight && !themeConfig?.continueCard?.motion) {
+            const containerRatio = containerSize.w / (containerSize.h || 1);
+            const imageRatio = imgWidth / (imgHeight || 1);
+            setMotionType(imageRatio > containerRatio * 1.3 ? "pingpong" : "static");
+        }
+    }, [containerSize.w, containerSize.h, imgWidth, imgHeight, themeConfig]);
+
+    const scale = imgHeight ? containerSize.h / imgHeight : 1;
+    const renderedWidth = imgWidth * scale;
+    const travelDistance = Math.max(0, renderedWidth - containerSize.w);
+    const isActive = travelDistance > 0 && motionType !== "static" && !reducedMotion;
+
+    if (isActive && motionType === "loop") {
+        const duration = Math.max(10, renderedWidth / 20);
+        return (
+            <div ref={containerRef} className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden flex">
+                <style dangerouslySetInnerHTML={{__html: `
+                    @keyframes loopPanorama {
+                        0% { transform: translateX(0); }
+                        100% { transform: translateX(-50%); }
+                    }
+                `}} />
+                <div className="flex h-full min-w-max" style={{ animation: `loopPanorama ${duration}s linear infinite`, opacity: fallbackOpacity, width: `${renderedWidth * 2}px` }}>
+                    <img src={src} className="h-full object-cover shrink-0 max-w-none" style={{ width: `${renderedWidth}px` }} alt="" onLoad={handleImageLoad} />
+                    <img src={src} className="h-full object-cover shrink-0 max-w-none" style={{ width: `${renderedWidth}px` }} alt="" />
+                </div>
+            </div>
+        );
+    }
+
+    if (isActive && motionType === "pingpong") {
+        const duration = Math.max(10, travelDistance / 20);
+        return (
+            <div ref={containerRef} className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
+                <style dangerouslySetInnerHTML={{__html: `
+                    @keyframes pingpongPanorama {
+                        0% { transform: translateX(0); }
+                        100% { transform: translateX(-${travelDistance}px); }
+                    }
+                `}} />
+                <img 
+                    src={src} 
+                    onLoad={handleImageLoad}
+                    className="absolute inset-0 h-full max-w-none"
+                    style={{
+                        animation: `pingpongPanorama ${duration}s ease-in-out infinite alternate`,
+                        opacity: fallbackOpacity,
+                        width: `${renderedWidth}px`
+                    }}
+                    alt="" 
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div ref={containerRef} className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-hidden">
+            <img 
+                src={src} 
+                onLoad={handleImageLoad}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ opacity: fallbackOpacity }}
+                alt="" 
+            />
+        </div>
+    );
+};
+
 const GameUI = () => {
     const ctx = React.useContext(GameContext);
     
@@ -18,6 +139,35 @@ const GameUI = () => {
     } = ctx;
 
     const [showNotificationPrompt, setShowNotificationPrompt] = React.useState(false);
+    const [regenTimeLeft, setRegenTimeLeft] = React.useState(null);
+
+    React.useEffect(() => {
+        if (hp >= 5 || !profile?.lastHpRegenTime) {
+            setRegenTimeLeft(null);
+            return;
+        }
+        
+        const REGEN_TIME_MS = 15 * 60 * 1000;
+        
+        const updateTimer = () => {
+            const now = Date.now();
+            const elapsed = now - profile.lastHpRegenTime;
+            const timeLeft = Math.max(0, REGEN_TIME_MS - (elapsed % REGEN_TIME_MS));
+            setRegenTimeLeft(timeLeft);
+        };
+        
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [profile?.lastHpRegenTime, hp]);
+
+    const formatRegenTime = (ms) => {
+        if (ms === null) return "";
+        const totalSeconds = Math.floor(ms / 1000);
+        const m = Math.floor(totalSeconds / 60);
+        const s = totalSeconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
 
     React.useEffect(() => {
         if (gameState === 'LOBBY_MAIN' && profile) {
@@ -55,10 +205,15 @@ const GameUI = () => {
                         {/* Top Row: HP, Level, Controls */}
                         <div className="flex items-center justify-between w-full">
                             {/* HP Left */}
-                            <div className="flex items-center bg-white px-2 py-0 rounded-full border theme-border shadow-sm shrink-0 min-w-[60px]">
-                                <IconHeart className="w-4 h-4 theme-text-active mr-1" />
-                                <span className="text-sm font-bold theme-text">{hp}</span>
-                                <div onClick={handleBuyHpInGame} className="w-3.5 h-3.5 bg-emerald-400 text-white rounded-full flex items-center justify-center text-[10px] font-bold ml-1 shadow-sm cursor-pointer">+</div>
+                            <div className="flex items-center gap-1">
+                                <div className="flex items-center bg-white px-2 py-0 rounded-full border theme-border shadow-sm shrink-0 min-w-[60px]">
+                                    <IconHeart className="w-4 h-4 theme-text-active mr-1" />
+                                    <span className="text-sm font-bold theme-text">{hp}</span>
+                                    <div onClick={handleBuyHpInGame} className="w-3.5 h-3.5 bg-emerald-400 text-white rounded-full flex items-center justify-center text-[10px] font-bold ml-1 shadow-sm cursor-pointer">+</div>
+                                </div>
+                                {regenTimeLeft !== null && (
+                                    <span className="text-[10px] font-bold text-gray-500 bg-white/80 px-1.5 rounded-full border theme-border drop-shadow-sm">{formatRegenTime(regenTimeLeft)}</span>
+                                )}
                             </div>
 
                             {/* Level Centered */}
@@ -289,46 +444,26 @@ const GameUI = () => {
 
                         <div className="flex-1 px-4 pb-4 flex flex-col gap-2.5 overflow-y-auto custom-scroll relative z-10">
                             
-                            {/* Hero Card / Play Button */}
+                                                                                    {/* Hero Card / Play Button */}
                             <div className="relative w-full shrink-0 animate-card-enter">
                                 <button onClick={() => {
-                                    let session = profile.activeSession;
-
-                                    // Check if session board is corrupted (all tiles same)
-                                    let isCorrupted = false;
-                                    if (session && session.board) {
-                                        let unique = new Set();
-                                        session.board.forEach(r => r.forEach(c => { if (c !== 0) unique.add(c); }));
-                                        if (unique.size <= 1) isCorrupted = true;
-                                    }
-
-                                    if (session && session.level === profile.currentLevel && !isCorrupted) {
-                                        let boardToLoad = session.board;
-                                        let matchedTilesToLoad = session.matchedTiles || [];
-                                        
-                                        prepareLevel(session.level, boardToLoad, session.activeTheme || activeThemeRef.current, session.score, profile.hp, profile.hints, profile.shuffles, session.progress, matchedTilesToLoad, session.selectedTile, session.comboCount || 0, session.lastMatchTime || 0);
-                                    } else {
-                                        prepareLevel(profile.currentLevel);
-                                    }
+                                    prepareLevel(profile.currentLevel);
                                 }} className="w-full overflow-hidden bg-gradient-to-br from-pink-500 to-rose-500 rounded-[1.25rem] p-4 shadow-md flex flex-col items-start relative active:scale-[0.98] transition-transform">
                                     {THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['continue'] && (
-                                        <img src={THEMES[activeThemeRef.current || activeTheme].menuBackgrounds['continue']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0 opacity-80" alt=""/>
+                                        <PanoramaBackground 
+                                            src={THEMES[activeThemeRef.current || activeTheme].menuBackgrounds['continue']} 
+                                            themeConfig={THEMES[activeThemeRef.current || activeTheme]} 
+                                            fallbackOpacity={0.8} 
+                                        />
                                     )}
                                     <div className="theme-text-active bg-white p-2.5 rounded-xl mb-3 shadow-sm relative z-10">
                                         <IconPlay className="w-5 h-5"/>
                                     </div>
-                                    <span className="text-white text-xl font-bold mb-0.5 tracking-wide relative z-10">{profile.currentLevel > 1 || profile.activeSession ? 'Lanjutkan Main' : 'Main Sekarang'}</span>
+                                    <span className="text-white text-xl font-bold mb-0.5 tracking-wide relative z-10">Main Sekarang</span>
                                     <span className="text-pink-100 text-sm font-medium relative z-10">Level {profile.currentLevel}</span>
-                                    
-                                    <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/20 z-10">{lobbyBadgeText}</div>
-                                    
-                                    {/* Decorative circles */}
-                                    <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full pointer-events-none z-0"></div>
-                                    <div className="absolute -right-8 top-2 w-16 h-16 bg-white/10 rounded-full pointer-events-none z-0"></div>
                                 </button>
                             </div>
                             
-                            {/* Chest Section */}
                             <div className="animate-card-enter stagger-1">
                                 <ChestSection activeTheme={activeThemeRef.current || activeTheme} profile={profile} setProfile={setProfile} saveProfile={saveProfile} playerName={playerName} setSweetMessage={setSweetMessage} />
                             </div>
@@ -431,74 +566,79 @@ const GameUI = () => {
                         <h2 className="text-2xl font-black theme-text mb-8 tracking-widest uppercase">Dijeda</h2>
                         <button onClick={() => { AudioEngine.uiStartGame(); setGameState('PLAYING'); }} className="btn-modern bg-gray-900 text-white w-full max-w-[260px] py-4 rounded-xl font-bold mb-4 shadow-md">Lanjutkan</button>
                         <button onClick={() => {
-                            // Simpan state saat keluar dari pause menu
-                            const sessionData = saveCurrentSession(true);
-                            const statsProfile = flushStats(profile, { scoreAchieved: score, activeSession: sessionData });
+                            const statsProfile = flushStats(profile, { scoreAchieved: score, activeSession: null });
                             const newProfile = { ...statsProfile, hp, hints, shuffles, currentLevel: level, currentScore: score };
                             setProfile(newProfile); saveProfile(playerName, newProfile);
                             AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN');
-                        }} className="btn-modern bg-gray-100 text-gray-600 w-full max-w-[260px] py-4 rounded-xl font-bold">Simpan & Keluar ke Menu</button>
+                        }} className="btn-modern bg-gray-100 text-gray-600 w-full max-w-[260px] py-4 rounded-xl font-bold">Keluar ke Menu</button>
                     </div>
                 )}
 
                 {gameState === 'GAMEOVER' && (
-                    <div className="absolute inset-0 theme-bg flex flex-col items-center justify-center z-[100] p-6">
-                        <h2 className="text-2xl font-black theme-text mb-8 uppercase tracking-widest">Permainan Berakhir</h2>
-                        <div className="w-full max-w-[300px] flex flex-col gap-3 mb-8">
-                            <div className="flex justify-between bg-white border border-gray-100 p-4 rounded-2xl shadow-sm">
-                                <span className="text-gray-500 font-bold text-sm">Skor Akhir</span>
-                                <span className="theme-text-active font-black text-lg">{formatNumber(score)}</span>
+                    <div className="absolute inset-0 theme-bg flex flex-col items-center justify-center z-[100] px-8">
+                        <h2 className="text-3xl font-black theme-text mb-2 tracking-widest text-center uppercase">Waktu Habis</h2>
+                        <p className="text-sm theme-text-active font-bold text-center mb-6 max-w-[280px]">"Waktunya habis, coba lagi ya sayang."</p>
+                        
+                        <div className="bg-white/80 p-5 rounded-3xl w-full max-w-[300px] mb-8 shadow-sm flex flex-col gap-4 border border-white/50 backdrop-blur-md">
+                            <div className="flex flex-col items-center border-b border-gray-100 pb-4 mb-2">
+                                <span className="font-bold text-gray-500 text-sm mb-1">Skor Level</span>
+                                <span className="font-black text-4xl theme-text-active">{formatNumber(window.lastLevelStats?.score || 0)}</span>
                             </div>
-                            <div className="flex justify-between bg-white border border-gray-100 p-4 rounded-2xl shadow-sm">
-                                <span className="text-gray-500 font-bold text-sm">Berhenti di Level</span>
-                                <span className="theme-text font-black text-lg">{level}</span>
+                            
+                            <div className="flex justify-between items-center">
+                                <span className="font-semibold text-gray-700 text-sm">Maksimal Kombo</span>
+                                <span className="font-black text-orange-500 text-base">x{window.lastLevelStats?.combo || 0}</span>
                             </div>
-                            <div className="flex justify-between bg-amber-50 border border-amber-100 p-4 rounded-2xl shadow-sm">
-                                <span className="text-amber-600 font-bold text-sm flex items-center gap-1"><IconCoin className="w-4 h-4" /> Didapat</span>
-                                <span className="text-amber-500 font-black text-lg flex items-center gap-1">+{calculateCoinReward(score)} <IconCoin/></span>
+                            <div className="flex justify-between items-center">
+                                <span className="font-semibold text-gray-700 text-sm">Pasangan Ditemukan</span>
+                                <span className="font-black text-sky-500 text-base">{window.lastLevelStats?.matches || 0}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-rose-50 -mx-2 px-2 py-1.5 rounded-xl border border-rose-100">
+                                <span className="font-bold text-rose-600 text-sm flex items-center gap-1"><IconHeart className="w-3.5 h-3.5" /> Nyawa</span>
+                                <span className="font-black text-rose-500 text-base">{window.lastLevelStats?.hpRemaining || 0} / 5</span>
                             </div>
                         </div>
-                        {isNewRecord && <div className="bg-yellow-400 text-white font-black px-6 py-2 rounded-full mb-6 text-sm shadow-md uppercase tracking-wider">Rekor Baru!</div>}
-                        <p className="text-xs text-red-500 font-bold mb-1">Yah, nyawanya habis sayang, mulai dari level 1 lagi ya.</p>
-                        <p className="text-[11px] text-gray-400 font-medium mb-4">Tenang cintaku, item, koin, gem & tema kamu tetap aman kok.</p>
-                        <button onClick={() => prepareLevel(1)} className="btn-modern bg-pink-500 text-white w-full max-w-[300px] py-4 rounded-xl font-bold shadow-md mb-3">Main Lagi (Level 1)</button>
+
+                        <button onClick={() => prepareLevel(level)} className="btn-modern bg-pink-500 text-white w-full max-w-[300px] py-4 rounded-xl font-bold shadow-md mb-3">Coba Lagi Level {level}</button>
                         <button onClick={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} className="btn-modern bg-gray-100 text-gray-600 w-full max-w-[300px] py-4 rounded-xl font-bold">Kembali ke Menu</button>
                     </div>
                 )}
 
                 {gameState === 'WON' && (
                     <div className="absolute inset-0 theme-bg flex flex-col items-center justify-center z-[100] px-8">
-                        <h2 className="text-3xl font-black theme-text mb-2 tracking-widest text-center">Level {level} Selesai!</h2>
+                        <h2 className="text-3xl font-black theme-text mb-2 tracking-widest text-center uppercase">Level {level} Selesai</h2>
                         {sweetMessage && <p className="text-sm theme-text-active font-bold text-center mb-6 max-w-[280px]">"{sweetMessage}"</p>}
                         
-                        <div className="bg-white/80 p-5 rounded-2xl w-full max-w-[300px] mb-8 shadow-sm flex flex-col gap-3">
-                            <h3 className="font-bold text-gray-500 text-center mb-2 border-b pb-2">Statistik Level Ini</h3>
+                        <div className="bg-white/80 p-5 rounded-3xl w-full max-w-[300px] mb-8 shadow-sm flex flex-col gap-4 border border-white/50 backdrop-blur-md">
+                            <div className="flex flex-col items-center border-b border-gray-100 pb-4 mb-2">
+                                <span className="font-bold text-gray-500 text-sm mb-1">Skor Level</span>
+                                <span className="font-black text-4xl theme-text-active">{formatNumber(window.lastLevelStats?.score || 0)}</span>
+                            </div>
+                            
                             <div className="flex justify-between items-center">
-                                <span className="font-semibold text-gray-700">Waktu Main:</span>
-                                <span className="font-black theme-text">{window.lastLevelStats?.timeSec || 0}s</span>
+                                <span className="font-semibold text-gray-700 text-sm">Maksimal Kombo</span>
+                                <span className="font-black text-orange-500 text-base">x{window.lastLevelStats?.combo || 0}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="font-semibold text-gray-700">Kesalahan:</span>
-                                <span className="font-black text-rose-500">{window.lastLevelStats?.wrong || 0}</span>
+                                <span className="font-semibold text-gray-700 text-sm">Waktu Tersisa</span>
+                                <span className="font-black theme-text text-base">{window.lastLevelStats?.remainingSeconds || 0}s</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="font-semibold text-gray-700">Sisa Nyawa:</span>
-                                <span className="font-black text-emerald-500">{window.lastLevelStats?.hpRemaining || 0}</span>
+                                <span className="font-semibold text-gray-700 text-sm">Kesalahan</span>
+                                <span className="font-black text-rose-500 text-base">{window.lastLevelStats?.wrong || 0}</span>
                             </div>
-                            <div className="flex justify-between items-center">
-                                <span className="font-semibold text-gray-700">Maksimal Kombo:</span>
-                                <span className="font-black text-orange-500">x{window.lastLevelStats?.combo || 0}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="font-semibold text-gray-700">Bantuan Dipakai:</span>
-                                <span className="font-black text-sky-500">{(window.lastLevelStats?.hints || 0) + (window.lastLevelStats?.shuffles || 0)}</span>
-                            </div>
+                            
+                            {(!window.lastLevelStats?.wrong && window.lastLevelStats?.hints === 0 && window.lastLevelStats?.shuffles === 0) && (
+                                <div className="mt-2 bg-emerald-50 text-emerald-600 font-black text-center py-2 rounded-xl text-sm border border-emerald-100 tracking-wider">
+                                    FLAWLESS
+                                </div>
+                            )}
                         </div>
 
                         <button onClick={() => {
                             const nextLevel = level + 1;
                             const newB = generateBoard(activeThemeRef.current, nextLevel);
-                            prepareLevel(nextLevel, newB, activeThemeRef.current, score, hp, hints, shuffles);
+                            prepareLevel(nextLevel, newB, activeThemeRef.current, 0, hp, hints, shuffles);
                             AudioEngine.uiStartGame(); setGameState('PLAYING');
                         }} className="btn-modern bg-pink-500 text-white w-full max-w-[300px] py-4 rounded-xl font-bold shadow-md text-lg mb-3">
                             Lanjut ke Level {level + 1}

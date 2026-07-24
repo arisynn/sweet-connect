@@ -158,32 +158,7 @@ const App = () => {
     }, []);
 
     const saveCurrentSession = useCallback((returnSession = false) => {
-        if (gameStateRef.current !== 'PLAYING' && gameStateRef.current !== 'PAUSED') return null;
-        const sessionData = {
-            level: levelRef.current,
-            score: scoreRef.current,
-            hp: hpRef.current,
-            hints: hintsRef.current,
-            shuffles: shufflesRef.current,
-            progress: progressRef.current,
-            board: boardRef.current,
-            matchedTiles: matchedTilesRef.current,
-            selectedTile: selectedTileRef.current,
-            comboCount: comboCountRef.current,
-            lastMatchTime: lastMatchTimeRef.current,
-            activeTheme: activeThemeRef.current,
-        };
-        // CLOUD-ONLY: sessionData is returned to be saved directly to the profile object
-        return sessionData;
-    }, []);
-
-    const clearActiveSession = useCallback(() => {
-        setProfile(p => {
-            if(!p) return p;
-            const newP = { ...p, activeSession: null };
-            // we do NOT saveProfile here because it's usually called together with level end which does saveProfile
-            return newP;
-        });
+        return null;
     }, []);
 
     // Periodic auto-save and tab lifecycle save
@@ -222,6 +197,53 @@ const App = () => {
             clearInterval(profileSaveTimer);
         };
     }, [saveCurrentSession, profile, playerName]);
+
+    useEffect(() => {
+        if (!playerName) return;
+        const REGEN_TIME_MS = 15 * 60 * 1000;
+        
+        const checkHpRegen = () => {
+            const currentProfile = profileRef.current;
+            const currentHp = hpRef.current;
+            
+            if (!currentProfile) return;
+            
+            if (currentHp >= 5) {
+                if (currentProfile.lastHpRegenTime) {
+                    const newProfile = { ...currentProfile, lastHpRegenTime: null };
+                    setProfile(newProfile);
+                    saveProfile(playerName, newProfile);
+                }
+                return;
+            }
+
+            if (!currentProfile.lastHpRegenTime) {
+                const newProfile = { ...currentProfile, lastHpRegenTime: Date.now() };
+                setProfile(newProfile);
+                saveProfile(playerName, newProfile);
+                return;
+            }
+
+            const now = Date.now();
+            const elapsed = now - currentProfile.lastHpRegenTime;
+            const hpToAdd = Math.floor(elapsed / REGEN_TIME_MS);
+            
+            if (hpToAdd > 0) {
+                const newHp = Math.min(5, currentHp + hpToAdd);
+                const remainderMs = elapsed % REGEN_TIME_MS;
+                const newLastRegen = newHp >= 5 ? null : (now - remainderMs);
+                
+                setHp(newHp);
+                const newProfile = { ...currentProfile, hp: newHp, lastHpRegenTime: newLastRegen };
+                setProfile(newProfile);
+                saveProfile(playerName, newProfile);
+            }
+        };
+        
+        checkHpRegen();
+        const interval = setInterval(checkHpRegen, 5000);
+        return () => clearInterval(interval);
+    }, [playerName]);
 
     // Save immediately after important state changes
     useEffect(() => {
@@ -636,19 +658,31 @@ const handleLoginSubmit = async (isColdStart = false) => {
         }
         if (isGameOver) {
             AudioEngine.gameOver();
-            const coinsEarned = calculateCoinReward(score);
             const statsProfile = flushStats(profile, { scoreAchieved: score });
-            // Game Over hanya mereset Level & Skor berjalan. HP, Hint, Shuffle, Koin, Gem,
-            // Tema, dan semua progres (achievement/statistik/reward) TIDAK pernah direset.
-            missionProgressRef.current = { combo: 0, addCombo: 0, match: 0, hints: 0, shuffles: 0, score: 0 };
             
-            if (!statsProfile.statistics) statsProfile.statistics = {};
-            statsProfile.statistics.totalCoinsEarned = (statsProfile.statistics.totalCoinsEarned || 0) + coinsEarned;
+            // Kurangi HP karena GAME OVER
+            const newHp = Math.max(0, hp - 1);
+            setHp(newHp);
 
+            // Capture stats before reset
+            window.lastLevelStats = {
+                score: missionProgressRef.current.score || 0,
+                matches: missionProgressRef.current.match || 0,
+                combo: missionProgressRef.current.combo || 0,
+                hints: missionProgressRef.current.hints || 0,
+                shuffles: missionProgressRef.current.shuffles || 0,
+                wrong: missionProgressRef.current.wrong || 0,
+                timeSec: levelStartTime ? Math.max(0, Math.floor((Date.now() - levelStartTime) / 1000)) : 0,
+                hpRemaining: newHp
+            };
+
+            // Game Over tidak mereset level, skor, atau item.
+            missionProgressRef.current = { combo: 0, addCombo: 0, match: 0, hints: 0, shuffles: 0, score: 0, wrong: 0 };
+            
             const newProfile = { 
                 ...statsProfile, 
-                coins: statsProfile.coins + coinsEarned,
-                currentLevel: 1, 
+                hp: newHp,
+                currentLevel: level, 
                 currentScore: 0,
                 highestLevel: Math.max(statsProfile.highestLevel || 1, level)
             };
@@ -656,12 +690,26 @@ const handleLoginSubmit = async (isColdStart = false) => {
             setGameState('GAMEOVER');
         } else {
             AudioEngine.levelClear(); 
-            const timeElapsed = (167 - Math.max(0, getSecondsLeft(progress, level))) * 1000;
+            const remainingSeconds = Math.max(0, getSecondsLeft(progress, level));
+            const timeElapsed = (167 - remainingSeconds) * 1000;
             const nextLevel = level + 1;
             let isFlawless = (!missionProgressRef.current.wrong && missionProgressRef.current.hints === 0 && missionProgressRef.current.shuffles === 0);
             
+            const timeBonus = calculateTimeBonus(remainingSeconds);
+            let finalScore = score + timeBonus;
+            const flawlessBonus = isFlawless ? calculateFlawlessBonus(finalScore) : 0;
+            finalScore += flawlessBonus;
+            
+            const bonusGained = timeBonus + flawlessBonus;
+            if (bonusGained > 0) {
+                missionProgressRef.current.score += bonusGained;
+                setProfile(p => updateMissions(p, "score", bonusGained));
+            }
+            
+            setScore(finalScore);
+
             let p = flushStats(profile, { 
-                scoreAchieved: score, 
+                scoreAchieved: finalScore, 
                 timeElapsedMs: timeElapsed,
                 remainingProgress: progress,
                 flawlessDelta: isFlawless ? 1 : 0
@@ -688,12 +736,14 @@ const handleLoginSubmit = async (isColdStart = false) => {
             
             // Capture stats before reset
             window.lastLevelStats = {
+                score: missionProgressRef.current.score || 0,
                 matches: missionProgressRef.current.match || 0,
                 combo: missionProgressRef.current.combo || 0,
                 hints: missionProgressRef.current.hints || 0,
                 shuffles: missionProgressRef.current.shuffles || 0,
                 wrong: missionProgressRef.current.wrong || 0,
                 timeSec: levelStartTime ? Math.max(0, Math.floor((Date.now() - levelStartTime) / 1000)) : 0,
+                remainingSeconds: remainingSeconds,
                 hpRemaining: hp
             };
             
@@ -706,7 +756,7 @@ const handleLoginSubmit = async (isColdStart = false) => {
             const newProfile = {
                 ...progressProfile,
                 currentLevel: nextLevel,
-                currentScore: score,
+                currentScore: 0,
                 hp: hp,
                 hints: hints,
                 shuffles: shuffles,
@@ -729,11 +779,13 @@ const handleLoginSubmit = async (isColdStart = false) => {
         const b = providedBoard || generateBoard(currentT, startLevel);
         setBoard(b); setLevel(startLevel);
         
-        // Gunakan nilai yang di pass, jika tidak ambil dari profile saat ini (melanjutkan main)
-        setScore(startScore !== null ? startScore : profile.currentScore);
+        // Gunakan nilai yang di pass, jika tidak ambil dari profile saat ini
+        // Score selalu dimulai dari 0 kecuali saat melanjutkan dari session.
+        setScore(startScore !== null ? startScore : 0);
         setHp(startHp !== null ? startHp : profile.hp);
         setHints(startHints !== null ? startHints : profile.hints);
         setShuffles(startShuffles !== null ? startShuffles : profile.shuffles);
+
 
         comboCountRef.current = startComboCount; 
         lastMatchTimeRef.current = startLastMatchTime;
@@ -812,6 +864,7 @@ const handleLoginSubmit = async (isColdStart = false) => {
                 missionProgressRef.current.match += 1;
                 setProfile(prev => updateMissions(prev, 'match', 1));
                 const now = Date.now();
+                const timeSinceLastMatchMs = lastMatchTimeRef.current > 0 ? now - lastMatchTimeRef.current : 10000;
                 comboCountRef.current = (now - lastMatchTimeRef.current <= COMBO_WINDOW_MS) ? comboCountRef.current + 1 : 1;
                 lastMatchTimeRef.current = now;
                 
@@ -827,17 +880,18 @@ const handleLoginSubmit = async (isColdStart = false) => {
                     combosPendingRef.current += 1;
                 }
                 
-                const comboBonus = getComboBonus(comboCountRef.current);
-                if (comboBonus > 0) {
-                    setComboDisplay({ count: comboCountRef.current, bonus: comboBonus, r, c });
-                    setTimeout(() => setComboDisplay(null), 900);
-                }
-
-                const gained = 10 + (comboBonus || 0); missionProgressRef.current.score += gained; setProfile(p => updateMissions(p, "score", gained));
-
                 setScore(s => {
                     const currentBest = profileRef.current?.statistics?.highestScore || 0;
-                    const { newScore, isNewRecord } = applyMatchScore(s, comboBonus, currentBest);
+                    const { newScore, gained, isNewRecord } = applyMatchScore(s, timeSinceLastMatchMs, comboCountRef.current, currentBest);
+                    
+                    if (comboCountRef.current > 1) {
+                        setComboDisplay({ count: comboCountRef.current, bonus: gained, r, c });
+                        setTimeout(() => setComboDisplay(null), 900);
+                    }
+                    
+                    missionProgressRef.current.score += gained;
+                    setProfile(p => updateMissions(p, "score", gained));
+
                     if (isNewRecord) setIsNewRecord(true);
                     return newScore;
                 });
@@ -875,32 +929,17 @@ const handleLoginSubmit = async (isColdStart = false) => {
         AudioEngine.timeout(); setShowTimeoutFlash(true);
         setTimeout(() => {
             setShowTimeoutFlash(false);
-            if (hp > 1) { 
-                setHp(h => h - 1); 
-                
-                // Simpan pengurangan HP ke profil sekalian supaya nggak hilang direfresh
-                const statsProfile = flushStats(profile, { scoreAchieved: score });
-                const newProfile = { ...statsProfile, hp: hp - 1 };
-                setProfile(newProfile); saveProfile(playerName, newProfile);
-                
-                // Reset statistik level karena ini percobaan ulang
-                missionProgressRef.current = { combo: 0, addCombo: 0, match: 0, hints: 0, shuffles: 0, score: 0, wrong: 0 };
-                
-                // Buat ulang papan dan reset state
-                const newB = generateBoard(activeThemeRef.current, level);
-                prepareLevel(level, newB, activeThemeRef.current, score, hp - 1, hints, shuffles, 100, [], null, 0, 0);
-            } 
-            else {
-                triggerLevelEndStats(true);
-            }
+            triggerLevelEndStats(true); // Always GAME OVER
         }, 1000);
     };
 
     const handleShuffleClick = () => { 
         if (gameState !== 'PLAYING') return;
         if (shuffles > 0) { 
+            comboCountRef.current = 0; // Memutus combo aktif
             setShuffles(s => s - 1); missionProgressRef.current.shuffles += 1; setProfile(p => updateMissions(p, 'useShuffle', 1)); shufflesPendingRef.current += 1; AudioEngine.shuffle(); handleDeadlock(board); setSelectedTile(null); 
         } else if (hp > 1) {
+            comboCountRef.current = 0; // Memutus combo aktif
             setHp(h => h - 1); missionProgressRef.current.shuffles += 1; setProfile(p => updateMissions(p, 'useShuffle', 1)); AudioEngine.shuffle(); handleDeadlock(board); setSelectedTile(null);
             window.Dialog.showInfo("Pakai Nyawa", "Kamu menggunakan 1 Nyawa untuk Shuffle!");
             const p = flushStats(profile);
@@ -917,8 +956,10 @@ const handleLoginSubmit = async (isColdStart = false) => {
         if (!hintData) return;
 
         if (hints > 0) {
+            comboCountRef.current = 0; // Memutus combo aktif
             setHints(h => h - 1); missionProgressRef.current.hints += 1; hintsPendingRef.current += 1; setProfile(p => updateMissions(p, 'useHint', 1)); AudioEngine.hint(); setHintActiveTiles([{r: hintData.p1.r, c: hintData.p1.c}, {r: hintData.p2.r, c: hintData.p2.c}]); setTimeout(() => setHintActiveTiles([]), 1200); 
         } else if (hp > 1) {
+            comboCountRef.current = 0; // Memutus combo aktif
             setHp(h => h - 1); missionProgressRef.current.hints += 1; setProfile(p => updateMissions(p, 'useHint', 1)); AudioEngine.hint(); setHintActiveTiles([{r: hintData.p1.r, c: hintData.p1.c}, {r: hintData.p2.r, c: hintData.p2.c}]); setTimeout(() => setHintActiveTiles([]), 1200); 
             window.Dialog.showInfo("Pakai Nyawa", "Kamu menggunakan 1 Nyawa untuk Hint!");
             const p = flushStats(profile);
@@ -934,15 +975,22 @@ const handleLoginSubmit = async (isColdStart = false) => {
             window.Dialog.showInfo("Penuh", "Nyawa kamu sudah penuh (Maksimal 5).");
             return;
         }
-        if ((profile.gems || 0) < 5) {
-            window.Dialog.showError("Gagal", "Gem tidak cukup! Butuh 5 Gem untuk beli 1 Nyawa saat main.");
-            return;
-        }
-        setHp(h => h + 1);
-        const newProfile = { ...profile, gems: profile.gems - 5, hp: hp + 1 };
-        setProfile(newProfile);
-        saveProfile(playerName, newProfile);
-        window.Dialog.showSuccess("Berhasil", "Berhasil membeli 1 Nyawa seharga 5 Gem!");
+        
+        const hpNeeded = 5 - hp;
+        const costPerHp = 15;
+        const totalCost = hpNeeded * costPerHp;
+
+        window.Dialog.showConfirm("Isi Penuh Nyawa", `Isi penuh Nyawa (+${hpNeeded}) seharga ${totalCost} Gem?`, "Beli", "Batal", () => {
+            if ((profile.gems || 0) < totalCost) {
+                window.Dialog.showError("Gagal", `Gem tidak cukup! Butuh ${totalCost} Gem.`);
+                return;
+            }
+            setHp(5);
+            const newProfile = { ...profile, gems: profile.gems - totalCost, hp: 5, lastHpRegenTime: null };
+            setProfile(newProfile);
+            saveProfile(playerName, newProfile);
+            window.Dialog.showSuccess("Berhasil", "Nyawa sudah terisi penuh!");
+        });
     };
     
     const handleBuyStore = async (item, qty = 1) => {

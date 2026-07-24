@@ -2,19 +2,20 @@
   "id": "kucing",
   "name": "Kucing",
   "desc": "Koleksi eksklusif kucing kreator.",
-  "price": 100,
+  "price": 0,
   "currency": "coins",
   "type": "standar",
-
   "splashFrames": 6,
   "splashFps": 8,
   "splashLoop": true,
-
   "colors": {
     "bg": "#fffbeb",
     "border": "#fde68a",
     "text": "#b45309",
     "accent": "#d97706",
     "buttonActive": "#92400e"
+  },
+  "continueCard": {
+    "motion": "pingpong"
   }
 }

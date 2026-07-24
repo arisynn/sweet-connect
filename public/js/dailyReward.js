@@ -278,3 +278,4 @@ const claimMissionReward = (profile, missionId, isWeekly = false) => {
 
     return { profile: newProfile, rewardLabel };
 };
+window.updateMissions = updateMissions;

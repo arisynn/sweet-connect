@@ -1,5 +1,29 @@
 window.ACHIEVEMENTS_DATA = [
     {
+        id: 'total_score',
+        category: 'progression',
+        title: 'Pengumpul Skor',
+        desc: (target) => `Kumpulkan total ${target.toLocaleString('id-ID')} Score.`,
+        tiers: [
+            { target: 10000, reward: { coins: 500 } },
+            { target: 100000, reward: { coins: 2500 } },
+            { target: 1000000, reward: { gems: 50 } }
+        ],
+        getProgress: (p) => p.statistics?.totalScore || 0
+    },
+    {
+        id: 'high_score',
+        category: 'skill',
+        title: 'Pencetak Rekor',
+        desc: (target) => `Raih ${target.toLocaleString('id-ID')} Score dalam satu level.`,
+        tiers: [
+            { target: 2500, reward: { gems: 5 } },
+            { target: 5000, reward: { gems: 15 } },
+            { target: 10000, reward: { gems: 30 } }
+        ],
+        getProgress: (p) => p.statistics?.highestScore || 0
+    },
+    {
         id: 'levels_cleared',
         category: 'progression',
         title: 'Penjelajah Dunia',

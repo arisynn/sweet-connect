@@ -405,12 +405,12 @@ const ChestSection = ({ profile, setProfile, saveProfile, playerName, setSweetMe
                             </div>
                             <div className="p-5 flex flex-col gap-4 bg-gray-50 overflow-y-auto max-h-[70vh] text-sm text-gray-700 font-medium">
                                 <div>
-                                    <h4 className="font-bold text-gray-900 mb-2">Cara Mendapatkan Progress (Max 5 per peti)</h4>
+                                    <h4 className="font-bold text-gray-900 mb-2">Cara Mendapatkan Progress Maksimal 5 per Peti</h4>
                                     <ul className="list-disc pl-5 flex flex-col gap-1 text-gray-600 text-xs">
-                                        <li>Selesai Level (Dasar) <strong className="text-gray-800">(+2)</strong></li>
-                                        <li>Selesai tanpa Bantuan (Flawless) <strong className="text-gray-800">(+1)</strong></li>
-                                        <li>Combo x8 / x15+ <strong className="text-gray-800">(+1 / +2)</strong></li>
-                                        <li>Selesai cepat &lt; 45 Detik <strong className="text-gray-800">(+1)</strong></li>
+                                        <li>Selesai Level Dasar <strong className="text-gray-800">+2</strong></li>
+                                        <li>Selesai Level Flawless <strong className="text-gray-800">+1</strong></li>
+                                        <li>Combo x8 / x15+ <strong className="text-gray-800">+1 / +2</strong></li>
+                                        <li>Selesai cepat &lt; 45 Detik <strong className="text-gray-800">+1</strong></li>
                                     </ul>
                                 </div>
                                 
@@ -418,7 +418,7 @@ const ChestSection = ({ profile, setProfile, saveProfile, playerName, setSweetMe
                                     <h4 className="font-bold text-gray-900 mb-2">Cara Mendapatkan Peti</h4>
                                     <ul className="list-disc pl-5 flex flex-col gap-1 text-gray-600 text-xs">
                                         <li>Dapatkan total <strong>5 Poin Progress</strong> untuk mendapatkan 1 peti.</li>
-                                        <li>Jika semua slot peti (3 maksimal) penuh, progress akan ditahan di 5/5.</li>
+                                        <li>Jika semua 3 slot peti penuh, progress akan ditahan di 5/5.</li>
                                         <li className="text-rose-600 font-bold">Pastikan membuka peti agar tidak membuang progress sia-sia!</li>
                                     </ul>
                                 </div>

@@ -176,11 +176,27 @@ Engine secara otomatis akan menggambar artwork sebagai layer paling bawah (`z-0`
 *   `achievement.png`
 *   `statistics.png`
 *   `theme.png`
-*   `continue.png` (Artwork untuk background tombol Lanjutkan Main di layar beranda)
+*   `continue.png` (Artwork untuk background tombol Lanjutkan Main di layar beranda) **[MENDUKUNG PANORAMA, lihat bagian bawah]**
 *   `game.png` (Artwork untuk background utama papan permainan, menggantikan background.png di luar folder)
+
+**Panorama Background (Lanjutkan Main):**
+Khusus untuk `continue.png` (Card Lanjutkan Main), Theme Engine sekarang mendukung rendering **Panorama Horisontal**. Anda dapat menggunakan gambar berukuran ultra-wide, dan engine akan otomatis menggerakkannya secara horizontal.
+Ada 3 tipe motion yang didukung:
+1.  **Static**: Gambar tidak bergerak (default jika gambar proporsional).
+2.  **Loop**: Gambar terus bergerak ke kiri tanpa henti (disarankan gambar seamless, atau engine akan menduplikasi dan menyambungnya).
+3.  **Pingpong**: Gambar bergerak dari kiri ke kanan lalu memantul kembali (cocok untuk artwork yang tidak seamless, namun lebih lebar dari card).
+
+*Auto-Detection*: Engine akan otomatis menggunakan mode `pingpong` jika dimensi gambar (`naturalWidth / naturalHeight`) jauh lebih lebar daripada dimensi card Lanjutkan Main (ratio `> 1.3x` dari ratio container).
+*Explicit Config*: Anda juga dapat memaksa behavior panorama melalui `theme.json` dengan mendeklarasikan block konfigurasi khusus (contoh):
+```json
+  "continueCard": {
+    "motion": "loop"
+  }
+```
 
 **Best Practice**:
 Gunakan standar kanvas 1024x1024. Engine akan melakukan `object-fit: cover`, jadi pastikan poin of interest tetap utuh meski gambar terpotong 15-20% pada proporsi HP yang berbeda.
+Khusus panorama `continue.png`, gunakan gambar berukuran 1920x512 atau lebih lebar.
 
 ---
 

@@ -1,11 +1,46 @@
 // ===================== SCORE / COIN REWARD =====================
-const SCORE_PER_MATCH = 10;
 
-// Mirrors the original inline game-over coin reward calculation (Math.floor(score * 0.1)).
-const calculateCoinReward = (score) => Math.floor(score * 0.1);
+// A. BASE MATCH SCORE
+const SCORE_PER_MATCH = 50;
 
-const applyMatchScore = (currentScore, comboBonus, currentBest) => {
-    const newScore = currentScore + SCORE_PER_MATCH + (comboBonus || 0);
-    const isNewRecord = newScore > (currentBest || 0);
-    return { newScore, isNewRecord };
+// B. SPEED BONUS
+const calculateSpeedBonusMultiplier = (timeSinceLastMatchMs) => {
+    if (timeSinceLastMatchMs <= 1500) return 2.0;
+    if (timeSinceLastMatchMs <= 3000) return 1.5;
+    if (timeSinceLastMatchMs <= 5000) return 1.2;
+    return 1.0;
 };
+
+// C. COMBO MULTIPLIER
+const calculateComboMultiplier = (comboCount) => {
+    if (comboCount <= 1) return 1.0;
+    if (comboCount === 2) return 1.5;
+    if (comboCount === 3) return 2.0;
+    if (comboCount === 4) return 2.5;
+    return 3.0; // Max 3.0
+};
+
+// D. TIME REMAINING BONUS
+const TIME_BONUS_PER_SECOND = 10;
+const calculateTimeBonus = (remainingSeconds) => {
+    return Math.floor(Math.max(0, remainingSeconds) * TIME_BONUS_PER_SECOND);
+};
+
+// E. FLAWLESS BONUS
+const FLAWLESS_BONUS_MULTIPLIER = 1.2; // +20%
+const calculateFlawlessBonus = (currentScore) => {
+    return Math.floor(currentScore * (FLAWLESS_BONUS_MULTIPLIER - 1.0));
+};
+
+const applyMatchScore = (currentLevelScore, timeSinceLastMatchMs, comboCount, currentHighestLevelScore) => {
+    const speedMult = calculateSpeedBonusMultiplier(timeSinceLastMatchMs);
+    const comboMult = calculateComboMultiplier(comboCount);
+    
+    const gained = Math.floor(SCORE_PER_MATCH * speedMult * comboMult);
+    const newScore = currentLevelScore + gained;
+    const isNewRecord = newScore > (currentHighestLevelScore || 0);
+    
+    return { newScore, gained, speedMult, comboMult, isNewRecord };
+};
+
+const calculateCoinReward = (score) => Math.floor(score * 0.1);

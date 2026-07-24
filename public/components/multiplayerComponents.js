@@ -61,7 +61,7 @@ const GameModeSheet = ({ isOpen, onClose, onSelect, currentMode, isHost }) => {
                     </button>
                     <button onClick={() => { if(!isHost) return; onSelect('Match Berhadiah'); }} className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${currentMode === 'Match Berhadiah' ? 'border-pink-500 bg-pink-50' : 'border-gray-100 bg-white'} ${!isHost && 'opacity-70'}`}>
                         <div className="font-bold text-gray-800 text-lg">Match Berhadiah</div>
-                        <div className="text-gray-500 text-xs mt-1">Taruhan Coin atau Gem (Host yang menentukan). Semua pemain harus setuju.</div>
+                        <div className="text-gray-500 text-xs mt-1">Taruhan Coin atau Gem ditentukan oleh Host. Semua pemain harus setuju.</div>
                     </button>
                 </div>
             </div>
