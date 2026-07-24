@@ -1,4 +1,60 @@
 
+const GridSprite = ({ src, frames, columns, rows, fps, loop }) => {
+    const cols = columns || frames;
+    const rws = rows || 1;
+    const [currentFrame, setCurrentFrame] = React.useState(0);
+    const [imgSize, setImgSize] = React.useState({ w: 0, h: 0 });
+    
+    React.useEffect(() => {
+        if (frames <= 1) return;
+        
+        let frame = 0;
+        const interval = setInterval(() => {
+            frame++;
+            if (frame >= frames) {
+                if (loop) frame = 0;
+                else {
+                    frame = frames - 1;
+                    clearInterval(interval);
+                }
+            }
+            setCurrentFrame(frame);
+        }, 1000 / fps);
+        
+        return () => clearInterval(interval);
+    }, [frames, cols, rws, fps, loop]);
+    
+    const handleImageLoad = (e) => {
+        setImgSize({ w: e.target.naturalWidth, h: e.target.naturalHeight });
+    };
+    
+    const col = currentFrame % cols;
+    const row = Math.floor(currentFrame / cols);
+    
+    const frameWidth = imgSize.w ? imgSize.w / cols : 0;
+    const frameHeight = imgSize.h ? imgSize.h / rws : 0;
+    const frameRatio = frameWidth && frameHeight ? frameWidth / frameHeight : 1;
+    
+    return (
+        <div className="w-48 h-48 relative drop-shadow-2xl flex items-center justify-center rounded-xl overflow-hidden">
+            <img src={src} onLoad={handleImageLoad} className="hidden" alt="" />
+            {imgSize.w > 0 && (
+                <div 
+                    style={{
+                        width: frameRatio >= 1 ? '100%' : `${frameRatio * 100}%`,
+                        height: frameRatio <= 1 ? '100%' : `${100 / frameRatio}%`,
+                        backgroundImage: `url(${src})`,
+                        backgroundSize: `${cols * 100}% ${rws * 100}%`,
+                        backgroundPosition: `${cols > 1 ? (col / (cols - 1)) * 100 : 0}% ${rws > 1 ? (row / (rws - 1)) * 100 : 0}%`,
+                        backgroundRepeat: 'no-repeat'
+                    }}
+                />
+            )}
+        </div>
+    );
+};
+
+
 
 const StartupScreen = ({ 
     activeTheme, 
@@ -22,6 +78,8 @@ const StartupScreen = ({
     const splashFrames = themeObj.splashFrames || 1;
     const splashFps = themeObj.splashFps || 8;
     const splashLoop = themeObj.splashLoop !== false; // Default true
+    const splashColumns = themeObj.splashColumns || themeObj.columns || splashFrames;
+    const splashRows = themeObj.splashRows || themeObj.rows || 1;
 
     // Fallback illustration: use the first emoji of the theme if no specific illustration exists
     const centerIllustration = themeObj.data ? themeObj.data[0] : "🍬";
@@ -50,20 +108,7 @@ const StartupScreen = ({
             <div className="relative z-10 flex-1 flex flex-col items-center justify-center animate-fade-in my-8">
                 {splashUrl ? (
                     splashFrames > 1 ? (
-                        <div className="w-48 h-48 overflow-hidden relative drop-shadow-2xl flex items-center justify-start rounded-xl">
-                            <img 
-                                src={splashUrl} 
-                                alt="Splash Artwork" 
-                                className="absolute top-0 left-0 h-full max-w-none object-contain animate-sprite"
-                                style={{ 
-                                    width: `${splashFrames * 100}%`,
-                                    animationDuration: `${splashFrames / splashFps}s`,
-                                    animationTimingFunction: `steps(${splashFrames})`,
-                                    animationIterationCount: splashLoop ? 'infinite' : '1',
-                                    animationFillMode: 'forwards'
-                                }}
-                            />
-                        </div>
+                        <GridSprite src={splashUrl} frames={splashFrames} columns={splashColumns} rows={splashRows} fps={splashFps} loop={splashLoop} />
                     ) : (
                         <img 
                             src={splashUrl} 

@@ -140,9 +140,11 @@ Background papan permainan bertugas memberikan atmosfir tanpa mengganggu _readab
 *   **Animasi**: Dapat dianimasikan sebagai *horizontal sprite sheet*. Tambahkan konfigurasi di `theme.json` jika berwujud sprite:
     ```json
     {
-      "splashFrames": 6, // Jumlah frame
-      "splashFps": 8, // Kecepatan
-      "splashLoop": true // Apakah looping
+      "splashFrames": 6, // Jumlah total frame
+      "splashColumns": 3, // (BARU) Jumlah kolom sprite sheet (opsional, jika grid)
+      "splashRows": 2, // (BARU) Jumlah baris sprite sheet (opsional, jika grid)
+      "splashFps": 8, // Kecepatan frame per detik
+      "splashLoop": true // Apakah animasi berulang
     }
     ```
 
@@ -256,7 +258,7 @@ Untuk memastikan sistem *Smart Asset Scanning* bekerja dengan sempurna dan mengh
 *   `preview.png` (Thumbnail di shop)
 *   `background.png` (Background papan game)
 *   `logo.png` (Logo game utama - **Tidak digunakan lagi untuk tema**, abaikan. Logo aplikasi bersifat global).
-*   `splash.png` (**BARU**: Artwork Splash Screen. Jika berupa sprite animasi, tambahkan properti `"splashFrames": 6`, `"splashFps": 8`, `"splashLoop": true` di `theme.json`)
+*   `splash.png` (**BARU**: Artwork Splash Screen. Jika berupa sprite animasi, tambahkan properti `"splashFrames": 6`, `"splashColumns": 3`, `"splashRows": 2`, `"splashFps": 8`, `"splashLoop": true` di `theme.json`)
 
 **2. Folder `background/` (Menu Backgrounds):**
 *   `home.png` (Layar utama)

@@ -5,17 +5,18 @@
   "price": 0,
   "currency": "coins",
   "type": "standar",
-  "splashFrames": 2,
-  "splashFps": 6,
+
+  "splashFrames": 6,
+  "splashColumns": 3,
+  "splashRows": 2,
+  "splashFps": 8,
   "splashLoop": true,
+
   "colors": {
     "bg": "#fffbeb",
     "border": "#fde68a",
     "text": "#b45309",
     "accent": "#d97706",
     "buttonActive": "#92400e"
-  },
-  "continueCard": {
-    "motion": "loop"
   }
 }
