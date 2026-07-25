@@ -99,7 +99,7 @@ const AchievementsScreen = ({ profile, onClaimAchievement, onClaimMilestone, onC
 
                             // Check if hidden secret
                             const isSecret = category === 'secret';
-                            const isHidden = isSecret && !eligible && !isCompleted && tierIdx === 0 && progress === 0;
+                            const isHidden = isSecret && !eligible && !isCompleted && tierIdx === 0;
 
                             if (isHidden) {
                                 return (
@@ -227,8 +227,14 @@ const AchievementsScreen = ({ profile, onClaimAchievement, onClaimMilestone, onC
             <div className="w-full flex items-center justify-between mb-4 mt-2 px-2 sticky top-0 bg-white/50 backdrop-blur-md z-20 py-2 border-b theme-border shadow-sm">
                 <button onClick={onClose} className="p-2 bg-white rounded-full text-gray-500 shadow-sm transition-colors"><IconChevronLeft /></button>
                 <div className="flex bg-white rounded-xl p-1 shadow-sm border theme-border">
-                    <button onClick={() => { AudioEngine.uiSwitchTab(); setTab('achievement'); }} className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${tab === 'achievement' ? 'bg-pink-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Prestasi</button>
-                    <button onClick={() => { AudioEngine.uiSwitchTab(); setTab('milestone'); }} className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${tab === 'milestone' ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Level</button>
+                    <button onClick={() => { AudioEngine.uiSwitchTab(); setTab('achievement'); }} className={`relative px-3 py-1 rounded-lg text-xs font-bold transition-all ${tab === 'achievement' ? 'bg-pink-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                        Prestasi
+                        {window.getClaimableAchievements && window.getClaimableAchievements(profile).length > 0 && <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white"></span>}
+                    </button>
+                    <button onClick={() => { AudioEngine.uiSwitchTab(); setTab('milestone'); }} className={`relative px-3 py-1 rounded-lg text-xs font-bold transition-all ${tab === 'milestone' ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                        Level
+                        {window.getClaimableMilestones && window.getClaimableMilestones(profile).length > 0 && <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white"></span>}
+                    </button>
                 </div>
                 <div className="w-10"></div>
             </div>

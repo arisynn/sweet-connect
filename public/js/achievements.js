@@ -13,7 +13,7 @@ window.ACHIEVEMENTS_DATA = [
     },
     {
         id: 'high_score',
-        category: 'skill',
+        category: 'mastery',
         title: 'Pencetak Rekor',
         desc: (target) => `Raih ${target.toLocaleString('id-ID')} Score dalam satu level.`,
         tiers: [

@@ -6,14 +6,7 @@ const ROWS = 16;
 const COLS = 10;
 
 // ===================== SHOP CONFIGURATION =====================
-const SHOP_ITEMS = [
-    { id: 'hints', name: '+1 Hint', price: 50, currency: 'coins', type: 'item', desc: 'Bantuan cari pasangan.', iconName: 'IconSearch', iconColor: 'text-sky-500' },
-    { id: 'shuffles', name: '+1 Shuffle', price: 50, currency: 'coins', type: 'item', desc: 'Acak ulang papan.', iconName: 'IconRefresh', iconColor: 'text-orange-500' },
-    { id: 'flex_crown', name: 'Mahkota Sultan', price: 150000, currency: 'coins', type: 'flex', desc: 'Item termahal. Hanya untuk sultan!', iconName: 'IconCrown', iconColor: 'text-yellow-500' }
-].sort((a, b) => {
-    // Sort by price, assuming uang is most expensive, then tickets, then coins (or just by raw price number for now)
-    return a.price - b.price;
-});
+const SHOP_ITEMS = [];
 
 const THEME_BADGE_TEXT = "Eksklusif";
 

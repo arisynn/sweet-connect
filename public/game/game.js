@@ -81,7 +81,8 @@ const App = () => {
     const [selectedTile, setSelectedTile] = useState(null);
     const [matchedTiles, setMatchedTiles] = useState([]); 
     const [hintActiveTiles, setHintActiveTiles] = useState([]); 
-    const [activePath, setActivePath] = useState(null); 
+    const [activePath, setActivePath] = useState(null);
+    const [hintPath, setHintPath] = useState(null); 
     const [wrongTile, setWrongTile] = useState(null);
     const [wrongConnectionPenalty, setWrongConnectionPenalty] = useState(null);
     const [showTimerAdd, setShowTimerAdd] = useState(false);
@@ -643,7 +644,7 @@ const handleLoginSubmit = async (isColdStart = false) => {
     };
 
     const triggerLevelEndStats = useCallback(async (isGameOver = false) => {
-        clearActiveSession();
+        try { localStorage.removeItem('pkmnActiveSession_' + playerName); } catch(e) {}
         if (isGameOver) {
             const trialJson = localStorage.getItem(`pkmn_trial_${playerName}`);
             if (trialJson) {
@@ -842,7 +843,7 @@ const handleLoginSubmit = async (isColdStart = false) => {
         if (path) {
             const r1 = selectedTile.r; const c1 = selectedTile.c; const id1 = virtualBoard[r1][c1]; const id2 = virtualBoard[r][c];
             const newMatches = [{r: r1, c: c1, id: id1}, {r, c, id: id2}];
-            setMatchedTiles(prev => [...prev, ...newMatches]); setHintActiveTiles([]); setActivePath(path); AudioEngine.match();
+            setMatchedTiles(prev => [...prev, ...newMatches]); setHintActiveTiles([]); setHintPath(null); setActivePath(path); AudioEngine.match();
 
             setShowTimerAdd(true); setTimeout(() => setShowTimerAdd(false), 900); setSelectedTile(null); 
 
@@ -899,19 +900,25 @@ const handleLoginSubmit = async (isColdStart = false) => {
                 const addPct = (addSec * 1000) / 90000 * 100;
                 setProgress(p => Math.min(100, p + addPct)); 
             }, 350); 
-                } else {
-            
-            AudioEngine.wrong(); missionProgressRef.current.wrong = (missionProgressRef.current.wrong || 0) + 1; wrongPendingRef.current += 1; setWrongTile({r, c}); setTimeout(() => setWrongTile(null), 380); setSelectedTile({r, c});
+        } else {
             if (virtualBoard[selectedTile.r][selectedTile.c] === virtualBoard[r][c]) {
+                AudioEngine.wrong(); 
+                missionProgressRef.current.wrong = (missionProgressRef.current.wrong || 0) + 1; 
+                wrongPendingRef.current += 1; 
+                setWrongTile({r, c}); 
+                setTimeout(() => setWrongTile(null), 380); 
+                setSelectedTile(null);
+                
                 const penaltySec = Math.min(15, 1 + level);
-                const penaltyPct = (penaltySec * 1000) / 90000 * 100; // TIME_LIMIT_MS is 90000
+                const penaltyPct = (penaltySec * 1000) / 90000 * 100; 
                 setProgress(p => Math.max(0, p - penaltyPct));
                 setWrongConnectionPenalty({ r, c, sec: penaltySec });
                 setTimeout(() => setWrongConnectionPenalty(null), 1000);
             } else {
-                const penaltySec = Math.min(15, 1 + level);
-                const penaltyPct = (penaltySec * 1000) / 90000 * 100;
-                setProgress(p => Math.max(0, p - penaltyPct)); // Wrong match penalty!
+                AudioEngine.uiClick();
+                setWrongTile({r, c});
+                setTimeout(() => setWrongTile(null), 380);
+                setSelectedTile({r, c});
             }
         }
     };
@@ -937,10 +944,10 @@ const handleLoginSubmit = async (isColdStart = false) => {
         if (gameState !== 'PLAYING') return;
         if (shuffles > 0) { 
             comboCountRef.current = 0; // Memutus combo aktif
-            setShuffles(s => s - 1); missionProgressRef.current.shuffles += 1; setProfile(p => updateMissions(p, 'useShuffle', 1)); shufflesPendingRef.current += 1; AudioEngine.shuffle(); handleDeadlock(board); setSelectedTile(null); 
+            setShuffles(s => s - 1); missionProgressRef.current.shuffles += 1; setProfile(p => updateMissions(p, 'useShuffle', 1)); shufflesPendingRef.current += 1; AudioEngine.shuffle(); setHintActiveTiles([]); setHintPath(null); handleDeadlock(board); setSelectedTile(null); 
         } else if (hp > 1) {
             comboCountRef.current = 0; // Memutus combo aktif
-            setHp(h => h - 1); missionProgressRef.current.shuffles += 1; setProfile(p => updateMissions(p, 'useShuffle', 1)); AudioEngine.shuffle(); handleDeadlock(board); setSelectedTile(null);
+            setHp(h => h - 1); missionProgressRef.current.shuffles += 1; setProfile(p => updateMissions(p, 'useShuffle', 1)); AudioEngine.shuffle(); setHintActiveTiles([]); setHintPath(null); handleDeadlock(board); setSelectedTile(null);
             window.Dialog.showInfo("Pakai Nyawa", "Kamu menggunakan 1 Nyawa untuk Shuffle!");
             const p = flushStats(profile);
             setProfile(p);
@@ -957,10 +964,10 @@ const handleLoginSubmit = async (isColdStart = false) => {
 
         if (hints > 0) {
             comboCountRef.current = 0; // Memutus combo aktif
-            setHints(h => h - 1); missionProgressRef.current.hints += 1; hintsPendingRef.current += 1; setProfile(p => updateMissions(p, 'useHint', 1)); AudioEngine.hint(); setHintActiveTiles([{r: hintData.p1.r, c: hintData.p1.c}, {r: hintData.p2.r, c: hintData.p2.c}]); setTimeout(() => setHintActiveTiles([]), 1200); 
+            setHints(h => h - 1); missionProgressRef.current.hints += 1; hintsPendingRef.current += 1; setProfile(p => updateMissions(p, 'useHint', 1)); AudioEngine.hint(); setHintActiveTiles([{r: hintData.p1.r, c: hintData.p1.c}, {r: hintData.p2.r, c: hintData.p2.c}]); setHintPath(hintData.path); 
         } else if (hp > 1) {
             comboCountRef.current = 0; // Memutus combo aktif
-            setHp(h => h - 1); missionProgressRef.current.hints += 1; setProfile(p => updateMissions(p, 'useHint', 1)); AudioEngine.hint(); setHintActiveTiles([{r: hintData.p1.r, c: hintData.p1.c}, {r: hintData.p2.r, c: hintData.p2.c}]); setTimeout(() => setHintActiveTiles([]), 1200); 
+            setHp(h => h - 1); missionProgressRef.current.hints += 1; setProfile(p => updateMissions(p, 'useHint', 1)); AudioEngine.hint(); setHintActiveTiles([{r: hintData.p1.r, c: hintData.p1.c}, {r: hintData.p2.r, c: hintData.p2.c}]); setHintPath(hintData.path); 
             window.Dialog.showInfo("Pakai Nyawa", "Kamu menggunakan 1 Nyawa untuk Hint!");
             const p = flushStats(profile);
             setProfile(p);
@@ -1149,7 +1156,7 @@ const handleLoginSubmit = async (isColdStart = false) => {
 
     
     const ctxValue = {
-        gameState, setGameState, activeTheme, activeThemeRef, gameStateRef, board, score, hp, hints, shuffles, level, progress, showTimerAdd, wrongConnectionPenalty, activePath, wrongTile, hintActiveTiles, matchedTiles, selectedTile, isMuted, setIsMuted, isStandalone, deferredPrompt, playerName, setPlayerName, loginError, setLoginError, lobbyBadgeText, isLoadingProfile, syncStatus, showSyncLog, setShowSyncLog, syncLogs, startupStep, startupMessage, startupProgress, showCloudRecovery, localRecoveryProfile, setShowCloudRecovery, setSelectedTile, setActiveTheme, setBoard, finishStartup, getDefaultProfile: window.getDefaultProfile, profile, setProfile, isNewRecord, countdown, setCountdown, comboDisplay, setComboDisplay, showBoardClear, setShowBoardClear, showTimeoutFlash, setShowTimeoutFlash, sweetMessage, setSweetMessage,  showSettings, setShowSettings, showCustomThemeEditor, setShowCustomThemeEditor, splashText, handleLoginSubmit, handleLogout, handleBuyHpInGame, handleHintClick, handleShuffleClick, handleTileClick, getSecondsLeft, handleBuyStore, handleSellStore, handleClaimDaily, handleClaimAchievement, handleClaimMilestone, handleMysteryGiftComplete, prepareLevel, handleClaimLoginReward, THEMES, formatNumber, calculateCoinReward, AudioEngine, saveProfile, window, saveCurrentSession, flushStats
+        gameState, setGameState, activeTheme, activeThemeRef, gameStateRef, board, score, hp, hints, shuffles, level, progress, showTimerAdd, wrongConnectionPenalty, activePath, wrongTile, hintPath, hintActiveTiles, matchedTiles, selectedTile, isMuted, setIsMuted, isStandalone, deferredPrompt, playerName, setPlayerName, loginError, setLoginError, lobbyBadgeText, isLoadingProfile, syncStatus, showSyncLog, setShowSyncLog, syncLogs, startupStep, startupMessage, startupProgress, showCloudRecovery, localRecoveryProfile, setShowCloudRecovery, setSelectedTile, setActiveTheme, setBoard, finishStartup, getDefaultProfile: window.getDefaultProfile, profile, setProfile, isNewRecord, countdown, setCountdown, comboDisplay, setComboDisplay, showBoardClear, setShowBoardClear, showTimeoutFlash, setShowTimeoutFlash, sweetMessage, setSweetMessage,  showSettings, setShowSettings, showCustomThemeEditor, setShowCustomThemeEditor, splashText, handleLoginSubmit, handleLogout, handleBuyHpInGame, handleHintClick, handleShuffleClick, handleTileClick, getSecondsLeft, handleBuyStore, handleSellStore, handleClaimDaily, handleClaimAchievement, handleClaimMilestone, handleMysteryGiftComplete, prepareLevel, handleClaimLoginReward, THEMES, formatNumber, calculateCoinReward, AudioEngine, saveProfile, window, saveCurrentSession, flushStats
     };
 
     return (

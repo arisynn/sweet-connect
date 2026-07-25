@@ -12,7 +12,6 @@ const GACHA_PRIZES_COIN = [
     { id: 'c100', name: '100 Koin', type: 'item', item: 'coins', val: 100, desc: 'Koin hiburan.', iconName: 'IconCoin' },
     { id: 'hint5', name: '+5 Hint', type: 'item', item: 'hints', val: 5, desc: 'Cheat legal dari sistem.', iconName: 'IconSearch' },
     { id: 'shuffle5', name: '+5 Shuffle', type: 'item', item: 'shuffles', val: 5, desc: 'Anti mentok-mentok club.', iconName: 'IconRefresh' },
-    { id: 'hp1', name: '+1 Nyawa', type: 'item', item: 'hp', val: 1, desc: 'Cadangan nyawa ekstra.', iconName: 'IconHeart' },
 ];
 
 const GACHA_RARITY = {
@@ -28,8 +27,7 @@ const GACHA_RARITY = {
         { id: 'c200', chance: 56.0 },
         { id: 'c100', chance: 66.0 },
         { id: 'hint5', chance: 78.0 },
-        { id: 'shuffle5', chance: 90.0 },
-        { id: 'hp1', chance: 100.0 },
+        { id: 'shuffle5', chance: 100.0 },
     ]
 };
 
@@ -56,7 +54,6 @@ const GACHA_PRIZES_THEME = [
     { id: 't_coin500', name: '500 Koin', type: 'item', item: 'coins', val: 500, desc: 'Bonus Koin!', iconName: 'IconCoin' },
     { id: 't_hint1', name: '+1 Hint', type: 'item', item: 'hints', val: 1, desc: 'Bantuan Hint ekstra.', iconName: 'IconSearch' },
     { id: 't_shuffle1', name: '+1 Shuffle', type: 'item', item: 'shuffles', val: 1, desc: 'Bantuan Shuffle ekstra.', iconName: 'IconRefresh' },
-    { id: 't_hp1', name: '+1 Nyawa', type: 'item', item: 'hp', val: 1, desc: 'Nyawa ekstra.', iconName: 'IconHeart' }
 ];
 
 GACHA_RARITY.theme = [
@@ -66,8 +63,7 @@ GACHA_RARITY.theme = [
     { id: 'rb_5', chance: 70.0 },
     { id: 't_coin500', chance: 80.0 },
     { id: 't_hint1', chance: 90.0 },
-    { id: 't_shuffle1', chance: 95.0 },
-    { id: 't_hp1', chance: 100.0 }
+    { id: 't_shuffle1', chance: 100.0 }
 ];
 
 const originalGetPrizeByRarity = getPrizeByRarity;

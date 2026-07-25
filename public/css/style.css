@@ -230,3 +230,11 @@ body, html {
     0% { opacity: 1; }
     100% { opacity: 0; }
 }
+
+@keyframes pulseHintPath { 
+    0%, 100% { opacity: 0.4; stroke-width: 0.12; } 
+    50% { opacity: 1; stroke-width: 0.2; } 
+}
+.hint-path-line { 
+    animation: pulseHintPath 1s infinite; 
+}
