@@ -112,15 +112,14 @@ export default async function handler(req: Request, res: Response) {
         if (action === "complete") {
             const { roomId, name } = req.body;
             const room = rooms.get(roomId);
-            if (room && room.status === "STARTED" && !room.winner) {
+            if (room && room.status === "ACTIVE" && !room.winner) {
                 room.winner = name;
                 room.status = "COMPLETED";
                 if (room.mode === "Match Berhadiah" && room.wager) {
                     const amount = room.wager.amount;
                     const curr = room.wager.currency;
-                    const loser = room.players.find((p: any) => p.name !== name)?.name;
-                    await updatePlayerBalance(name, curr, amount);
-                    await updatePlayerBalance(loser, curr, -amount);
+                    // Winner gets both wagers (their own wager back + the loser's wager)
+                    await updatePlayerBalance(name, curr, amount * 2);
                     room.payoutProcessed = true;
                 }
             }
@@ -205,6 +204,7 @@ export default async function handler(req: Request, res: Response) {
             const { roomId, host, board } = req.body;
             const room = rooms.get(roomId);
             if (!room || room.host !== host) return res.status(403).json({ error: 'Invalid room' });
+            if (room.status === 'STARTING' || room.status === 'ACTIVE') return res.json({ success: true, room });
             if (room.players.length < 2 || !room.players.every((p: any) => p.ready)) return res.status(400).json({ error: 'Not all ready' });
             
             if (room.mode === 'Match Berhadiah') {
@@ -212,16 +212,20 @@ export default async function handler(req: Request, res: Response) {
                     return res.status(400).json({ error: 'Wager not agreed by both players' });
                 }
                 
-                const hostBalance = await getPlayerBalance(room.host, room.wager.currency);
                 const member = room.players.find((p: any) => p.name !== room.host)?.name;
-                const memberBalance = await getPlayerBalance(member, room.wager.currency);
                 
-                if (hostBalance < room.wager.amount || memberBalance < room.wager.amount) {
-                    return res.status(400).json({ error: 'Saldo salah satu pemain tidak mencukupi saat ini.' });
+                if (!room.wagerLocked) {
+                    const hostBalance = await getPlayerBalance(room.host, room.wager.currency);
+                    const memberBalance = await getPlayerBalance(member, room.wager.currency);
+                    
+                    if (hostBalance < room.wager.amount || memberBalance < room.wager.amount) {
+                        return res.status(400).json({ error: 'Saldo salah satu pemain tidak mencukupi saat ini.' });
+                    }
+                    
+                    await updatePlayerBalance(room.host, room.wager.currency, -room.wager.amount);
+                    await updatePlayerBalance(member, room.wager.currency, -room.wager.amount);
+                    room.wagerLocked = true;
                 }
-                
-                // TODO: Deduct balance here in a real database transaction.
-                // Since this is mock DB we just proceed. In production, we'd do a transaction here.
             }
             
             room.status = 'STARTING';
@@ -231,6 +235,23 @@ export default async function handler(req: Request, res: Response) {
             });
             if (board) room.board = board;
             room.winner = null;
+            
+            // Timeout if players don't both ready up for game
+            setTimeout(async () => {
+                const currentRoom = rooms.get(roomId);
+                if (currentRoom && currentRoom.status === 'STARTING') {
+                    currentRoom.status = 'LOBBY';
+                    // refund wager if it was locked
+                    if (currentRoom.mode === 'Match Berhadiah' && currentRoom.wagerLocked) {
+                        const memberName = currentRoom.players.find((p: any) => p.name !== currentRoom.host)?.name;
+                        await updatePlayerBalance(currentRoom.host, currentRoom.wager.currency, currentRoom.wager.amount);
+                        await updatePlayerBalance(memberName, currentRoom.wager.currency, currentRoom.wager.amount);
+                        currentRoom.wagerLocked = false;
+                    }
+                    currentRoom.players.forEach((p: any) => p.ready = false);
+                }
+            }, 15000);
+            
             return res.json({ success: true, room });
         }
 

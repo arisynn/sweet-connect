@@ -154,7 +154,7 @@ const GameUI = () => {
         let poll;
         if ((multiplayerState === 'LOBBY' || multiplayerState === 'STARTING' || multiplayerState === 'PLAYING') && roomData?.id) {
             poll = setInterval(() => {
-                fetch(`/api/multiplayer?action=sync&roomId=${roomData.id}`)
+                fetch(`/api/multiplayer?action=sync&roomId=${roomData.id}&name=${encodeURIComponent(playerName)}&progress=${progress || 0}`)
                 .then(r => r.json())
                 .then(data => {
                     if (data && data.id) {
@@ -678,7 +678,7 @@ const GameUI = () => {
                                 prepareLevel={prepareLevel} 
                                 onMultiplayerClick={() => setShowMultiplayerPopup(true)} 
                                 inRoom={multiplayerState === 'LOBBY'}
-                                onStartGame={() => window.Dialog.showInfo("Info", "Permainan akan segera dimulai!")}
+                                onStartGame={handleStartMatch}
                                 isHost={roomData?.host === playerName}
                                 allReady={roomData?.players?.every(p => p.ready)}
                             />
