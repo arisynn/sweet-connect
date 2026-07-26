@@ -206,6 +206,13 @@ const GameUI = () => {
                             prepareLevel(profile.currentLevel, data.board || null, null, null, null, null, null, 0, null, null, 0, 0, data.startAt); 
                         } else if (data.status === "COMPLETED" && multiplayerState === "PLAYING") {
                             setMultiplayerState("RESULT");
+                            if (window.addChestProgress) {
+                                setProfile(prev => {
+                                    const next = window.addChestProgress(prev, 10);
+                                    if (window.saveProfile) window.saveProfile(playerName, next);
+                                    return next;
+                                });
+                            }
                             if (window.handleMultiplayerEnd) window.handleMultiplayerEnd();
                         }
                     } else if (data.error) {
@@ -219,15 +226,7 @@ const GameUI = () => {
         return () => clearInterval(poll);
     }, [multiplayerState, roomData?.id, profile?.currentLevel]);
 
-    React.useEffect(() => {
-        if (multiplayerState === 'STARTING' && roomData?.id) {
-            fetch("/api/multiplayer?action=ready_for_game", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ roomId: roomData.id, name: playerName })
-            }).catch(console.error);
-        }
-    }, [multiplayerState, roomData?.id, playerName]);
+
 
     React.useEffect(() => {
         window.handleMultiplayerEnd = () => {

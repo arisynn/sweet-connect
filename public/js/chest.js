@@ -107,7 +107,7 @@ window.calculateDynamicSpeedUpCost = (chestType, startTime) => {
     if (remaining <= 0) return 0;
     
     const minutesRemaining = Math.ceil(remaining / 60000);
-    return Math.max(1, minutesRemaining);
+    return Math.max(1, Math.ceil(minutesRemaining / 6));
 };
 
 const calculateDynamicSpeedUpCost = window.calculateDynamicSpeedUpCost;

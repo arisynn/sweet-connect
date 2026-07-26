@@ -234,54 +234,20 @@ export default async function handler(req: Request, res: Response) {
                 }
             }
             
-            room.status = 'STARTING';
+            room.status = 'ACTIVE';
+            room.startAt = Date.now() + 4000;
             room.winner = null;
             room.payoutProcessed = false;
             room.players.forEach((p: any) => {
                 p.progress = 0;
-                p.readyForGame = false;
+                p.readyForGame = true;
             });
             if (board) room.board = board;
             room.winner = null;
             
-            // Timeout if players don't both ready up for game
-            setTimeout(async () => {
-                const currentRoom = rooms.get(roomId);
-                if (currentRoom && currentRoom.status === 'STARTING') {
-                    currentRoom.status = 'LOBBY';
-                    // refund wager if it was locked
-                    if (currentRoom.mode === 'Match Berhadiah' && currentRoom.wagerLocked) {
-                        const memberName = currentRoom.players.find((p: any) => p.name !== currentRoom.host)?.name;
-                        await updatePlayerBalance(currentRoom.host, currentRoom.wager.currency, currentRoom.wager.amount);
-                        await updatePlayerBalance(memberName, currentRoom.wager.currency, currentRoom.wager.amount);
-                        currentRoom.wagerLocked = false;
-                    }
-                    currentRoom.players.forEach((p: any) => p.ready = false);
-                }
-            }, 15000);
-            
             return res.json({ success: true, room });
         }
 
-        if (action === 'ready_for_game') {
-            const { roomId, name } = req.body;
-            const room = rooms.get(roomId);
-            if (!room) return res.status(404).json({ error: 'Room not found' });
-            
-            const player = room.players.find((p: any) => p.name === name);
-            if (player) {
-                player.readyForGame = true;
-            }
-
-            // Check if all players are ready for game
-            if (room.status === 'STARTING' && room.players.length === 2 && room.players.every((p: any) => p.readyForGame)) {
-                room.status = 'ACTIVE';
-                room.startAt = Date.now() + 4000; // 4 seconds for countdown (3, 2, 1, GO)
-            }
-            
-            return res.json({ success: true, room });
-        }
-        
         res.status(404).json({ error: 'Not found' });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
