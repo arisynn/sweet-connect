@@ -8,12 +8,14 @@ window.ConflictResolver = {
         if (cloudRev > localRev) {
             const localLevel = localPayload.gameData.currentLevel || 1;
             const cloudLevel = cloudPayload.gameData.currentLevel || 1;
-            const localCoins = localPayload.gameData.coins || 0;
-            const cloudCoins = cloudPayload.gameData.coins || 0;
-            if (localLevel > cloudLevel || (localLevel === cloudLevel && localCoins > cloudCoins)) {
-                window.EngineUtils.log('Conflict', 'Cloud revision higher, but Local has more progress. Force merging local over cloud.');
-                localPayload._engine.revision = cloudRev + 1;
-                return localPayload;
+
+            if (localLevel > cloudLevel) {
+                window.EngineUtils.log('Conflict', 'Cloud revision higher, but Local has more progress. Force merging local over cloud, but keeping cloud currency.');
+                const mergedPayload = JSON.parse(JSON.stringify(localPayload));
+                mergedPayload.gameData.coins = cloudPayload.gameData.coins;
+                mergedPayload.gameData.gems = cloudPayload.gameData.gems;
+                mergedPayload._engine.revision = cloudRev + 1;
+                return mergedPayload;
             }
             window.EngineUtils.log('Conflict', 'Cloud is ahead. Adopting cloud save.');
             return cloudPayload;

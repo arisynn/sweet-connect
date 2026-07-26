@@ -778,6 +778,7 @@ const handleLoginSubmit = async (isColdStart = false) => {
     const prepareLevel = async (startLevel, providedBoard = null, providedTheme = null, startScore = null, startHp = null, startHints = null, startShuffles = null, startProgress = null, startMatchedTiles = null, startSelectedTile = null, startComboCount = 0, startLastMatchTime = 0, targetStartAt = null) => {
         const currentT = providedTheme || activeThemeRef.current;
         const b = providedBoard || generateBoard(currentT, startLevel);
+        window.initialMultiplayerTiles = b.flat().filter(v => v !== 0).length;
         setBoard(b); setLevel(startLevel);
         
         // Gunakan nilai yang di pass, jika tidak ambil dari profile saat ini
@@ -858,7 +859,12 @@ const handleLoginSubmit = async (isColdStart = false) => {
                         if (countRemaining(newBoard) === 0) { if(window.isMultiplayerMatch) { setTimeout(() => window.handleMultiplayerClear(), 0); } else { setTimeout(() => handleLevelCleared(), 0); } }
                         else if (!findHint(newBoard)) setTimeout(() => handleDeadlock(newBoard), 0);
                     }
-                    if (window.isMultiplayerMatch) { const remaining = newBoard.flat().filter(v => v !== 0).length; setProgress(Math.floor(((60 - remaining) / 60) * 100)); } return newBoard;
+                    if (window.isMultiplayerMatch) { 
+                        const remaining = newBoard.flat().filter(v => v !== 0).length;
+                        const initial = window.initialMultiplayerTiles || 192;
+                        setProgress(Math.floor(((initial - remaining) / initial) * 100)); 
+                    } 
+                    return newBoard;
                 });
                 setMatchedTiles(prev => prev.filter(m => !( (m.r === r1 && m.c === c1) || (m.r === r && m.c === c) )));
                 setActivePath(null); 

@@ -143,6 +143,7 @@ const GameUI = () => {
     
     // Multiplayer State
     const [multiplayerState, setMultiplayerState] = React.useState('IDLE');
+    const [matchTime, setMatchTime] = React.useState(0);
     const [showMultiplayerPopup, setShowMultiplayerPopup] = React.useState(false);
     const [showJoinDialog, setShowJoinDialog] = React.useState(false);
     const [showModeSheet, setShowModeSheet] = React.useState(false);
@@ -150,6 +151,41 @@ const GameUI = () => {
 
     const [wagerConfigOpen, setWagerConfigOpen] = React.useState(false); const [showWagerPrompt, setShowWagerPrompt] = React.useState(false); React.useEffect(() => { if (roomData?.wager && !roomData.wager.memberAgreed && roomData.host !== playerName) { const t = setTimeout(() => setShowWagerPrompt(true), 1000); return () => clearTimeout(t); } else { setShowWagerPrompt(false); } }, [roomData?.wager, roomData?.wager?.memberAgreed, roomData?.host, playerName]);
     
+    // Auto-reconnect to active room
+    React.useEffect(() => {
+        if (gameState === 'LOBBY_MAIN' && multiplayerState === 'IDLE' && profile) {
+            fetch(`/api/multiplayer?action=sync&name=${encodeURIComponent(playerName)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.id) {
+                    setRoomData(data);
+                    if (data.status === 'ACTIVE') {
+                        setMultiplayerState('PLAYING');
+                        window.isMultiplayerMatch = true;
+                        prepareLevel(profile.currentLevel, data.board || null, null, null, null, null, null, 0, null, null, 0, 0, data.startAt);
+                        setGameState('PLAYING');
+                    } else if (data.status === 'COMPLETED') {
+                        setMultiplayerState('RESULT');
+                        window.isMultiplayerMatch = false;
+                    } else {
+                        setMultiplayerState('LOBBY');
+                    }
+                }
+            })
+            .catch(() => {});
+        }
+    }, [gameState, multiplayerState, profile, playerName]);
+
+    React.useEffect(() => {
+        let timer;
+        if (multiplayerState === 'PLAYING' && gameState === 'PLAYING' && roomData?.startAt) {
+            timer = setInterval(() => {
+                setMatchTime(Math.max(0, Math.floor((Date.now() - roomData.startAt) / 1000)));
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [multiplayerState, gameState, roomData?.startAt]);
+
     React.useEffect(() => {
         let poll;
         if ((multiplayerState === 'LOBBY' || multiplayerState === 'STARTING' || multiplayerState === 'PLAYING') && roomData?.id) {
@@ -195,7 +231,7 @@ const GameUI = () => {
 
     React.useEffect(() => {
         window.handleMultiplayerEnd = () => {
-            setGameState("IDLE");
+            setGameState("LOBBY_MAIN");
         };
     }, []);
 
@@ -409,7 +445,7 @@ const GameUI = () => {
                                     <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1 rounded-full border theme-border shadow-sm">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-pink-500"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                         <span className="text-sm font-black theme-text-active">
-                                            {roomData.startedAt ? Math.floor((Date.now() - roomData.startedAt) / 1000) : 0}s
+                                            {roomData.startAt ? `${Math.floor(matchTime / 60).toString().padStart(2, '0')}:${(matchTime % 60).toString().padStart(2, '0')}` : '00:00'}
                                         </span>
                                     </div>
                                 </div>
@@ -422,16 +458,6 @@ const GameUI = () => {
                                 </div>
                             </div>
                         </div>
-                            ) : multiplayerState === "RESULT" ? (
-                                <window.MultiplayerResult 
-                                    roomData={roomData} 
-                                    playerName={playerName}
-                                    onRematch={async () => {
-                                        await fetch("/api/multiplayer?action=ready", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId: roomData.id, name: playerName, ready: true }) });
-                                        setMultiplayerState("LOBBY");
-                                    }}
-                                    onLeave={handleLeaveRoom}
-                                />
                             ) : (
                         <div className={`w-full flex flex-col shrink-0 border-b theme-border z-50 py-0.5 px-1 gap-0.5 shadow-sm ${(THEMES[activeThemeRef.current || activeTheme]?.background || THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home']) ? 'bg-white/20 backdrop-blur-md' : 'theme-bg'}`}>
                             
@@ -692,7 +718,23 @@ const GameUI = () => {
 
                             {/* Menu Grid / Multiplayer Lobby */}
                             {multiplayerState === 'STARTING' ? (
-                                <window.MultiplayerLoading roomData={roomData} playerName={playerName} />
+                                (() => {
+                                    const MultiplayerLoading = window.MultiplayerLoading;
+                                    return <MultiplayerLoading roomData={roomData} playerName={playerName} />;
+                                })()
+                            ) : multiplayerState === 'RESULT' ? (
+                                (() => {
+                                    const MultiplayerResult = window.MultiplayerResult;
+                                    return <MultiplayerResult 
+                                        roomData={roomData} 
+                                        playerName={playerName}
+                                        onRematch={async () => {
+                                            await fetch("/api/multiplayer?action=ready", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId: roomData.id, name: playerName, ready: true }) });
+                                            setMultiplayerState("LOBBY");
+                                        }}
+                                        onLeave={handleLeaveRoom}
+                                    />;
+                                })()
                             ) : multiplayerState === 'LOBBY' ? (
                                 <MultiplayerLobby 
                                     roomData={roomData} 

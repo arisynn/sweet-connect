@@ -11,10 +11,16 @@ async function updatePlayerBalance(playerName: string, currency: string, change:
     const { data, error } = await supabase.from("profiles").select("profile_data").eq("player_name", playerName).maybeSingle();
     if (error || !data || !data.profile_data) return;
     let profileData = data.profile_data;
-    if (profileData.gameData) profileData = profileData.gameData;
-    const current = parseInt(profileData[currency]) || 0;
-    profileData[currency] = current + change;
-    await supabase.from("profiles").update({ profile_data: data.profile_data }).eq("player_name", playerName);
+    let target = profileData.gameData ? profileData.gameData : profileData;
+    const current = parseInt(target[currency]) || 0;
+    target[currency] = current + change;
+    
+    if (profileData._engine) {
+        profileData._engine.revision = (profileData._engine.revision || 0) + 1;
+        profileData._engine.updatedAt = Date.now();
+    }
+    
+    await supabase.from("profiles").update({ profile_data: profileData }).eq("player_name", playerName);
 }
 
 async function getPlayerBalance(playerName: string, currency: string) {
@@ -229,6 +235,8 @@ export default async function handler(req: Request, res: Response) {
             }
             
             room.status = 'STARTING';
+            room.winner = null;
+            room.payoutProcessed = false;
             room.players.forEach((p: any) => {
                 p.progress = 0;
                 p.readyForGame = false;
