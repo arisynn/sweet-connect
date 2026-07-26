@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import profileHandler from "./api/profile.ts";
 import pushHandler from "./api/push.ts";
+import multiplayerHandler from "./api/multiplayer.ts";
 
 dotenv.config();
 
@@ -30,6 +31,15 @@ async function startServer() {
             await pushHandler(req, res);
         } catch (error: any) {
             console.error("Error executing push serverless function:", error);
+            res.status(500).json({ error: error.stack || error.toString() });
+        }
+    });
+
+    app.all("/api/multiplayer", async (req, res) => {
+        try {
+            await multiplayerHandler(req, res);
+        } catch (error: any) {
+            console.error("Error executing multiplayer function:", error);
             res.status(500).json({ error: error.stack || error.toString() });
         }
     });

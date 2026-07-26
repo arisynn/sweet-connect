@@ -6,7 +6,7 @@ async function generate() {
     const themes = [];
     
     // Direktori yang akan di-scan secara dinamis
-    const scanDirs = ['menu', 'ui', 'icons', 'effects', 'sfx', 'bgm'];
+    const scanDirs = ['menu', 'card', 'ui', 'icons', 'effects', 'sfx', 'bgm'];
 
     try {
         const folders = await fs.readdir(themesDir, { withFileTypes: true });
@@ -53,6 +53,8 @@ async function generate() {
                             // Untuk backward compatibility, 'menu' disimpan di 'menuIcons'
                             if (dirName === 'menu') {
                                 themeData.menuIcons = assetMap;
+                            } else if (dirName === 'card') {
+                                themeData.cards = assetMap;
                             } else {
                                 themeData[dirName] = assetMap;
                             }

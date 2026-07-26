@@ -140,6 +140,198 @@ const GameUI = () => {
 
     const [showNotificationPrompt, setShowNotificationPrompt] = React.useState(false);
     const [regenTimeLeft, setRegenTimeLeft] = React.useState(null);
+    
+    // Multiplayer State
+    const [multiplayerState, setMultiplayerState] = React.useState('IDLE');
+    const [showMultiplayerPopup, setShowMultiplayerPopup] = React.useState(false);
+    const [showJoinDialog, setShowJoinDialog] = React.useState(false);
+    const [showModeSheet, setShowModeSheet] = React.useState(false);
+    const [roomData, setRoomData] = React.useState(null);
+
+    const [wagerConfigOpen, setWagerConfigOpen] = React.useState(false); const [showWagerPrompt, setShowWagerPrompt] = React.useState(false); React.useEffect(() => { if (roomData?.wager && !roomData.wager.memberAgreed && roomData.host !== playerName) { const t = setTimeout(() => setShowWagerPrompt(true), 1000); return () => clearTimeout(t); } else { setShowWagerPrompt(false); } }, [roomData?.wager, roomData?.wager?.memberAgreed, roomData?.host, playerName]);
+    
+    React.useEffect(() => {
+        let poll;
+        if ((multiplayerState === 'LOBBY' || multiplayerState === 'STARTING' || multiplayerState === 'PLAYING') && roomData?.id) {
+            poll = setInterval(() => {
+                fetch(`/api/multiplayer?action=sync&roomId=${roomData.id}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.id) {
+                        setRoomData(data);
+                        if (data.status === 'STARTING' && multiplayerState === 'LOBBY') {
+                            setMultiplayerState('STARTING');
+                        } else if (data.status === 'ACTIVE' && (multiplayerState === 'STARTING' || multiplayerState === 'LOBBY')) {
+                            setMultiplayerState('PLAYING'); 
+                            window.isMultiplayerMatch = true;
+                            prepareLevel(profile.currentLevel, data.board || null, null, null, null, null, null, 0, null, null, 0, 0, data.startAt); 
+                        } else if (data.status === "COMPLETED" && multiplayerState === "PLAYING") {
+                            setMultiplayerState("RESULT");
+                            if (window.handleMultiplayerEnd) window.handleMultiplayerEnd();
+                        }
+                    } else if (data.error) {
+                        setMultiplayerState('IDLE'); window.isMultiplayerMatch = false;
+                        setRoomData(null);
+                        window.Dialog.showError("Disconnected", "Room tidak ditemukan.");
+                    }
+                }).catch(e => console.warn('Sync error:', e.message));
+            }, 2000);
+        }
+        return () => clearInterval(poll);
+    }, [multiplayerState, roomData?.id, profile?.currentLevel]);
+
+    React.useEffect(() => {
+        if (multiplayerState === 'STARTING' && roomData?.id) {
+            fetch("/api/multiplayer?action=ready_for_game", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roomId: roomData.id, name: playerName })
+            }).catch(console.error);
+        }
+    }, [multiplayerState, roomData?.id, playerName]);
+
+    React.useEffect(() => {
+        window.handleMultiplayerEnd = () => {
+            setGameState("IDLE");
+        };
+    }, []);
+
+    React.useEffect(() => {
+        window.handleMultiplayerClear = async () => {
+            try {
+                const res = await fetch("/api/multiplayer?action=complete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ roomId: roomData?.id, name: playerName })
+                });
+                const data = await res.json();
+                if (!data.error) setRoomData(data);
+            } catch (e) {}
+        };
+    }, [roomData?.id, playerName]);
+
+    const handleCreateRoom = async () => {
+        try {
+            const res = await fetch('/api/multiplayer?action=create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ host: playerName, level: profile.currentLevel, theme: activeThemeRef.current || activeTheme })
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            setRoomData(data);
+            setShowMultiplayerPopup(false);
+            setMultiplayerState('LOBBY');
+        } catch (e) {
+            window.Dialog.showError("Gagal", e.message);
+        }
+    };
+
+    const handleJoinRoom = async (code) => {
+        try {
+            const res = await fetch('/api/multiplayer?action=join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId: code, name: playerName, level: profile.currentLevel, theme: activeThemeRef.current || activeTheme })
+            });
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            setRoomData(data);
+            setShowJoinDialog(false);
+            setMultiplayerState('LOBBY');
+        } catch (e) {
+            window.Dialog.showError("Gagal", e.message);
+        }
+    };
+
+    const handleLeaveRoom = async () => {
+        if (roomData?.id) {
+            fetch('/api/multiplayer?action=leave', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId: roomData.id, name: playerName })
+            }).catch(() => {});
+        }
+        setRoomData(null);
+        setMultiplayerState('IDLE'); window.isMultiplayerMatch = false;
+    };
+
+    const handleReadyToggle = async () => {
+        if (!roomData?.id) return;
+        const myPlayer = roomData.players.find(p => p.name === playerName);
+        const newReady = !myPlayer?.ready;
+        try {
+            const res = await fetch('/api/multiplayer?action=ready', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId: roomData.id, name: playerName, ready: newReady })
+            });
+            const data = await res.json();
+            if (!data.error) setRoomData(data);
+        } catch (e) {}
+    };
+
+    const handleProposeWager = async (currency, amount) => {
+        try {
+            const res = await fetch('/api/multiplayer?action=propose_wager', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId: roomData.id, host: playerName, currency, amount })
+            });
+            const data = await res.json();
+            if (data.error) {
+                window.Dialog.showError("Gagal", data.error);
+                return;
+            }
+            setRoomData(data);
+            setWagerConfigOpen(false);
+            setShowModeSheet(false);
+        } catch (e) {
+            window.Dialog.showError("Gagal", e.message);
+        }
+    };
+
+    const handleAcceptWager = async (version) => {
+        try {
+            const res = await fetch('/api/multiplayer?action=accept_wager', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId: roomData.id, name: playerName, version })
+            });
+            const data = await res.json();
+            if (data.error) window.Dialog.showError("Gagal", data.error);
+            else setRoomData(data);
+        } catch (e) {
+            window.Dialog.showError("Gagal", e.message);
+        }
+    };
+
+    const handleRejectWager = async (version) => {
+        try {
+            const res = await fetch('/api/multiplayer?action=reject_wager', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId: roomData.id, version })
+            });
+            const data = await res.json();
+            if (!data.error) setRoomData(data);
+        } catch (e) {}
+    };
+
+    const handleStartMatch = async () => {
+        try {
+            const res = await fetch('/api/multiplayer?action=start_match', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId: roomData.id, host: playerName, board: generateBoard(activeThemeRef.current || activeTheme, profile.currentLevel) })
+            });
+            const data = await res.json();
+            if (data.error) window.Dialog.showError("Gagal", data.error);
+            // On success, polling will pick up STATUS='STARTED'
+        } catch (e) {
+            window.Dialog.showError("Gagal", e.message);
+        }
+    };
 
     React.useEffect(() => {
         if (hp >= 5 || !profile?.lastHpRegenTime) {
@@ -200,74 +392,105 @@ const GameUI = () => {
                 
                 {/* ===================== IN-GAME HEADER ===================== */}
                 {(gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'COUNTDOWN') && (
-                    <div className={`w-full flex flex-col shrink-0 border-b theme-border z-50 py-0.5 px-1 gap-0.5 shadow-sm ${(THEMES[activeThemeRef.current || activeTheme]?.background || THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home']) ? 'bg-white/20 backdrop-blur-md' : 'theme-bg'}`}>
-                        
-                        {/* Top Row: HP, Level, Controls */}
-                        <div className="flex items-center justify-between w-full">
-                            {/* HP Left */}
-                            <div className="flex items-center gap-1">
-                                <div className="flex items-center bg-white px-2 py-0 rounded-full border theme-border shadow-sm shrink-0 min-w-[60px]">
-                                    <IconHeart className="w-4 h-4 theme-text-active mr-1" />
-                                    <span className="text-sm font-bold theme-text">{hp}</span>
-                                    <div onClick={handleBuyHpInGame} className="w-3.5 h-3.5 bg-emerald-400 text-white rounded-full flex items-center justify-center text-[10px] font-bold ml-1 shadow-sm cursor-pointer">+</div>
+                    multiplayerState === 'PLAYING' && roomData ? (
+                        <div className={`w-full flex flex-col shrink-0 border-b theme-border z-50 py-2 px-3 gap-2 shadow-sm ${(THEMES[activeThemeRef.current || activeTheme]?.background || THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home']) ? 'bg-white/20 backdrop-blur-md' : 'theme-bg'}`}>
+                            <div className="flex items-center justify-between w-full">
+                                <div className="flex flex-col items-start w-[35%]">
+                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 line-clamp-1">{roomData.host}</span>
+                                    <div className="w-full bg-emerald-100 rounded-full h-[6px] relative overflow-hidden border border-emerald-200 shadow-inner">
+                                        <div className="h-full rounded-full bg-emerald-500 transition-all duration-200 shadow-[inset_0_-1px_1px_rgba(0,0,0,0.1)]" style={{ width: `${roomData.host === playerName ? progress : (roomData.players.find(p => p.name === roomData.host)?.progress || 0)}%` }} />
+                                    </div>
                                 </div>
-                                {regenTimeLeft !== null && (
-                                    <span className="text-[10px] font-bold text-gray-500 bg-white/80 px-1.5 rounded-full border theme-border drop-shadow-sm">{formatRegenTime(regenTimeLeft)}</span>
-                                )}
-                            </div>
-
-                            {/* Level Centered */}
-                            <div className="flex items-center bg-white px-4 py-0 rounded-full border theme-border shadow-sm shrink-0">
-                                <span className="text-sm font-black theme-text-active">Level {level}</span>
-                            </div>
-
-                            {/* Pause & Sound Right */}
-                            <div className="flex gap-1 shrink-0">
-                                <button onClick={() => setIsMuted(m => !m)} className={`bg-white w-6 h-6 rounded-full flex items-center justify-center border theme-border shadow-sm active:scale-95 transition-transform ${isMuted ? 'text-gray-400' : 'theme-text-active'}`}>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5">{isMuted ? <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.531V19.94a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.506-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.395C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" /> : <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.395C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />}</svg>
-                                </button>
-                                <button onClick={() => { AudioEngine.uiOpen(); setGameState('PAUSED'); }} className="bg-white w-6 h-6 rounded-full flex items-center justify-center border theme-border theme-text-active shadow-sm active:scale-95 transition-transform"><IconPause className="w-3.5 h-3.5"/></button>
+                                
+                                <div className="flex flex-col items-center">
+                                    <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1 rounded-full border theme-border shadow-sm">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-pink-500"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        <span className="text-sm font-black theme-text-active">
+                                            {roomData.startedAt ? Math.floor((Date.now() - roomData.startedAt) / 1000) : 0}s
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex flex-col items-end w-[35%]">
+                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 line-clamp-1">{roomData.players.find(p => p.name !== roomData.host)?.name || 'Guest'}</span>
+                                    <div className="w-full bg-sky-100 rounded-full h-[6px] relative overflow-hidden border border-sky-200 shadow-inner">
+                                        <div className="h-full rounded-full bg-sky-500 transition-all duration-200 shadow-[inset_0_-1px_1px_rgba(0,0,0,0.1)]" style={{ width: `${roomData.host !== playerName ? progress : (roomData.players.find(p => p.name !== roomData.host)?.progress || 0)}%` }} />
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        {/* Row 2: Thin Progress Bar */}
-                        <div className="w-full bg-emerald-100 rounded-full h-[3px] relative overflow-hidden border border-emerald-200 shadow-inner mt-0.5 mb-0.5">
-                            <div className="h-full rounded-full transition-all duration-200 shadow-[inset_0_-1px_1px_rgba(0,0,0,0.1)]" style={{ width: `${progress}%`, backgroundColor: progress > 40 ? '#34d399' : progress > 20 ? '#fbbf24' : '#f87171' }} />
-                        </div>
-
-                        {/* Bottom Row: Score, Time, Hint, Shuffle */}
-                        <div className="flex items-center justify-between gap-1 w-full">
+                            ) : multiplayerState === "RESULT" ? (
+                                <window.MultiplayerResult 
+                                    roomData={roomData} 
+                                    playerName={playerName}
+                                    onRematch={async () => {
+                                        await fetch("/api/multiplayer?action=ready", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId: roomData.id, name: playerName, ready: true }) });
+                                        setMultiplayerState("LOBBY");
+                                    }}
+                                    onLeave={handleLeaveRoom}
+                                />
+                            ) : (
+                        <div className={`w-full flex flex-col shrink-0 border-b theme-border z-50 py-0.5 px-1 gap-0.5 shadow-sm ${(THEMES[activeThemeRef.current || activeTheme]?.background || THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home']) ? 'bg-white/20 backdrop-blur-md' : 'theme-bg'}`}>
                             
-                            {/* Score */}
-                            <div className="flex items-center bg-white px-2 py-0 rounded-full border theme-border shadow-sm flex-1 justify-center">
-                                <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3 text-amber-400 mr-1"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" /></svg>
-                                <span className="text-xs font-bold theme-text">{score}</span>
+                            {/* Top Row: HP, Level, Controls */}
+                            <div className="flex items-center justify-between w-full">
+                                {/* HP Left */}
+                                <div className="flex items-center gap-1">
+                                    <div className="flex items-center bg-white px-2 py-0 rounded-full border theme-border shadow-sm shrink-0 min-w-[60px]">
+                                        <IconHeart className="w-4 h-4 theme-text-active mr-1" />
+                                        <span className="text-sm font-bold theme-text">{hp}</span>
+                                        <div onClick={handleBuyHpInGame} className="w-3.5 h-3.5 bg-emerald-400 text-white rounded-full flex items-center justify-center text-[10px] font-bold ml-1 shadow-sm cursor-pointer">+</div>
+                                    </div>
+                                    {regenTimeLeft !== null && (
+                                        <span className="text-[10px] font-bold text-gray-500 bg-white/80 px-1.5 rounded-full border theme-border drop-shadow-sm">{formatRegenTime(regenTimeLeft)}</span>
+                                    )}
+                                </div>
+                                {/* Level Centered */}
+                                <div className="flex items-center bg-white px-4 py-0 rounded-full border theme-border shadow-sm shrink-0">
+                                    <span className="text-sm font-black theme-text-active">Level {level}</span>
+                                </div>
+                                {/* Pause & Sound Right */}
+                                <div className="flex gap-1 shrink-0">
+                                    <button onClick={() => setIsMuted(m => !m)} className={`bg-white w-6 h-6 rounded-full flex items-center justify-center border theme-border shadow-sm active:scale-95 transition-transform ${isMuted ? 'text-gray-400' : 'theme-text-active'}`}>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5">{isMuted ? <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.531V19.94a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.506-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.395C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" /> : <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.395C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />}</svg>
+                                    </button>
+                                    <button onClick={() => { AudioEngine.uiOpen(); setGameState('PAUSED'); }} className="bg-white w-6 h-6 rounded-full flex items-center justify-center border theme-border theme-text-active shadow-sm active:scale-95 transition-transform"><IconPause className="w-3.5 h-3.5"/></button>
+                                </div>
                             </div>
-
-                            {/* Timer */}
-                            <div className="flex items-center bg-white px-2 py-0 rounded-full border theme-border shadow-sm flex-1 justify-center relative">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3 text-orange-500 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                <span className="text-xs font-bold theme-text">{getSecondsLeft(progress, level)}s</span>
-                                {showTimerAdd && <span className="absolute -top-4 text-[10px] font-bold text-emerald-500 float-text z-[60]">+waktu</span>}
+                            
+                            {/* Row 2: Thin Progress Bar */}
+                            <div className="w-full bg-emerald-100 rounded-full h-[3px] relative overflow-hidden border border-emerald-200 shadow-inner mt-0.5 mb-0.5">
+                                <div className="h-full rounded-full transition-all duration-200 shadow-[inset_0_-1px_1px_rgba(0,0,0,0.1)]" style={{ width: `${progress}%`, backgroundColor: progress > 40 ? '#34d399' : progress > 20 ? '#fbbf24' : '#f87171' }} />
                             </div>
-
-                            {/* Hint */}
-                            <button onClick={handleHintClick} className={`flex items-center bg-white px-2 py-0 rounded-full border theme-border shadow-sm active:scale-95 transition-transform flex-1 justify-center ${hints === 0 ? 'text-rose-500' : 'text-sky-500'}`}>
-                                {hints === 0 ? <IconHeart className="w-3 h-3 mr-1"/> : <IconSearch className="w-3 h-3 mr-1"/>}
-                                <span className="text-xs font-bold theme-text">{hints === 0 ? '1' : hints}</span>
-                            </button>
-
-                            {/* Shuffle */}
-                            <button onClick={handleShuffleClick} className={`flex items-center bg-white px-2 py-0 rounded-full border theme-border shadow-sm active:scale-95 transition-transform flex-1 justify-center ${shuffles === 0 ? 'text-rose-500' : 'text-orange-500'}`}>
-                                {shuffles === 0 ? <IconHeart className="w-3 h-3 mr-1"/> : <IconRefresh className="w-3 h-3 mr-1"/>}
-                                <span className="text-xs font-bold theme-text">{shuffles === 0 ? '1' : shuffles}</span>
-                            </button>
-
+                            
+                            {/* Bottom Row: Score, Time, Hint, Shuffle */}
+                            <div className="flex items-center justify-between gap-1 w-full">
+                                
+                                {/* Score */}
+                                <div className="flex items-center bg-white px-2 py-0 rounded-full border theme-border shadow-sm flex-1 justify-center">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3 text-amber-400 mr-1"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" /></svg>
+                                    <span className="text-xs font-bold theme-text">{score}</span>
+                                </div>
+                                {/* Timer */}
+                                <div className="flex items-center bg-white px-2 py-0 rounded-full border theme-border shadow-sm flex-1 justify-center relative">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3 text-orange-500 mr-1"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    <span className="text-xs font-bold theme-text">{getSecondsLeft(progress, level)}s</span>
+                                    {showTimerAdd && <span className="absolute -top-4 text-[10px] font-bold text-emerald-500 float-text z-[60]">+waktu</span>}
+                                </div>
+                                {/* Hint */}
+                                <button onClick={handleHintClick} className={`flex items-center bg-white px-2 py-0 rounded-full border theme-border shadow-sm active:scale-95 transition-transform flex-1 justify-center ${hints === 0 ? 'text-rose-500' : 'text-sky-500'}`}>
+                                    {hints === 0 ? <IconHeart className="w-3 h-3 mr-1"/> : <IconSearch className="w-3 h-3 mr-1"/>}
+                                    <span className="text-xs font-bold theme-text">{hints === 0 ? '1' : hints}</span>
+                                </button>
+                                {/* Shuffle */}
+                                <button onClick={handleShuffleClick} className={`flex items-center bg-white px-2 py-0 rounded-full border theme-border shadow-sm active:scale-95 transition-transform flex-1 justify-center ${shuffles === 0 ? 'text-rose-500' : 'text-orange-500'}`}>
+                                    {shuffles === 0 ? <IconHeart className="w-3 h-3 mr-1"/> : <IconRefresh className="w-3 h-3 mr-1"/>}
+                                    <span className="text-xs font-bold theme-text">{shuffles === 0 ? '1' : shuffles}</span>
+                                </button>
+                            </div>
                         </div>
-
-                    </div>
+                    )
                 )}
-
                 {/* ===================== GRID ===================== */}
                 <div style={{ visibility: (gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'COUNTDOWN') ? 'visible' : 'hidden' }} className={`flex-1 w-full relative overflow-hidden ${(THEMES[activeThemeRef.current || activeTheme]?.background || THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home']) ? 'bg-transparent' : 'theme-bg'}`} onClick={() => { if (gameStateRef.current === 'PLAYING' && selectedTile) { AudioEngine.uiCancel(); setSelectedTile(null); } }} >
                     {board.length > 0 && (() => {
@@ -447,83 +670,88 @@ const GameUI = () => {
 
                         <div className="flex-1 px-4 pb-4 flex flex-col gap-2.5 overflow-y-auto custom-scroll relative z-10">
                             
-                                                                                    {/* Hero Card / Play Button */}
-                            <div className="relative w-full shrink-0 animate-card-enter">
-                                <button onClick={() => {
-                                    prepareLevel(profile.currentLevel);
-                                }} className="w-full overflow-hidden bg-gradient-to-br from-pink-500 to-rose-500 rounded-[1.25rem] p-4 shadow-md flex flex-col items-start relative active:scale-[0.98] transition-transform">
-                                    {THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['continue'] && (
-                                        <PanoramaBackground 
-                                            src={THEMES[activeThemeRef.current || activeTheme].menuBackgrounds['continue']} 
-                                            themeConfig={THEMES[activeThemeRef.current || activeTheme]} 
-                                            fallbackOpacity={0.8} 
-                                        />
-                                    )}
-                                    <div className="theme-text-active bg-white p-2.5 rounded-xl mb-3 shadow-sm relative z-10">
-                                        <IconPlay className="w-5 h-5"/>
-                                    </div>
-                                    <span className="text-white text-xl font-bold mb-0.5 tracking-wide relative z-10">Main Sekarang</span>
-                                    <span className="text-pink-100 text-sm font-medium relative z-10">Level {profile.currentLevel}</span>
-                                </button>
-                            </div>
+                                                                                    {/* Hero Carousel */}
+                            <HeroCarousel 
+                                profile={profile} 
+                                activeTheme={activeThemeRef.current || activeTheme} 
+                                THEMES={THEMES} 
+                                prepareLevel={prepareLevel} 
+                                onMultiplayerClick={() => setShowMultiplayerPopup(true)} 
+                                inRoom={multiplayerState === 'LOBBY'}
+                                onStartGame={() => window.Dialog.showInfo("Info", "Permainan akan segera dimulai!")}
+                                isHost={roomData?.host === playerName}
+                                allReady={roomData?.players?.every(p => p.ready)}
+                            />
                             
                             <div className="animate-card-enter stagger-1">
                                 <ChestSection activeTheme={activeThemeRef.current || activeTheme} profile={profile} setProfile={setProfile} saveProfile={saveProfile} playerName={playerName} setSweetMessage={setSweetMessage} />
                             </div>
 
-                            {/* Menu Grid */}
-                            <div className="grid grid-cols-2 gap-2.5">
-                                <button onClick={() => setGameState('ROULETTE')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative animate-card-enter stagger-2">
-                                    <div className="bg-pink-50 theme-text-active p-2.5 rounded-xl mb-2">
-                                        {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['gacha'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['gacha']} className="w-5 h-5 object-contain mix-blend-multiply" alt="gacha"/> : <IconGift className="w-5 h-5"/>}
-                                    </div>
-                                    <span className="theme-text font-bold text-sm">Gacha</span>
-                                    {(profile.gacha_vouchers || 0) > 0 ? (
-                                        <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{profile.gacha_vouchers}</span>
-                                    ) : (
-                                        Object.keys(THEMES || {}).filter(k => THEMES[k].type === 'gacha' && THEMES[k].price > 0 && !(profile.unlockedThemes || []).includes(k) && (profile.rainbow_candy || 0) >= (THEMES[k].price || 100)).length > 0 && (
-                                            <span className="absolute top-2.5 right-2.5 bg-red-500 w-3 h-3 rounded-full border-2 border-white shadow-sm"></span>
-                                        )
-                                    )}
-                                </button>
-                                <button onClick={() => setGameState('SHOP')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors animate-card-enter stagger-3">
-                                    <div className="bg-amber-50 text-amber-500 p-2.5 rounded-xl mb-2">
-                                        {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['toko'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['toko']} className="w-5 h-5 object-contain mix-blend-multiply" alt="toko"/> : <IconStore className="w-5 h-5"/>}
-                                    </div>
-                                    <span className="theme-text font-bold text-sm">Toko</span>
-                                </button>
-                                <button onClick={() => setGameState('DAILY_REWARD')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative animate-card-enter stagger-4">
-                                    <div className="bg-indigo-50 text-indigo-500 p-2.5 rounded-xl mb-2">
-                                        {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['misi'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['misi']} className="w-5 h-5 object-contain mix-blend-multiply" alt="misi"/> : <IconTarget className="w-5 h-5"/>}
-                                    </div>
-                                    <span className="theme-text font-bold text-sm">Misi</span>
-                                    {canClaimAnyMissionReward(profile) && <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
-                                </button>
-                                <button onClick={() => setGameState('ACHIEVEMENTS')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative animate-card-enter stagger-5">
-                                    <div className="bg-amber-50 text-amber-500 p-2.5 rounded-xl mb-2">
-                                        {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['prestasi'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['prestasi']} className="w-5 h-5 object-contain mix-blend-multiply" alt="prestasi"/> : <IconTrophy className="w-5 h-5"/>}
-                                    </div>
-                                    <span className="theme-text font-bold text-sm">Prestasi</span>
-                                    {(getClaimableAchievements(profile).length > 0 || getClaimableMilestones(profile).length > 0) && <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
-                                </button>
-                                
-                                <button onClick={() => setGameState('THEMES')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative animate-card-enter stagger-6">
-                                    <div className="bg-emerald-50 text-emerald-500 p-2.5 rounded-xl mb-2">
-                                        {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['tema'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['tema']} className="w-5 h-5 object-contain mix-blend-multiply" alt="tema"/> : <IconBrush className="w-5 h-5"/>}
-                                    </div>
-                                    <span className="theme-text font-bold text-sm">Tema</span>
-                                    {profile.newThemes && profile.newThemes.length > 0 && <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
-                                </button>
-                                
-                                <button onClick={() => setGameState('STATISTICS')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors animate-card-enter stagger-7">
-                                    <div className="bg-sky-50 text-sky-500 p-2.5 rounded-xl mb-2">
-                                        {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['statistik'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['statistik']} className="w-5 h-5 object-contain mix-blend-multiply" alt="statistik"/> : <IconChart className="w-5 h-5"/>}
-                                    </div>
-                                    <span className="theme-text font-bold text-sm">Statistik</span>
-                                </button>
-                                
-                                
-                            </div>
+                            {/* Menu Grid / Multiplayer Lobby */}
+                            {multiplayerState === 'STARTING' ? (
+                                <window.MultiplayerLoading roomData={roomData} playerName={playerName} />
+                            ) : multiplayerState === 'LOBBY' ? (
+                                <MultiplayerLobby 
+                                    roomData={roomData} 
+                                    profile={profile} 
+                                    playerName={playerName}
+                                    onLeaveRoom={handleLeaveRoom}
+                                    onStartGame={handleStartMatch}
+                                    onChangeMode={() => { if(roomData?.host === playerName) setShowModeSheet(true); }}
+                                    onReadyToggle={handleReadyToggle}
+                                />
+                            ) : (
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <button onClick={() => setGameState('ROULETTE')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative animate-card-enter stagger-2">
+                                        <div className="bg-pink-50 theme-text-active p-2.5 rounded-xl mb-2">
+                                            {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['gacha'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['gacha']} className="w-5 h-5 object-contain mix-blend-multiply" alt="gacha"/> : <IconGift className="w-5 h-5"/>}
+                                        </div>
+                                        <span className="theme-text font-bold text-sm">Gacha</span>
+                                        {(profile.gacha_vouchers || 0) > 0 ? (
+                                            <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{profile.gacha_vouchers}</span>
+                                        ) : (
+                                            Object.keys(THEMES || {}).filter(k => THEMES[k].type === 'gacha' && THEMES[k].price > 0 && !(profile.unlockedThemes || []).includes(k) && (profile.rainbow_candy || 0) >= (THEMES[k].price || 100)).length > 0 && (
+                                                <span className="absolute top-2.5 right-2.5 bg-red-500 w-3 h-3 rounded-full border-2 border-white shadow-sm"></span>
+                                            )
+                                        )}
+                                    </button>
+                                    <button onClick={() => setGameState('SHOP')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors animate-card-enter stagger-3">
+                                        <div className="bg-amber-50 text-amber-500 p-2.5 rounded-xl mb-2">
+                                            {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['toko'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['toko']} className="w-5 h-5 object-contain mix-blend-multiply" alt="toko"/> : <IconStore className="w-5 h-5"/>}
+                                        </div>
+                                        <span className="theme-text font-bold text-sm">Toko</span>
+                                    </button>
+                                    <button onClick={() => setGameState('DAILY_REWARD')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative animate-card-enter stagger-4">
+                                        <div className="bg-indigo-50 text-indigo-500 p-2.5 rounded-xl mb-2">
+                                            {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['misi'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['misi']} className="w-5 h-5 object-contain mix-blend-multiply" alt="misi"/> : <IconTarget className="w-5 h-5"/>}
+                                        </div>
+                                        <span className="theme-text font-bold text-sm">Misi</span>
+                                        {canClaimAnyMissionReward(profile) && <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+                                    </button>
+                                    <button onClick={() => setGameState('ACHIEVEMENTS')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative animate-card-enter stagger-5">
+                                        <div className="bg-amber-50 text-amber-500 p-2.5 rounded-xl mb-2">
+                                            {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['prestasi'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['prestasi']} className="w-5 h-5 object-contain mix-blend-multiply" alt="prestasi"/> : <IconTrophy className="w-5 h-5"/>}
+                                        </div>
+                                        <span className="theme-text font-bold text-sm">Prestasi</span>
+                                        {(getClaimableAchievements(profile).length > 0 || getClaimableMilestones(profile).length > 0) && <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+                                    </button>
+                                    
+                                    <button onClick={() => setGameState('THEMES')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors relative animate-card-enter stagger-6">
+                                        <div className="bg-emerald-50 text-emerald-500 p-2.5 rounded-xl mb-2">
+                                            {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['tema'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['tema']} className="w-5 h-5 object-contain mix-blend-multiply" alt="tema"/> : <IconBrush className="w-5 h-5"/>}
+                                        </div>
+                                        <span className="theme-text font-bold text-sm">Tema</span>
+                                        {profile.newThemes && profile.newThemes.length > 0 && <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>}
+                                    </button>
+                                    
+                                    <button onClick={() => setGameState('STATISTICS')} className="bg-white rounded-[1.25rem] p-3.5 flex flex-col items-start justify-center shadow-sm active:bg-gray-50 transition-colors animate-card-enter stagger-7">
+                                        <div className="bg-sky-50 text-sky-500 p-2.5 rounded-xl mb-2">
+                                            {THEMES[activeThemeRef.current || activeTheme]?.menuIcons?.['statistik'] ? <img src={THEMES[activeThemeRef.current || activeTheme].menuIcons['statistik']} className="w-5 h-5 object-contain mix-blend-multiply" alt="statistik"/> : <IconChart className="w-5 h-5"/>}
+                                        </div>
+                                        <span className="theme-text font-bold text-sm">Statistik</span>
+                                    </button>
+                                </div>
+                            )}
                             
                         </div>
                     </div>
@@ -545,6 +773,42 @@ const GameUI = () => {
                 {gameState === 'ACHIEVEMENTS' && <AchievementsScreen activeTheme={activeThemeRef.current || activeTheme} profile={profile} onClaimAchievement={handleClaimAchievement} onClaimMilestone={handleClaimMilestone} onClose={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} />}
                 {gameState === 'STATISTICS' && <StatisticsScreen activeTheme={activeThemeRef.current || activeTheme} profile={profile} onClose={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} />}
                 {gameState === 'LOGIN_REWARD' && <LoginRewardScreen profile={profile} onClaim={handleClaimLoginReward} onClose={() => { AudioEngine.uiReturnMenu(); setGameState('LOBBY_MAIN'); }} />}
+
+                <MultiplayerPopup isOpen={showMultiplayerPopup} onClose={() => setShowMultiplayerPopup(false)} onCreateRoom={handleCreateRoom} onJoinRoom={() => { setShowMultiplayerPopup(false); setShowJoinDialog(true); }} />
+                <JoinRoomDialog isOpen={showJoinDialog} onClose={() => setShowJoinDialog(false)} onJoin={handleJoinRoom} />
+                <GameModeSheet 
+                    isOpen={showModeSheet} 
+                    onClose={() => setShowModeSheet(false)} 
+                    currentMode={roomData?.mode} 
+                    isHost={roomData?.host === playerName} 
+                    onSelect={async (mode) => { 
+                        if (mode === 'Match Berhadiah') {
+                            setShowModeSheet(false);
+                            setWagerConfigOpen(true);
+                        } else {
+                            setShowModeSheet(false);
+                            fetch('/api/multiplayer?action=change_mode', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ roomId: roomData.id, host: playerName, mode: 'Friendly Match' })
+                            }).catch(()=>{});
+                        }
+                    }} 
+                />
+                
+                <window.WagerConfigSheet 
+                    isOpen={wagerConfigOpen} 
+                    onClose={() => setWagerConfigOpen(false)} 
+                    onPropose={handleProposeWager} 
+                    profile={profile} 
+                />
+
+                <window.WagerApprovalDialog 
+                    wager={showWagerPrompt ? roomData.wager : null} 
+                    profile={profile} 
+                    onAccept={() => handleAcceptWager(roomData.wager.version)} 
+                    onReject={() => handleRejectWager(roomData.wager.version)} 
+                />
 
                 {gameState === 'LOADING_BOARD' && (
                     <div className="absolute inset-0 theme-bg flex flex-col items-center justify-center z-[100]">

@@ -408,6 +408,7 @@ const ChestSection = ({ profile, setProfile, saveProfile, playerName, setSweetMe
                                     <h4 className="font-bold text-gray-900 mb-2">Cara Mendapatkan Progress Maksimal 5 per Peti</h4>
                                     <ul className="list-disc pl-5 flex flex-col gap-1 text-gray-600 text-xs">
                                         <li>Selesai Level Dasar <strong className="text-gray-800">+2</strong></li>
+                                        <li>Kemenangan Multiplayer <strong className="text-gray-800">+2</strong></li>
                                         <li>Selesai Level Flawless <strong className="text-gray-800">+1</strong></li>
                                         <li>Combo x8 / x15+ <strong className="text-gray-800">+1 / +2</strong></li>
                                         <li>Selesai cepat &lt; 45 Detik <strong className="text-gray-800">+1</strong></li>

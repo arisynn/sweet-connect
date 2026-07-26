@@ -367,7 +367,7 @@ const App = () => {
 
     // Tracks total time spent actively playing, for the Statistics screen
     useEffect(() => {
-        if (gameState !== 'PLAYING') return;
+        if (gameState !== 'PLAYING' || window.isMultiplayerMatch) return;
         const t = setInterval(() => { playTimeAccumRef.current += 1000; }, 1000);
         return () => clearInterval(t);
     }, [gameState]);
@@ -775,7 +775,7 @@ const handleLoginSubmit = async (isColdStart = false) => {
 
     const handleDeadlock = useCallback((b) => setBoard(guaranteedShuffle(b)), []);
 
-    const prepareLevel = async (startLevel, providedBoard = null, providedTheme = null, startScore = null, startHp = null, startHints = null, startShuffles = null, startProgress = null, startMatchedTiles = null, startSelectedTile = null, startComboCount = 0, startLastMatchTime = 0) => {
+    const prepareLevel = async (startLevel, providedBoard = null, providedTheme = null, startScore = null, startHp = null, startHints = null, startShuffles = null, startProgress = null, startMatchedTiles = null, startSelectedTile = null, startComboCount = 0, startLastMatchTime = 0, targetStartAt = null) => {
         const currentT = providedTheme || activeThemeRef.current;
         const b = providedBoard || generateBoard(currentT, startLevel);
         setBoard(b); setLevel(startLevel);
@@ -803,14 +803,16 @@ const handleLoginSubmit = async (isColdStart = false) => {
         setComboDisplay(null);
         setHintActiveTiles([]);
         setActivePath(null);
+                
         
         setGameState('LOADING_BOARD'); setProgress(0); 
         let p = 0; const interval = setInterval(() => { p += 25; setProgress(p); }, 100);
         await new Promise(r => setTimeout(r, 400)); clearInterval(interval); 
         setProgress(startProgress !== null ? startProgress : 100);
         
-        setLevelStartTime(Date.now() + 3700);
-        runCountdownThenPlay(Date.now() + 3700, startSelectedTile);
+        const startAt = targetStartAt || (Date.now() + 3700);
+        setLevelStartTime(startAt);
+        runCountdownThenPlay(startAt, startSelectedTile);
     };
 
     const runCountdownThenPlay = (startAt, startSelectedTile = null) => {
@@ -823,6 +825,7 @@ const handleLoginSubmit = async (isColdStart = false) => {
         const playDelay = Math.max(0, (startAt + 700) - Date.now());
         setTimeout(() => {
             setCountdown(null); setSelectedTile(startSelectedTile); setActivePath(null); setHintActiveTiles([]);
+                
             AudioEngine.uiStartGame(); setGameState('PLAYING');
         }, playDelay);
     };
@@ -852,13 +855,14 @@ const handleLoginSubmit = async (isColdStart = false) => {
                     const newBoard = prev.map(row => [...row]);
                     if (newBoard[r1][c1] !== 0 && newBoard[r][c] !== 0) {
                         newBoard[r1][c1] = 0; newBoard[r][c] = 0;
-                        if (countRemaining(newBoard) === 0) setTimeout(() => handleLevelCleared(), 0);
+                        if (countRemaining(newBoard) === 0) { if(window.isMultiplayerMatch) { setTimeout(() => window.handleMultiplayerClear(), 0); } else { setTimeout(() => handleLevelCleared(), 0); } }
                         else if (!findHint(newBoard)) setTimeout(() => handleDeadlock(newBoard), 0);
                     }
-                    return newBoard;
+                    if (window.isMultiplayerMatch) { const remaining = newBoard.flat().filter(v => v !== 0).length; setProgress(Math.floor(((60 - remaining) / 60) * 100)); } return newBoard;
                 });
                 setMatchedTiles(prev => prev.filter(m => !( (m.r === r1 && m.c === c1) || (m.r === r && m.c === c) )));
                 setActivePath(null); 
+                
 
                 // Combo: matches made in quick succession stack a bonus & a little animation
                 matchesPendingRef.current += 1;
@@ -924,7 +928,7 @@ const handleLoginSubmit = async (isColdStart = false) => {
     };
 
     useEffect(() => {
-        if (gameState !== 'PLAYING') return;
+        if (gameState !== 'PLAYING' || window.isMultiplayerMatch) return;
         const speed = getTimerSpeed(level);
         const timer = setInterval(() => {
             setProgress(prev => { if (prev <= 0) { clearInterval(timer); handleTimeout(); return 0; } return prev - speed; });
@@ -941,7 +945,7 @@ const handleLoginSubmit = async (isColdStart = false) => {
     };
 
     const handleShuffleClick = () => { 
-        if (gameState !== 'PLAYING') return;
+        if (gameState !== 'PLAYING' || window.isMultiplayerMatch) return;
         if (shuffles > 0) { 
             comboCountRef.current = 0; // Memutus combo aktif
             setShuffles(s => s - 1); missionProgressRef.current.shuffles += 1; setProfile(p => updateMissions(p, 'useShuffle', 1)); shufflesPendingRef.current += 1; AudioEngine.shuffle(); setHintActiveTiles([]); setHintPath(null); handleDeadlock(board); setSelectedTile(null); 
@@ -958,7 +962,7 @@ const handleLoginSubmit = async (isColdStart = false) => {
     };
     
     const handleHintClick = () => {
-        if (gameState !== 'PLAYING') return;
+        if (gameState !== 'PLAYING' || window.isMultiplayerMatch) return;
         const hintData = findHint(board);
         if (!hintData) return;
 

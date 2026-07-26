@@ -71,11 +71,16 @@ window.initPushManager = async function(playerName, forcePrompt = false) {
         console.log('Service worker is ready.');
         
         // Get public VAPID key from backend first
-        const response = await fetch('/api/push');
-        const data = await response.json();
+        const response = await fetch('/api/push').catch(() => null);
+        if (!response || !response.ok) {
+            console.warn('Push API unavailable or failed to fetch');
+            return false;
+        }
+        
+        const data = await response.json().catch(() => ({}));
         
         if (!data.publicKey) {
-            console.error('Failed to retrieve VAPID public key');
+            console.warn('VAPID public key not configured on server');
             return false;
         }
         

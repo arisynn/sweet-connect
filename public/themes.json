@@ -45,9 +45,10 @@
       "type": "standar",
       "folder": "animals",
       "menuIcons": {},
-      "menuBackgrounds": {
-        "continue": "/assets/themes/animals/cards/continue.png"
-      }
+      "cards": {
+        "continue": "/assets/themes/animals/card/continue.png"
+      },
+      "menuBackgrounds": {}
     },
     {
       "id": "cute_symbols",
@@ -91,6 +92,7 @@
       "type": "standar",
       "folder": "cute_symbols",
       "menuIcons": {},
+      "cards": {},
       "menuBackgrounds": {}
     },
     {
@@ -135,6 +137,7 @@
       "type": "standar",
       "folder": "flowers",
       "menuIcons": {},
+      "cards": {},
       "menuBackgrounds": {}
     },
     {
@@ -179,17 +182,20 @@
       "type": "standar",
       "folder": "fruits",
       "menuIcons": {},
+      "cards": {},
       "menuBackgrounds": {}
     },
     {
       "id": "kucing",
       "name": "Kucing",
       "desc": "Koleksi eksklusif kucing kreator.",
-      "price": 100,
+      "price": 0,
       "currency": "coins",
       "type": "standar",
-      "splashFrames": 6,
-      "splashFps": 8,
+      "splashFrames": 12,
+      "splashColumns": 4,
+      "splashRows": 3,
+      "splashFps": 12,
       "splashLoop": true,
       "colors": {
         "bg": "#fffbeb",
@@ -205,6 +211,9 @@
         "/assets/themes/kucing/tiles/kucing2.png"
       ],
       "menuIcons": {},
+      "cards": {
+        "continue": "/assets/themes/kucing/card/continue.png"
+      },
       "menuBackgrounds": {}
     },
     {
@@ -248,6 +257,7 @@
       "type": "reward",
       "folder": "neon",
       "menuIcons": {},
+      "cards": {},
       "menuBackgrounds": {}
     },
     {
@@ -292,6 +302,7 @@
       "type": "standar",
       "folder": "ocean",
       "menuIcons": {},
+      "cards": {},
       "menuBackgrounds": {}
     },
     {
@@ -336,6 +347,7 @@
       "type": "standar",
       "folder": "space",
       "menuIcons": {},
+      "cards": {},
       "menuBackgrounds": {}
     },
     {
@@ -380,9 +392,10 @@
       "type": "standar",
       "folder": "sweets",
       "menuIcons": {},
-      "menuBackgrounds": {
-        "continue": "/assets/themes/sweets/cards/continue.png"
-      }
+      "cards": {
+        "continue": "/assets/themes/sweets/card/continue.png"
+      },
+      "menuBackgrounds": {}
     }
   ]
 }
