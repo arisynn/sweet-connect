@@ -161,6 +161,9 @@ const GameUI = () => {
                         setRoomData(data);
                         if (data.status === 'STARTING' && multiplayerState === 'LOBBY') {
                             setMultiplayerState('STARTING');
+                        } else if (data.status === 'LOBBY' && multiplayerState === 'STARTING') {
+                            setMultiplayerState('LOBBY');
+                            window.Dialog.showError("Timeout", "Gagal memulai permainan. Salah satu pemain tidak merespon.");
                         } else if (data.status === 'ACTIVE' && (multiplayerState === 'STARTING' || multiplayerState === 'LOBBY')) {
                             setMultiplayerState('PLAYING'); 
                             window.isMultiplayerMatch = true;
