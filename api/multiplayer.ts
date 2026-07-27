@@ -101,21 +101,69 @@ export default async function handler(req: Request, res: Response) {
 
         if (action === 'sync') {
             const { roomId, name, level, theme, progress } = req.query;
-            const room = rooms.get(roomId as string);
+            let room;
+            
+            if (roomId) {
+                room = rooms.get(roomId as string);
+            } else if (name) {
+                // Find room by player name
+                for (const r of rooms.values()) {
+                    if (r.players && r.players.some((p: any) => p.name === name)) {
+                        room = r;
+                        break;
+                    }
+                }
+            }
+            
             if (!room) return res.status(404).json({ error: 'Room not found' });
             
+            const now = Date.now();
             if (name && room.players) {
                 const p = room.players.find((p: any) => p.name === name);
                 if (p) {
                     if (level) p.level = Number(level);
                     if (theme) p.theme = theme as string;
                     if (progress) p.progress = Number(progress);
+                    p.lastSync = now;
                 }
             }
+            
+            // Check for disconnects
+            if (room.status === 'ACTIVE' && !room.winner) {
+                for (const p of room.players) {
+                    if (p.lastSync && (now - p.lastSync > 10000)) {
+                        if (room.startAt && now >= room.startAt) {
+                            const opponent = room.players.find((op: any) => op.name !== p.name);
+                            if (opponent) {
+                                room.winner = opponent.name;
+                                room.status = 'COMPLETED';
+                                room.finishReason = 'DISCONNECT';
+                                if (room.mode === 'Match Berhadiah' && room.wager && !room.payoutProcessed) {
+                                    room.payoutProcessed = true; // Set before await
+                                    const amount = room.wager.amount;
+                                    const curr = room.wager.currency;
+                                    await updatePlayerBalance(opponent.name, curr, amount * 2);
+                                }
+                            }
+                        } else {
+                            // Disconnected during countdown - revert to lobby
+                            room.status = 'LOBBY';
+                            if (room.mode === 'Match Berhadiah' && room.wagerLocked) {
+                                const memberName = room.players.find((player: any) => player.name !== room.host)?.name;
+                                if (room.host) await updatePlayerBalance(room.host, room.wager.currency, room.wager.amount);
+                                if (memberName) await updatePlayerBalance(memberName, room.wager.currency, room.wager.amount);
+                                room.wagerLocked = false;
+                            }
+                            room.players.forEach((player: any) => player.ready = false);
+                        }
+                    }
+                }
+            }
+
             return res.json(room);
         }
         
-        if (action === "complete") {
+        if (action === 'complete') {
             const { roomId, name } = req.body;
             const room = rooms.get(roomId);
             if (room && room.status === "ACTIVE" && !room.winner) {
@@ -123,11 +171,11 @@ export default async function handler(req: Request, res: Response) {
                 room.status = "COMPLETED";
                 room.finishReason = "BOARD_COMPLETED";
                 if (room.mode === "Match Berhadiah" && room.wager && !room.payoutProcessed) {
+                    room.payoutProcessed = true;
                     const amount = room.wager.amount;
                     const curr = room.wager.currency;
                     // Winner gets both wagers (their own wager back + the loser's wager)
                     await updatePlayerBalance(name, curr, amount * 2);
-                    room.payoutProcessed = true;
                 }
             }
             return res.json(room || { error: "Not found" });
@@ -272,6 +320,7 @@ export default async function handler(req: Request, res: Response) {
             const player = room.players.find((p: any) => p.name === name);
             if (player) {
                 player.readyForGame = true;
+                player.lastSync = Date.now();
             }
 
             // Check if all players are ready for game
@@ -283,27 +332,6 @@ export default async function handler(req: Request, res: Response) {
             return res.json({ success: true, room });
         }
         
-        if (action === 'surrender') {
-            const { roomId, name } = req.body;
-            const room = rooms.get(roomId);
-            if (room && room.status === 'ACTIVE' && !room.winner) {
-                const opponent = room.players.find((p: any) => p.name !== name);
-                if (opponent) {
-                    room.winner = opponent.name;
-                    room.status = 'COMPLETED';
-                    room.finishReason = 'SURRENDER';
-                    if (room.mode === 'Match Berhadiah' && room.wager && !room.payoutProcessed) {
-                        const amount = room.wager.amount;
-                        const curr = room.wager.currency;
-                        // Winner gets both wagers
-                        await updatePlayerBalance(opponent.name, curr, amount * 2);
-                        room.payoutProcessed = true;
-                    }
-                }
-            }
-            return res.json(room || { error: 'Not found' });
-        }
-
         res.status(404).json({ error: 'Not found' });
     } catch (e: any) {
         res.status(500).json({ error: e.message });

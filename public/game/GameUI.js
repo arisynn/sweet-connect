@@ -248,30 +248,6 @@ const GameUI = () => {
         }
     }, [multiplayerState, roomData?.id, playerName]);
 
-    const handleSurrender = () => {
-        window.Dialog.showConfirm(
-            "Menyerah?",
-            "Jika kamu menyerah, lawan akan memenangkan pertandingan." + (roomData?.mode === 'Match Berhadiah' ? " Taruhan kamu akan hangus." : ""),
-            async () => {
-                try {
-                    const res = await fetch("/api/multiplayer?action=surrender", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ roomId: roomData.id, name: playerName })
-                    });
-                    const data = await res.json();
-                    if (data.status === "COMPLETED") {
-                        setRoomData(data);
-                        setMultiplayerState("RESULT");
-                        if (window.handleMultiplayerEnd) window.handleMultiplayerEnd();
-                    }
-                } catch (e) {
-                    console.error("Surrender error", e);
-                }
-            }
-        );
-    };
-
     React.useEffect(() => {
         window.handleMultiplayerEnd = () => {
             setGameState("LOBBY_MAIN");
@@ -494,9 +470,6 @@ const GameUI = () => {
                                                 {roomData.startAt ? `${Math.floor(matchTime / 60).toString().padStart(2, '0')}:${(matchTime % 60).toString().padStart(2, '0')}` : '00:00'}
                                             </span>
                                         </div>
-                                        <button onClick={handleSurrender} className="p-1.5 bg-red-50 text-red-500 rounded-full border border-red-100 hover:bg-red-100 active:scale-95 transition-all shadow-sm" title="Menyerah">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
-                                        </button>
                                     </div>
                                 </div>
                                 
