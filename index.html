@@ -125,7 +125,7 @@
         Promise.all(scriptUrls.map(src => fetch(src + '?v=' + Date.now()).then(r => r.text())))
             .then(codes => {
                 const fullCode = codes.join('\n\n');
-                const compiled = Babel.transform(fullCode, { presets: [['react', { runtime: 'classic' }]] }).code;
+                const compiled = Babel.transform(fullCode, { presets: [['react', { runtime: 'classic' }]], compact: false }).code;
                 const script = document.createElement('script');
                 script.innerHTML = compiled;
                 document.body.appendChild(script);
