@@ -89,6 +89,22 @@ export default async function handler(req: Request, res: Response) {
             const { roomId, name } = req.body;
             const room = rooms.get(roomId);
             if (room) {
+                if (room.status === 'ACTIVE' && !room.winner) {
+                    // Leaving during active match counts as disconnect/forfeit
+                    const opponent = room.players.find((p: any) => p.name !== name);
+                    if (opponent) {
+                        room.winner = opponent.name;
+                        room.status = 'COMPLETED';
+                        room.finishReason = 'DISCONNECT';
+                        if (room.mode === 'Match Berhadiah' && room.wager && !room.payoutProcessed) {
+                            room.payoutProcessed = true;
+                            const amount = room.wager.amount;
+                            const curr = room.wager.currency;
+                            updatePlayerBalance(opponent.name, curr, amount * 2).catch(() => {});
+                        }
+                    }
+                }
+                
                 room.players = room.players.filter((p: any) => p.name !== name);
                 if (room.players.length === 0) rooms.delete(roomId);
                 else {

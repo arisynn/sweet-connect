@@ -350,7 +350,9 @@ window.WagerApprovalDialog = WagerApprovalDialog;
 
 const MultiplayerResult = ({ roomData, playerName, onRematch, onLeave }) => {
     const isWinner = roomData.winner === playerName;
-    const opponent = roomData.players.find(p => p.name !== playerName)?.name;
+    const [opponentName] = React.useState(() => {
+        return roomData.players.find(p => p.name !== playerName)?.name || 'Guest';
+    });
     const wager = roomData.wager;
 
     return (
@@ -360,7 +362,7 @@ const MultiplayerResult = ({ roomData, playerName, onRematch, onLeave }) => {
             </h1>
             
             <div className="text-gray-500 font-bold mb-6 flex flex-col items-center">
-                <span>vs {opponent}</span>
+                <span>vs {opponentName}</span>
                 {roomData.finishReason === 'DISCONNECT' && (
                     <span className="text-xs font-black text-red-500 bg-red-50 border border-red-100 px-3 py-1 rounded-full mt-2">
                         {isWinner ? 'Lawan terputus dari pertandingan' : 'Kamu terputus'}
