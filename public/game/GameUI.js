@@ -186,16 +186,19 @@ const GameUI = () => {
         return () => clearInterval(timer);
     }, [multiplayerState, gameState, roomData?.startAt]);
 
+    const progressRef = React.useRef(progress);
+    React.useEffect(() => { progressRef.current = progress; }, [progress]);
+
     React.useEffect(() => {
         let poll;
         if ((multiplayerState === 'LOBBY' || multiplayerState === 'STARTING' || multiplayerState === 'PLAYING') && roomData?.id) {
             poll = setInterval(() => {
-                fetch(`/api/multiplayer?action=sync&roomId=${roomData.id}&name=${encodeURIComponent(playerName)}&progress=${progress || 0}`)
+                fetch(`/api/multiplayer?action=sync&roomId=${roomData.id}&name=${encodeURIComponent(playerName)}&progress=${progressRef.current || 0}`)
                 .then(r => r.json())
                 .then(data => {
                     if (data && data.id) {
                         setRoomData(data);
-                        if (data.status === 'STARTING' && multiplayerState === 'LOBBY') {
+                        if (data.status === 'PREPARING' && multiplayerState === 'LOBBY') {
                             setMultiplayerState('STARTING');
                         } else if (data.status === 'LOBBY' && multiplayerState === 'STARTING') {
                             setMultiplayerState('LOBBY');
@@ -224,9 +227,50 @@ const GameUI = () => {
             }, 2000);
         }
         return () => clearInterval(poll);
-    }, [multiplayerState, roomData?.id, profile?.currentLevel]);
+    }, [multiplayerState, roomData?.id, profile?.currentLevel, playerName]);
 
+    React.useEffect(() => {
+        if (multiplayerState === 'STARTING' && roomData?.id) {
+            fetch("/api/multiplayer?action=ready_for_game", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roomId: roomData.id, name: playerName })
+            }).then(r => r.json()).then(data => {
+                if (data.success && data.room) {
+                    setRoomData(data.room);
+                    if (data.room.status === 'ACTIVE') {
+                        setMultiplayerState('PLAYING');
+                        window.isMultiplayerMatch = true;
+                        prepareLevel(profile.currentLevel, data.room.board || null, null, null, null, null, null, 0, null, null, 0, 0, data.room.startAt);
+                    }
+                }
+            }).catch(console.error);
+        }
+    }, [multiplayerState, roomData?.id, playerName]);
 
+    const handleSurrender = () => {
+        window.Dialog.showConfirm(
+            "Menyerah?",
+            "Jika kamu menyerah, lawan akan memenangkan pertandingan." + (roomData?.mode === 'Match Berhadiah' ? " Taruhan kamu akan hangus." : ""),
+            async () => {
+                try {
+                    const res = await fetch("/api/multiplayer?action=surrender", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ roomId: roomData.id, name: playerName })
+                    });
+                    const data = await res.json();
+                    if (data.status === "COMPLETED") {
+                        setRoomData(data);
+                        setMultiplayerState("RESULT");
+                        if (window.handleMultiplayerEnd) window.handleMultiplayerEnd();
+                    }
+                } catch (e) {
+                    console.error("Surrender error", e);
+                }
+            }
+        );
+    };
 
     React.useEffect(() => {
         window.handleMultiplayerEnd = () => {
@@ -365,7 +409,10 @@ const GameUI = () => {
             });
             const data = await res.json();
             if (data.error) window.Dialog.showError("Gagal", data.error);
-            // On success, polling will pick up STATUS='STARTED'
+            else if (data.success && data.room) {
+                 setRoomData(data.room);
+                 setMultiplayerState('STARTING');
+            }
         } catch (e) {
             window.Dialog.showError("Gagal", e.message);
         }
@@ -441,11 +488,16 @@ const GameUI = () => {
                                 </div>
                                 
                                 <div className="flex flex-col items-center">
-                                    <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1 rounded-full border theme-border shadow-sm">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-pink-500"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                        <span className="text-sm font-black theme-text-active">
-                                            {roomData.startAt ? `${Math.floor(matchTime / 60).toString().padStart(2, '0')}:${(matchTime % 60).toString().padStart(2, '0')}` : '00:00'}
-                                        </span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1 rounded-full border theme-border shadow-sm">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-pink-500"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            <span className="text-sm font-black theme-text-active">
+                                                {roomData.startAt ? `${Math.floor(matchTime / 60).toString().padStart(2, '0')}:${(matchTime % 60).toString().padStart(2, '0')}` : '00:00'}
+                                            </span>
+                                        </div>
+                                        <button onClick={handleSurrender} className="p-1.5 bg-red-50 text-red-500 rounded-full border border-red-100 hover:bg-red-100 active:scale-95 transition-all shadow-sm" title="Menyerah">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+                                        </button>
                                     </div>
                                 </div>
                                 

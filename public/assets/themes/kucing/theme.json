@@ -17,6 +17,9 @@
     "border": "#fde68a",
     "text": "#b45309",
     "accent": "#d97706",
-    "buttonActive": "#92400e"
+    "buttonActive": "#92400e",
+    "continueCard": {
+        "motion": "loop"
+    }
   }
 }

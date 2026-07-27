@@ -359,8 +359,13 @@ const MultiplayerResult = ({ roomData, playerName, onRematch, onLeave }) => {
                 {isWinner ? 'MENANG!' : 'KALAH'}
             </h1>
             
-            <div className="text-gray-500 font-bold mb-6">
-                vs {opponent}
+            <div className="text-gray-500 font-bold mb-6 flex flex-col items-center">
+                <span>vs {opponent}</span>
+                {roomData.finishReason === 'SURRENDER' && (
+                    <span className="text-xs font-black text-red-500 bg-red-50 border border-red-100 px-3 py-1 rounded-full mt-2">
+                        {isWinner ? 'Lawan Menyerah' : 'Kamu Menyerah'}
+                    </span>
+                )}
             </div>
 
             {roomData.mode === 'Match Berhadiah' && wager && (

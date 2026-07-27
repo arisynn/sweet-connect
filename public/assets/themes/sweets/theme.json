@@ -36,5 +36,8 @@
     "logo": null,
     "preview": null,
     "tilesDir": "tiles",
-    "menuDir": "menu"
+    "menuDir": "menu",
+    "continueCard": {
+        "motion": "loop"
+    }
 }
