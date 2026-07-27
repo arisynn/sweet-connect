@@ -154,7 +154,7 @@ const GameUI = () => {
     // Auto-reconnect to active room
     React.useEffect(() => {
         if (gameState === 'LOBBY_MAIN' && multiplayerState === 'IDLE' && profile) {
-            fetch(`/api/multiplayer?action=sync&name=${encodeURIComponent(playerName)}`)
+            fetch(`/api/multiplayer?action=sync&name=${encodeURIComponent(playerName)}`, { cache: 'no-store' })
             .then(r => r.json())
             .then(data => {
                 if (data && data.id) {
@@ -193,7 +193,7 @@ const GameUI = () => {
         let poll;
         if ((multiplayerState === 'LOBBY' || multiplayerState === 'STARTING' || multiplayerState === 'PLAYING') && roomData?.id) {
             poll = setInterval(() => {
-                fetch(`/api/multiplayer?action=sync&roomId=${roomData.id}&name=${encodeURIComponent(playerName)}&progress=${progressRef.current || 0}`)
+                fetch(`/api/multiplayer?action=sync&roomId=${roomData.id}&name=${encodeURIComponent(playerName)}&progress=${progressRef.current || 0}`, { cache: 'no-store' })
                 .then(r => r.json())
                 .then(data => {
                     if (data && data.id) {
@@ -411,7 +411,6 @@ const GameUI = () => {
             if (data.error) window.Dialog.showError("Gagal", data.error);
             else if (data.success && data.room) {
                  setRoomData(data.room);
-                 setMultiplayerState('STARTING');
             }
         } catch (e) {
             window.Dialog.showError("Gagal", e.message);

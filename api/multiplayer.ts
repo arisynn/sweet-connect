@@ -253,8 +253,8 @@ export default async function handler(req: Request, res: Response) {
                     // refund wager if it was locked
                     if (currentRoom.mode === 'Match Berhadiah' && currentRoom.wagerLocked) {
                         const memberName = currentRoom.players.find((p: any) => p.name !== currentRoom.host)?.name;
-                        await updatePlayerBalance(currentRoom.host, currentRoom.wager.currency, currentRoom.wager.amount);
-                        await updatePlayerBalance(memberName, currentRoom.wager.currency, currentRoom.wager.amount);
+                        if (currentRoom.host) await updatePlayerBalance(currentRoom.host, currentRoom.wager.currency, currentRoom.wager.amount);
+                        if (memberName) await updatePlayerBalance(memberName, currentRoom.wager.currency, currentRoom.wager.amount);
                         currentRoom.wagerLocked = false;
                     }
                     currentRoom.players.forEach((p: any) => p.ready = false);
