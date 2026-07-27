@@ -57,10 +57,10 @@ const GACHA_PRIZES_THEME = [
 ];
 
 GACHA_RARITY.theme = [
-    { id: 'rb_50', chance: 2.0 },
-    { id: 'rb_25', chance: 10.0 },
-    { id: 'rb_10', chance: 35.0 },
-    { id: 'rb_5', chance: 70.0 },
+    { id: 'rb_50', chance: 0.5 },
+    { id: 'rb_25', chance: 3.0 },
+    { id: 'rb_10', chance: 25.0 },
+    { id: 'rb_5', chance: 60.0 },
     { id: 't_coin500', chance: 80.0 },
     { id: 't_hint1', chance: 90.0 },
     { id: 't_shuffle1', chance: 100.0 }

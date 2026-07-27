@@ -88,7 +88,7 @@ const App = () => {
     const [showTimerAdd, setShowTimerAdd] = useState(false);
     const [showTimeoutFlash, setShowTimeoutFlash] = useState(false);
     const [showBoardClear, setShowBoardClear] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
+    const [isMuted, setIsMuted] = useState(() => localStorage.getItem('pkmnIsMuted') === 'true');
     const [isNewRecord, setIsNewRecord] = useState(false);
     const [levelStartTime, setLevelStartTime] = useState(0);
     const [countdown, setCountdown] = useState(null);
@@ -346,7 +346,8 @@ const App = () => {
             setSplashText(SPLASH_TEXTS[Math.floor(Math.random() * SPLASH_TEXTS.length)]);
         }
     }, [gameState]);
-    useEffect(() => { 
+    useEffect(() => {
+     localStorage.setItem("pkmnIsMuted", isMuted);
     AudioEngine.updateSettings({ muteMusic: isMuted, muteSfx: isMuted }); 
     setProfile(p => { 
         if(!p) return p;
