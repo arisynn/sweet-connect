@@ -199,7 +199,10 @@
         "border": "#fde68a",
         "text": "#b45309",
         "accent": "#d97706",
-        "buttonActive": "#92400e"
+        "buttonActive": "#92400e",
+        "continueCard": {
+          "motion": "loop"
+        }
       },
       "folder": "kucing",
       "splash": "/assets/themes/kucing/splash.png",
@@ -383,12 +386,12 @@
       "preview": null,
       "tilesDir": "tiles",
       "menuDir": "menu",
+      "continueCard": {
+        "motion": "loop"
+      },
       "type": "standar",
       "folder": "sweets",
       "menuIcons": {},
-      "cards": {
-        "continue": "/assets/themes/sweets/card/continue.png"
-      },
       "menuBackgrounds": {}
     }
   ]

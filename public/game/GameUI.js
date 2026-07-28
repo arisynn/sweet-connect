@@ -154,6 +154,7 @@ const GameUI = () => {
     // Auto-reconnect to active room
     React.useEffect(() => {
         if (gameState === 'LOBBY_MAIN' && multiplayerState === 'IDLE' && profile) {
+            if (leaveIntentRef.current) return;
             fetch(`/api/multiplayer?action=sync&name=${encodeURIComponent(playerName)}`, { cache: 'no-store' })
             .then(r => r.json())
             .then(data => {
@@ -188,6 +189,7 @@ const GameUI = () => {
 
     const progressRef = React.useRef(progress);
     React.useEffect(() => { progressRef.current = progress; }, [progress]);
+    const leaveIntentRef = React.useRef(false);
 
     React.useEffect(() => {
         let poll;
@@ -211,7 +213,14 @@ const GameUI = () => {
                             setMultiplayerState("RESULT");
                             if (window.addChestProgress) {
                                 setProfile(prev => {
-                                    const next = window.addChestProgress(prev, 10);
+                                    if (!prev) return prev;
+                                    let next = { ...prev };
+                                    if (data.wager && data.wager.settledBalances) {
+                                        if (data.wager.settledBalances[playerName] !== undefined) {
+                                            next[data.wager.currency] = data.wager.settledBalances[playerName];
+                                        }
+                                    }
+                                    next = window.addChestProgress(next, 10);
                                     if (window.saveProfile) window.saveProfile(playerName, next);
                                     return next;
                                 });
@@ -219,9 +228,17 @@ const GameUI = () => {
                             if (window.handleMultiplayerEnd) window.handleMultiplayerEnd();
                         }
                     } else if (data.error) {
-                        setMultiplayerState('IDLE'); window.isMultiplayerMatch = false;
-                        setRoomData(null);
-                        window.Dialog.showError("Disconnected", "Room tidak ditemukan.");
+                        if (leaveIntentRef.current) return;
+                        // Prevent reverting to single player mid-game if there's a temporary disconnect
+                        if (multiplayerState === 'PLAYING') {
+                            setMultiplayerState('RESULT');
+                            window.Dialog.showError("Disconnected", "Koneksi ke room terputus.");
+                        } else {
+                            setMultiplayerState('IDLE'); 
+                            window.isMultiplayerMatch = false;
+                            setRoomData(null);
+                            window.Dialog.showError("Disconnected", "Room tidak ditemukan.");
+                        }
                     }
                 }).catch(e => console.warn('Sync error:', e.message));
             }, 2000);
@@ -250,7 +267,7 @@ const GameUI = () => {
 
     React.useEffect(() => {
         window.handleMultiplayerEnd = () => {
-            setGameState("LOBBY_MAIN");
+            // Keep gameState as PLAYING to show result over the board
         };
     }, []);
 
@@ -303,15 +320,23 @@ const GameUI = () => {
     };
 
     const handleLeaveRoom = async () => {
+        leaveIntentRef.current = true;
         if (roomData?.id) {
-            fetch('/api/multiplayer?action=leave', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ roomId: roomData.id, name: playerName })
-            }).catch(() => {});
+            try {
+                await fetch('/api/multiplayer?action=leave', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roomId: roomData.id, name: playerName })
+                });
+            } catch(e) {}
         }
         setRoomData(null);
         setMultiplayerState('IDLE'); window.isMultiplayerMatch = false;
+        
+        // Reset after a short delay so user can join a new room
+        setTimeout(() => {
+            leaveIntentRef.current = false;
+        }, 3000);
     };
 
     const handleReadyToggle = async () => {
@@ -745,19 +770,6 @@ const GameUI = () => {
                                     const MultiplayerLoading = window.MultiplayerLoading;
                                     return <MultiplayerLoading roomData={roomData} playerName={playerName} />;
                                 })()
-                            ) : multiplayerState === 'RESULT' ? (
-                                (() => {
-                                    const MultiplayerResult = window.MultiplayerResult;
-                                    return <MultiplayerResult 
-                                        roomData={roomData} 
-                                        playerName={playerName}
-                                        onRematch={async () => {
-                                            await fetch("/api/multiplayer?action=ready", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId: roomData.id, name: playerName, ready: true }) });
-                                            setMultiplayerState("LOBBY");
-                                        }}
-                                        onLeave={handleLeaveRoom}
-                                    />;
-                                })()
                             ) : multiplayerState === 'LOBBY' ? (
                                 <MultiplayerLobby 
                                     roomData={roomData} 
@@ -987,6 +999,26 @@ const GameUI = () => {
             </div>
         </div>
         
+                {multiplayerState === 'RESULT' && (
+                    <div className="fixed inset-0 z-[230] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        {(() => {
+                            const MultiplayerResult = window.MultiplayerResult;
+                            return <MultiplayerResult 
+                                roomData={roomData} 
+                                playerName={playerName}
+                                onRematch={async () => {
+                                    await fetch("/api/multiplayer?action=ready", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roomId: roomData?.id, name: playerName, ready: true }) });
+                                    setMultiplayerState("LOBBY");
+                                    setGameState("LOBBY_MAIN");
+                                }}
+                                onLeave={() => {
+                                    handleLeaveRoom();
+                                    setGameState("LOBBY_MAIN");
+                                }}
+                            />;
+                        })()}
+                    </div>
+                )}
                 
                 {showSettings && (
                     <SettingsPanel 

@@ -9,8 +9,8 @@ window.ConflictResolver = {
             const localLevel = localPayload.gameData.currentLevel || 1;
             const cloudLevel = cloudPayload.gameData.currentLevel || 1;
 
-            if (localLevel > cloudLevel) {
-                window.EngineUtils.log('Conflict', 'Cloud revision higher, but Local has more progress. Force merging local over cloud, but keeping cloud currency.');
+            if (localLevel >= cloudLevel) {
+                window.EngineUtils.log('Conflict', 'Cloud revision higher, but Local has same or more progress. Force merging local over cloud, but keeping cloud currency.');
                 const mergedPayload = JSON.parse(JSON.stringify(localPayload));
                 mergedPayload.gameData.coins = cloudPayload.gameData.coins;
                 mergedPayload.gameData.gems = cloudPayload.gameData.gems;

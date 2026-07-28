@@ -5,11 +5,22 @@ import { getSupabase } from './supabase.js';
 // In production, use Redis or Supabase Realtime/DB for this.
 const rooms = new Map<string, any>();
 
+function calculateHash(obj: any): string {
+    const str = JSON.stringify(obj);
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return hash.toString(16);
+}
+
 async function updatePlayerBalance(playerName: string, currency: string, change: number) {
     const supabase = getSupabase();
-    if (!supabase) return;
+    if (!supabase) return 0;
     const { data, error } = await supabase.from("profiles").select("profile_data").eq("player_name", playerName).maybeSingle();
-    if (error || !data || !data.profile_data) return;
+    if (error || !data || !data.profile_data) return 0;
     let profileData = data.profile_data;
     let target = profileData.gameData ? profileData.gameData : profileData;
     const current = parseInt(target[currency]) || 0;
@@ -18,9 +29,13 @@ async function updatePlayerBalance(playerName: string, currency: string, change:
     if (profileData._engine) {
         profileData._engine.revision = (profileData._engine.revision || 0) + 1;
         profileData._engine.updatedAt = Date.now();
+        if (profileData.gameData) {
+            profileData._engine.saveHash = calculateHash(profileData.gameData);
+        }
     }
     
     await supabase.from("profiles").update({ profile_data: profileData }).eq("player_name", playerName);
+    return target[currency];
 }
 
 async function getPlayerBalance(playerName: string, currency: string) {
@@ -158,7 +173,11 @@ export default async function handler(req: Request, res: Response) {
                                     room.payoutProcessed = true; // Set before await
                                     const amount = room.wager.amount;
                                     const curr = room.wager.currency;
-                                    await updatePlayerBalance(opponent.name, curr, amount * 2);
+                                    const winnerBal = await updatePlayerBalance(opponent.name, curr, amount * 2);
+                                    room.wager.settledBalances = room.wager.settledBalances || {};
+                                    room.wager.settledBalances[opponent.name] = winnerBal;
+                                    const loserBal = await getPlayerBalance(p.name, curr);
+                                    room.wager.settledBalances[p.name] = loserBal;
                                 }
                             }
                         } else {
@@ -191,7 +210,15 @@ export default async function handler(req: Request, res: Response) {
                     const amount = room.wager.amount;
                     const curr = room.wager.currency;
                     // Winner gets both wagers (their own wager back + the loser's wager)
-                    await updatePlayerBalance(name, curr, amount * 2);
+                    const winnerBal = await updatePlayerBalance(name, curr, amount * 2);
+                    room.wager.settledBalances = room.wager.settledBalances || {};
+                    room.wager.settledBalances[name] = winnerBal;
+                    
+                    const loserName = room.players.find((p: any) => p.name !== name)?.name;
+                    if (loserName) {
+                        const loserBal = await getPlayerBalance(loserName, curr);
+                        room.wager.settledBalances[loserName] = loserBal;
+                    }
                 }
             }
             return res.json(room || { error: "Not found" });
