@@ -752,7 +752,12 @@ const handleLoginSubmit = async (isColdStart = false) => {
 
     const handleLevelCleared = useCallback(() => triggerLevelEndStats(false), [triggerLevelEndStats]);
 
-    const handleDeadlock = useCallback((b) => setBoard(guaranteedShuffle(b)), []);
+    const handleDeadlock = useCallback((b) => {
+        comboCountRef.current = 0;
+        lastMatchTimeRef.current = 0;
+        setComboDisplay(null);
+        setBoard(guaranteedShuffle(b));
+    }, []);
 
     const prepareLevel = async (startLevel, providedBoard = null, providedTheme = null, startScore = null, startHp = null, startHints = null, startShuffles = null, startProgress = null, startMatchedTiles = null, startSelectedTile = null, startComboCount = 0, startLastMatchTime = 0, targetStartAt = null) => {
         const currentT = providedTheme || activeThemeRef.current;
@@ -898,8 +903,14 @@ const handleLoginSubmit = async (isColdStart = false) => {
                 setTimeout(() => setWrongTile(null), 380); 
                 setSelectedTile(null);
                 
-                const penaltySec = Math.min(15, 1 + level);
-                const penaltyPct = (penaltySec * 1000) / 90000 * 100; 
+                // Break combo!
+                comboCountRef.current = 0;
+                lastMatchTimeRef.current = 0;
+                setComboDisplay(null);
+                
+                // Balance penalty to be less punishing on timer (3 seconds max)
+                const penaltySec = Math.min(3, 1 + Math.floor(level / 5));
+                const penaltyPct = (penaltySec / 1.666); // Based on ~166s total time
                 setProgress(p => Math.max(0, p - penaltyPct));
                 setWrongConnectionPenalty({ r, c, sec: penaltySec });
                 setTimeout(() => setWrongConnectionPenalty(null), 1000);
@@ -932,10 +943,10 @@ const handleLoginSubmit = async (isColdStart = false) => {
     const handleShuffleClick = () => { 
         if (gameState !== 'PLAYING' || window.isMultiplayerMatch) return;
         if (shuffles > 0) { 
-            comboCountRef.current = 0; // Memutus combo aktif
+            comboCountRef.current = 0; lastMatchTimeRef.current = 0; setComboDisplay(null);
             setShuffles(s => s - 1); missionProgressRef.current.shuffles += 1; setProfile(p => updateMissions(p, 'useShuffle', 1)); shufflesPendingRef.current += 1; AudioEngine.shuffle(); setHintActiveTiles([]); setHintPath(null); handleDeadlock(board); setSelectedTile(null); 
         } else if (hp > 1) {
-            comboCountRef.current = 0; // Memutus combo aktif
+            comboCountRef.current = 0; lastMatchTimeRef.current = 0; setComboDisplay(null);
             setHp(h => h - 1); missionProgressRef.current.shuffles += 1; 
             AudioEngine.shuffle(); setHintActiveTiles([]); setHintPath(null); handleDeadlock(board); setSelectedTile(null);
             window.Dialog.showInfo("Pakai Nyawa", "Kamu menggunakan 1 Nyawa untuk Shuffle!");
@@ -954,10 +965,10 @@ const handleLoginSubmit = async (isColdStart = false) => {
         if (!hintData) return;
 
         if (hints > 0) {
-            comboCountRef.current = 0; // Memutus combo aktif
+            comboCountRef.current = 0; lastMatchTimeRef.current = 0; setComboDisplay(null);
             setHints(h => h - 1); missionProgressRef.current.hints += 1; hintsPendingRef.current += 1; setProfile(p => updateMissions(p, 'useHint', 1)); AudioEngine.hint(); setHintActiveTiles([{r: hintData.p1.r, c: hintData.p1.c}, {r: hintData.p2.r, c: hintData.p2.c}]); setHintPath(hintData.path); 
         } else if (hp > 1) {
-            comboCountRef.current = 0; // Memutus combo aktif
+            comboCountRef.current = 0; lastMatchTimeRef.current = 0; setComboDisplay(null);
             setHp(h => h - 1); missionProgressRef.current.hints += 1; 
             AudioEngine.hint(); setHintActiveTiles([{r: hintData.p1.r, c: hintData.p1.c}, {r: hintData.p2.r, c: hintData.p2.c}]); setHintPath(hintData.path); 
             window.Dialog.showInfo("Pakai Nyawa", "Kamu menggunakan 1 Nyawa untuk Hint!");

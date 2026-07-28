@@ -5,9 +5,10 @@ const SCORE_PER_MATCH = 50;
 
 // B. SPEED BONUS
 const calculateSpeedBonusMultiplier = (timeSinceLastMatchMs) => {
-    if (timeSinceLastMatchMs <= 1500) return 2.0;
+    if (timeSinceLastMatchMs <= 1000) return 2.5;
+    if (timeSinceLastMatchMs <= 2000) return 2.0;
     if (timeSinceLastMatchMs <= 3000) return 1.5;
-    if (timeSinceLastMatchMs <= 5000) return 1.2;
+    if (timeSinceLastMatchMs <= 4500) return 1.2;
     return 1.0;
 };
 
@@ -17,7 +18,9 @@ const calculateComboMultiplier = (comboCount) => {
     if (comboCount === 2) return 1.5;
     if (comboCount === 3) return 2.0;
     if (comboCount === 4) return 2.5;
-    return 3.0; // Max 3.0
+    if (comboCount === 5) return 3.0;
+    if (comboCount === 6) return 3.5;
+    return 4.0; // Max 4.0
 };
 
 // D. TIME REMAINING BONUS
