@@ -88,7 +88,7 @@ const App = () => {
     const [showTimerAdd, setShowTimerAdd] = useState(false);
     const [showTimeoutFlash, setShowTimeoutFlash] = useState(false);
     const [showBoardClear, setShowBoardClear] = useState(false);
-    const [isMuted, setIsMuted] = useState(() => localStorage.getItem('pkmnIsMuted') === 'true');
+    const [isMuted, setIsMuted] = useState(() => (window.AudioEngine ? (window.AudioEngine.getSettings().muteMusic && window.AudioEngine.getSettings().muteSfx) : localStorage.getItem('pkmnIsMuted') === 'true'));
     const [isNewRecord, setIsNewRecord] = useState(false);
     const [levelStartTime, setLevelStartTime] = useState(0);
     const [countdown, setCountdown] = useState(null);
@@ -141,16 +141,6 @@ const App = () => {
             if (newProfile) {
                 setProfile(newProfile);
                 if (newProfile.activeTheme) setActiveTheme(newProfile.activeTheme);
-                if (newProfile.settings) {
-                    setIsMuted(newProfile.settings.isMuted);
-                    if (window.AudioEngine) {
-                        window.AudioEngine.updateSettings({ 
-                            muteMusic: newProfile.settings.isMuted, 
-                            muteSfx: newProfile.settings.isMuted,
-                            ...newProfile.settings.audio 
-                        });
-                    }
-                }
                 setSweetMessage('Profil diperbarui dari Cloud!');
             }
         };
@@ -346,17 +336,7 @@ const App = () => {
             setSplashText(SPLASH_TEXTS[Math.floor(Math.random() * SPLASH_TEXTS.length)]);
         }
     }, [gameState]);
-    useEffect(() => {
-     localStorage.setItem("pkmnIsMuted", isMuted);
-    AudioEngine.updateSettings({ muteMusic: isMuted, muteSfx: isMuted }); 
-    setProfile(p => { 
-        if(!p) return p;
-        const newSettings = { ...(p.settings || {}), isMuted };
-        const newP = { ...p, settings: newSettings };
-        saveProfile(playerName, newP);
-        return newP;
-    });
-}, [isMuted]);
+    
     useEffect(() => {
         const gameStates = ['LOADING_BOARD', 'COUNTDOWN', 'PLAYING', 'PAUSED', 'GAMEOVER', 'WON'];
         if (gameStates.includes(gameState)) {
@@ -444,14 +424,6 @@ const App = () => {
         } else {
             finalProfile.activeTheme = 'sweets';
             setActiveTheme('sweets');
-        }
-        if (finalProfile.settings) {
-            setIsMuted(finalProfile.settings.isMuted);
-            AudioEngine.updateSettings({ 
-                muteMusic: finalProfile.settings.isMuted, 
-                muteSfx: finalProfile.settings.isMuted,
-                ...finalProfile.settings.audio 
-            });
         }
         if (!finalProfile.unlockedThemes.includes(finalProfile.activeTheme)) {
             finalProfile.activeTheme = 'sweets';

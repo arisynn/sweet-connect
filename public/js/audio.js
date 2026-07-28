@@ -11,8 +11,19 @@ const AudioEngine = (() => {
         muteSfx: false
     };
 
+    
+    try {
+        const saved = localStorage.getItem('sweetConnectAudioSettings');
+        if (saved) {
+            settings = { ...settings, ...JSON.parse(saved) };
+        }
+    } catch(e) {}
+
     const saveSettings = () => {
-        // CLOUD-ONLY: Audio settings are managed via the profile system
+        try {
+            localStorage.setItem('sweetConnectAudioSettings', JSON.stringify(settings));
+            localStorage.setItem('pkmnIsMuted', String(settings.muteMusic && settings.muteSfx));
+        } catch(e) {}
     };
 
     const getCtx = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); return ctx; };

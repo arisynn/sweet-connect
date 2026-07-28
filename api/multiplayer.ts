@@ -1,107 +1,120 @@
 import type { Request, Response } from 'express';
 import { getSupabase } from './supabase.js';
 
-// Ephemeral room state
-// In production, use Redis or Supabase Realtime/DB for this.
 const rooms = new Map<string, any>();
 
-function calculateHash(obj: any): string {
-    const str = JSON.stringify(obj);
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return hash.toString(16);
+function logMultiplayerEvent(event: string, roomId: string, details: any = {}) {
+    console.log(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        module: 'Multiplayer',
+        event,
+        roomId,
+        ...details
+    }));
 }
 
-async function updatePlayerBalance(playerName: string, currency: string, change: number) {
+async function updatePlayerBalance(playerName: string, currency: string, delta: number) {
     const supabase = getSupabase();
-    if (!supabase) return 0;
-    const { data, error } = await supabase.from("profiles").select("profile_data").eq("player_name", playerName).maybeSingle();
-    if (error || !data || !data.profile_data) return 0;
-    let profileData = data.profile_data;
-    let target = profileData.gameData ? profileData.gameData : profileData;
-    const current = parseInt(target[currency]) || 0;
-    target[currency] = current + change;
-    
-    if (profileData._engine) {
-        profileData._engine.revision = (profileData._engine.revision || 0) + 1;
-        profileData._engine.updatedAt = Date.now();
-        if (profileData.gameData) {
-            profileData._engine.saveHash = calculateHash(profileData.gameData);
-        }
-    }
-    
-    await supabase.from("profiles").update({ profile_data: profileData }).eq("player_name", playerName);
-    return target[currency];
-}
-
-async function getPlayerBalance(playerName: string, currency: string) {
-    const supabase = getSupabase();
-    if (!supabase) return 0;
-    
-    const { data, error } = await supabase.from('profiles').select('profile_data').eq('player_name', playerName).maybeSingle();
-    if (error || !data || !data.profile_data) {
-        console.error(`getPlayerBalance error for ${playerName}:`, error?.message || 'No data');
+    if (!supabase) {
+        logMultiplayerEvent('BALANCE_UPDATE_SKIPPED', '', { reason: 'Supabase missing', playerName, currency, delta });
         return 0;
     }
     
-    let gameData = data.profile_data;
-    if (data.profile_data.gameData) {
-        gameData = data.profile_data.gameData;
+    try {
+        const { data, error } = await supabase.from('profiles').select('profile_data').eq('player_name', playerName).maybeSingle();
+        if (error || !data) {
+            logMultiplayerEvent('BALANCE_UPDATE_FAILED', '', { reason: 'Profile not found', playerName, error: error?.message });
+            return 0;
+        }
+        
+        let profileData = data.profile_data || {};
+        let currentBalance = profileData[currency] || 0;
+        let newBalance = Math.max(0, currentBalance + delta);
+        
+        profileData[currency] = newBalance;
+        
+        // CRITICAL FOR SAVE ENGINE V2: Increment revision so client gets 409 Conflict if they try to save an old state
+        if (profileData._engine && typeof profileData._engine.revision === 'number') {
+            profileData._engine.revision += 1;
+            profileData._engine.updatedAt = Date.now();
+        }
+        
+        await supabase.from('profiles').update({ profile_data: profileData }).eq('player_name', playerName);
+        logMultiplayerEvent('BALANCE_UPDATED', '', { playerName, currency, oldBalance: currentBalance, newBalance, delta, newRevision: profileData._engine?.revision });
+        return newBalance;
+    } catch (e: any) {
+        logMultiplayerEvent('BALANCE_UPDATE_ERROR', '', { playerName, error: e.message });
+        return 0;
     }
-    
-    return parseInt(gameData[currency]) || 0;
 }
 
 export default async function handler(req: Request, res: Response) {
-    res.setHeader('Access-Control-Allow-Credentials', "true");
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-
-    const { action } = req.query;
-
     try {
+        // Prevent caching for multiplayer endpoints
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+
+        const action = req.query.action || req.body.action;
+        
         if (action === 'create') {
             const { host, level, theme } = req.body;
+            if (!host) return res.status(400).json({ error: 'Missing host' });
+            
             const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-            rooms.set(roomId, {
+            const room = {
                 id: roomId,
                 host,
+                status: 'LOBBY',
+                revision: 1, // Add revision for state conflict resolution
+                players: [{ name: host, level, ready: false, theme, lastSync: Date.now() }],
                 mode: 'Friendly Match',
-                wager: null,
-                players: [{ name: host, level, ready: false, theme }]
-            });
-            return res.json(rooms.get(roomId));
+                wager: null
+            };
+            rooms.set(roomId, room);
+            logMultiplayerEvent('ROOM_CREATED', roomId, { host, mode: room.mode });
+            return res.json(room);
         }
-
+        
         if (action === 'join') {
             const { roomId, name, level, theme } = req.body;
+            if (!roomId || !name) return res.status(400).json({ error: 'Missing parameters' });
+            
             const room = rooms.get(roomId);
             if (!room) return res.status(404).json({ error: 'Room not found' });
-            if (room.players.length >= 2 && !room.players.find((p: any) => p.name === name)) return res.status(400).json({ error: 'Room is full' });
+            
+            if (room.status !== 'LOBBY' && room.status !== 'PREPARING') {
+                // If they are rejoining, allow them if they are already in the room
+                if (!room.players.find((p: any) => p.name === name)) {
+                    return res.status(400).json({ error: 'Room is currently in a match' });
+                }
+            }
+            
+            if (room.players.length >= 2 && !room.players.find((p: any) => p.name === name)) {
+                return res.status(400).json({ error: 'Room is full' });
+            }
             
             const existingPlayer = room.players.find((p: any) => p.name === name);
             if (existingPlayer) {
                 existingPlayer.level = level;
                 existingPlayer.theme = theme;
                 existingPlayer.ready = false;
+                existingPlayer.lastSync = Date.now();
+                logMultiplayerEvent('PLAYER_REJOINED', roomId, { name });
             } else {
-                room.players.push({ name, level, ready: false, theme });
+                room.players.push({ name, level, ready: false, theme, lastSync: Date.now() });
+                logMultiplayerEvent('PLAYER_JOINED', roomId, { name });
             }
+            
             room.players.forEach((p: any) => p.ready = false);
+            room.revision += 1;
             return res.json(room);
         }
         
         if (action === 'leave') {
             const { roomId, name } = req.body;
+            if (!roomId || !name) return res.status(400).json({ error: 'Missing parameters' });
+            
             const room = rooms.get(roomId);
             if (room) {
                 if (room.status === 'ACTIVE' && !room.winner) {
@@ -111,25 +124,48 @@ export default async function handler(req: Request, res: Response) {
                         room.winner = opponent.name;
                         room.status = 'COMPLETED';
                         room.finishReason = 'DISCONNECT';
+                        room.revision += 1;
+                        logMultiplayerEvent('MATCH_FORFEITED', roomId, { leaver: name, winner: opponent.name });
+                        
                         if (room.mode === 'Match Berhadiah' && room.wager && !room.payoutProcessed) {
                             room.payoutProcessed = true;
                             const amount = room.wager.amount;
                             const curr = room.wager.currency;
-                            updatePlayerBalance(opponent.name, curr, amount * 2).catch(() => {});
+                            updatePlayerBalance(opponent.name, curr, amount * 2).then(winnerBal => {
+                                room.wager.settledBalances = room.wager.settledBalances || {};
+                                room.wager.settledBalances[opponent.name] = winnerBal;
+                            });
                         }
                     }
                 }
                 
                 room.players = room.players.filter((p: any) => p.name !== name);
-                if (room.players.length === 0) rooms.delete(roomId);
-                else {
-                    if (room.host === name) room.host = room.players[0].name;
+                logMultiplayerEvent('PLAYER_LEFT', roomId, { name, remaining: room.players.length });
+                
+                if (room.players.length === 0) {
+                    rooms.delete(roomId);
+                    logMultiplayerEvent('ROOM_DESTROYED', roomId, { reason: 'empty' });
+                } else {
+                    if (room.host === name) {
+                        room.host = room.players[0].name;
+                        logMultiplayerEvent('HOST_MIGRATED', roomId, { newHost: room.host });
+                    }
                     room.players.forEach((p: any) => p.ready = false);
+                    if (room.status === 'PREPARING' || room.status === 'STARTING') {
+                        room.status = 'LOBBY';
+                        if (room.mode === 'Match Berhadiah' && room.wagerLocked) {
+                            // Refund wager if locked during preparing
+                            const p1 = room.players[0]?.name;
+                            if (p1) updatePlayerBalance(p1, room.wager.currency, room.wager.amount);
+                            room.wagerLocked = false;
+                        }
+                    }
+                    room.revision += 1;
                 }
             }
             return res.json({ success: true });
         }
-
+        
         if (action === 'sync') {
             const { roomId, name, level, theme, progress } = req.query;
             let room;
@@ -146,7 +182,9 @@ export default async function handler(req: Request, res: Response) {
                 }
             }
             
-            if (!room) return res.status(404).json({ error: 'Room not found' });
+            if (!room) {
+                return res.status(404).json({ error: 'Room not found' });
+            }
             
             const now = Date.now();
             if (name && room.players) {
@@ -154,39 +192,44 @@ export default async function handler(req: Request, res: Response) {
                 if (p) {
                     if (level) p.level = Number(level);
                     if (theme) p.theme = theme as string;
-                    if (progress) p.progress = Number(progress);
+                    if (progress !== undefined) p.progress = Number(progress);
                     p.lastSync = now;
                 }
             }
             
-            // Check for disconnects
+            // Rehydrate / Check for disconnects
             if (room.status === 'ACTIVE' && !room.winner) {
                 for (const p of room.players) {
-                    if (p.lastSync && (now - p.lastSync > 10000)) {
+                    if (p.lastSync && (now - p.lastSync > 15000)) { // 15 seconds grace period
                         if (room.startAt && now >= room.startAt) {
                             const opponent = room.players.find((op: any) => op.name !== p.name);
                             if (opponent) {
                                 room.winner = opponent.name;
                                 room.status = 'COMPLETED';
                                 room.finishReason = 'DISCONNECT';
+                                room.revision += 1;
+                                logMultiplayerEvent('MATCH_ENDED_DISCONNECT', room.id, { disconnectedPlayer: p.name, winner: opponent.name });
+                                
                                 if (room.mode === 'Match Berhadiah' && room.wager && !room.payoutProcessed) {
-                                    room.payoutProcessed = true; // Set before await
+                                    room.payoutProcessed = true;
                                     const amount = room.wager.amount;
                                     const curr = room.wager.currency;
-                                    const winnerBal = await updatePlayerBalance(opponent.name, curr, amount * 2);
-                                    room.wager.settledBalances = room.wager.settledBalances || {};
-                                    room.wager.settledBalances[opponent.name] = winnerBal;
-                                    const loserBal = await getPlayerBalance(p.name, curr);
-                                    room.wager.settledBalances[p.name] = loserBal;
+                                    updatePlayerBalance(opponent.name, curr, amount * 2).then(winnerBal => {
+                                        room.wager.settledBalances = room.wager.settledBalances || {};
+                                        room.wager.settledBalances[opponent.name] = winnerBal;
+                                    });
                                 }
                             }
                         } else {
                             // Disconnected during countdown - revert to lobby
                             room.status = 'LOBBY';
+                            room.revision += 1;
+                            logMultiplayerEvent('COUNTDOWN_ABORTED_DISCONNECT', room.id, { disconnectedPlayer: p.name });
+                            
                             if (room.mode === 'Match Berhadiah' && room.wagerLocked) {
                                 const memberName = room.players.find((player: any) => player.name !== room.host)?.name;
-                                if (room.host) await updatePlayerBalance(room.host, room.wager.currency, room.wager.amount);
-                                if (memberName) await updatePlayerBalance(memberName, room.wager.currency, room.wager.amount);
+                                if (room.host) updatePlayerBalance(room.host, room.wager.currency, room.wager.amount);
+                                if (memberName) updatePlayerBalance(memberName, room.wager.currency, room.wager.amount);
                                 room.wagerLocked = false;
                             }
                             room.players.forEach((player: any) => player.ready = false);
@@ -194,7 +237,7 @@ export default async function handler(req: Request, res: Response) {
                     }
                 }
             }
-
+            
             return res.json(room);
         }
         
@@ -205,42 +248,60 @@ export default async function handler(req: Request, res: Response) {
                 room.winner = name;
                 room.status = "COMPLETED";
                 room.finishReason = "BOARD_COMPLETED";
+                room.revision += 1;
+                logMultiplayerEvent('MATCH_COMPLETED', roomId, { winner: name });
+                
                 if (room.mode === "Match Berhadiah" && room.wager && !room.payoutProcessed) {
                     room.payoutProcessed = true;
                     const amount = room.wager.amount;
                     const curr = room.wager.currency;
-                    // Winner gets both wagers (their own wager back + the loser's wager)
-                    const winnerBal = await updatePlayerBalance(name, curr, amount * 2);
-                    room.wager.settledBalances = room.wager.settledBalances || {};
-                    room.wager.settledBalances[name] = winnerBal;
-                    
+                    // Run payouts concurrently
+                    const winnerBalP = updatePlayerBalance(name, curr, amount * 2);
                     const loserName = room.players.find((p: any) => p.name !== name)?.name;
+                    const loserBalP = loserName ? updatePlayerBalance(loserName, curr, 0) : Promise.resolve(0); // Just fetch balance
+                    
+                    winnerBalP.then(winnerBal => {
+                        room.wager.settledBalances = room.wager.settledBalances || {};
+                        room.wager.settledBalances[name] = winnerBal;
+                    });
+                    
                     if (loserName) {
-                        const loserBal = await getPlayerBalance(loserName, curr);
-                        room.wager.settledBalances[loserName] = loserBal;
+                        loserBalP.then(loserBal => {
+                            room.wager.settledBalances = room.wager.settledBalances || {};
+                            room.wager.settledBalances[loserName] = loserBal;
+                        });
                     }
                 }
             }
-            return res.json(room || { error: "Not found" });
+            return res.json(room || { error: "Room not found" });
         }
 
         if (action === 'ready') {
             const { roomId, name, ready } = req.body;
+            if (!roomId || !name) return res.status(400).json({ error: 'Missing parameters' });
+            
             const room = rooms.get(roomId);
             if (room) {
                 const p = room.players.find((p: any) => p.name === name);
-                if (p) p.ready = ready;
+                if (p && p.ready !== ready) {
+                    p.ready = ready;
+                    room.revision += 1;
+                    logMultiplayerEvent('PLAYER_READY_CHANGED', roomId, { name, ready });
+                }
             }
-            return res.json(room);
+            return res.json(room || { error: 'Room not found' });
         }
 
         if (action === 'change_mode') {
             const { roomId, host, mode } = req.body;
             const room = rooms.get(roomId);
             if (!room || room.host !== host) return res.status(403).json({ error: 'Not host' });
-            room.mode = mode;
-            if (mode === 'Friendly Match') {
-                room.wager = null;
+            
+            if (room.mode !== mode) {
+                room.mode = mode;
+                room.revision += 1;
+                if (mode === 'Friendly Match') room.wager = null;
+                logMultiplayerEvent('MODE_CHANGED', roomId, { newMode: mode });
             }
             return res.json(room);
         }
@@ -258,9 +319,13 @@ export default async function handler(req: Request, res: Response) {
             const room = rooms.get(roomId);
             if (!room || room.host !== host) return res.status(403).json({ error: 'Not host' });
             
-            const balance = await getPlayerBalance(host, currency);
-            if (balance < amount) {
-                return res.status(400).json({ error: `${currency === 'coins' ? 'Coin' : 'Gem'} kamu tidak cukup untuk taruhan ini.` });
+            const supabase = getSupabase();
+            if (supabase) {
+                const { data } = await supabase.from('profiles').select('profile_data').eq('player_name', host).maybeSingle();
+                const balance = data?.profile_data?.[currency] || 0;
+                if (balance < amount) {
+                    return res.status(400).json({ error: `${currency === 'coins' ? 'Coin' : 'Gem'} kamu tidak cukup.` });
+                }
             }
             
             room.mode = 'Match Berhadiah';
@@ -271,6 +336,8 @@ export default async function handler(req: Request, res: Response) {
                 memberAgreed: false,
                 version: Date.now()
             };
+            room.revision += 1;
+            logMultiplayerEvent('WAGER_PROPOSED', roomId, { host, currency, amount });
             return res.json(room);
         }
 
@@ -279,12 +346,20 @@ export default async function handler(req: Request, res: Response) {
             const room = rooms.get(roomId);
             if (!room || !room.wager || room.wager.version !== version) return res.status(400).json({ error: 'Wager expired' });
             
-            const balance = await getPlayerBalance(name, room.wager.currency);
-            if (balance < room.wager.amount) {
-                return res.status(400).json({ error: `${room.wager.currency} kamu tidak cukup untuk menerima pertandingan ini.` });
+            const supabase = getSupabase();
+            if (supabase) {
+                const { data } = await supabase.from('profiles').select('profile_data').eq('player_name', name).maybeSingle();
+                const balance = data?.profile_data?.[room.wager.currency] || 0;
+                if (balance < room.wager.amount) {
+                    return res.status(400).json({ error: `${room.wager.currency} tidak cukup untuk menerima taruhan.` });
+                }
             }
             
-            room.wager.memberAgreed = true;
+            if (!room.wager.memberAgreed) {
+                room.wager.memberAgreed = true;
+                room.revision += 1;
+                logMultiplayerEvent('WAGER_ACCEPTED', roomId, { name });
+            }
             return res.json(room);
         }
         
@@ -294,14 +369,18 @@ export default async function handler(req: Request, res: Response) {
             if (room && room.wager && room.wager.version === version) {
                 room.wager = null;
                 room.mode = 'Friendly Match';
+                room.revision += 1;
+                logMultiplayerEvent('WAGER_REJECTED', roomId, {});
             }
-            return res.json(room);
+            return res.json(room || { error: 'Room not found' });
         }
 
         if (action === 'start_match') {
             const { roomId, host, board } = req.body;
             const room = rooms.get(roomId);
             if (!room || room.host !== host) return res.status(403).json({ error: 'Invalid room' });
+            
+            // ATOMIC CHECK: Ensure we don't start multiple times
             if (room.status === 'PREPARING' || room.status === 'ACTIVE') return res.json({ success: true, room });
             if (room.players.length < 2 || !room.players.every((p: any) => p.ready)) return res.status(400).json({ error: 'Not all ready' });
             
@@ -313,16 +392,15 @@ export default async function handler(req: Request, res: Response) {
                 const member = room.players.find((p: any) => p.name !== room.host)?.name;
                 
                 if (!room.wagerLocked) {
-                    const hostBalance = await getPlayerBalance(room.host, room.wager.currency);
-                    const memberBalance = await getPlayerBalance(member, room.wager.currency);
-                    
-                    if (hostBalance < room.wager.amount || memberBalance < room.wager.amount) {
-                        return res.status(400).json({ error: 'Saldo salah satu pemain tidak mencukupi saat ini.' });
+                    try {
+                        // Deduct wagers immediately
+                        await updatePlayerBalance(room.host, room.wager.currency, -room.wager.amount);
+                        if (member) await updatePlayerBalance(member, room.wager.currency, -room.wager.amount);
+                        room.wagerLocked = true;
+                    } catch (e) {
+                        logMultiplayerEvent('WAGER_LOCK_FAILED', roomId, { error: e });
+                        return res.status(500).json({ error: 'Failed to lock wagers. Match aborted.' });
                     }
-                    
-                    await updatePlayerBalance(room.host, room.wager.currency, -room.wager.amount);
-                    await updatePlayerBalance(member, room.wager.currency, -room.wager.amount);
-                    room.wagerLocked = true;
                 }
             }
             
@@ -330,22 +408,30 @@ export default async function handler(req: Request, res: Response) {
             room.winner = null;
             room.finishReason = null;
             room.payoutProcessed = false;
+            room.revision += 1;
             room.players.forEach((p: any) => {
                 p.progress = 0;
                 p.readyForGame = false;
             });
             if (board) room.board = board;
             
+            const startToken = room.revision; // Store current revision
+            logMultiplayerEvent('MATCH_PREPARING', roomId, {});
+            
             // Timeout if players don't both ready up for game
-            setTimeout(async () => {
+            setTimeout(() => {
                 const currentRoom = rooms.get(roomId);
-                if (currentRoom && currentRoom.status === 'PREPARING') {
+                // Only abort if we are STILL in the same PREPARING state
+                if (currentRoom && currentRoom.status === 'PREPARING' && currentRoom.revision === startToken) {
+                    logMultiplayerEvent('MATCH_START_TIMEOUT', roomId, {});
                     currentRoom.status = 'LOBBY';
-                    // refund wager if it was locked
+                    currentRoom.revision += 1;
+                    
+                    // Refund wager if it was locked
                     if (currentRoom.mode === 'Match Berhadiah' && currentRoom.wagerLocked) {
                         const memberName = currentRoom.players.find((p: any) => p.name !== currentRoom.host)?.name;
-                        if (currentRoom.host) await updatePlayerBalance(currentRoom.host, currentRoom.wager.currency, currentRoom.wager.amount);
-                        if (memberName) await updatePlayerBalance(memberName, currentRoom.wager.currency, currentRoom.wager.amount);
+                        if (currentRoom.host) updatePlayerBalance(currentRoom.host, currentRoom.wager.currency, currentRoom.wager.amount);
+                        if (memberName) updatePlayerBalance(memberName, currentRoom.wager.currency, currentRoom.wager.amount);
                         currentRoom.wagerLocked = false;
                     }
                     currentRoom.players.forEach((p: any) => p.ready = false);
@@ -361,22 +447,31 @@ export default async function handler(req: Request, res: Response) {
             if (!room) return res.status(404).json({ error: 'Room not found' });
             
             const player = room.players.find((p: any) => p.name === name);
-            if (player) {
+            if (player && !player.readyForGame) {
                 player.readyForGame = true;
                 player.lastSync = Date.now();
+                room.revision += 1;
+                logMultiplayerEvent('PLAYER_READY_FOR_GAME', roomId, { name });
             }
 
-            // Check if all players are ready for game
+            // ATOMIC START: Start only when both are ready and we are still PREPARING
             if (room.status === 'PREPARING' && room.players.length === 2 && room.players.every((p: any) => p.readyForGame)) {
                 room.status = 'ACTIVE';
-                room.startAt = Date.now() + 4000; // 4 seconds for countdown (3, 2, 1, GO)
+                // Server defines the precise start time (4 seconds in the future)
+                room.startAt = Date.now() + 4000;
+                room.revision += 1;
+                logMultiplayerEvent('MATCH_STARTED', roomId, { startAt: room.startAt });
             }
             
             return res.json({ success: true, room });
         }
         
-        res.status(404).json({ error: 'Not found' });
+        return res.status(400).json({ error: 'Invalid action' });
     } catch (e: any) {
-        res.status(500).json({ error: e.message });
+        // Log all uncaught errors, do not let them fail silently on the client
+        console.error("Multiplayer API Error:", e);
+        // Instead of returning 500 which the client interprets as "Room tidak ditemukan", 
+        // we return 500 with a specific error struct, so the frontend can handle it if needed.
+        res.status(500).json({ error: 'Server error', details: e.message });
     }
 }

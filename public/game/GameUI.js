@@ -209,9 +209,9 @@ const GameUI = () => {
                             setMultiplayerState('PLAYING'); 
                             window.isMultiplayerMatch = true;
                             prepareLevel(profile.currentLevel, data.board || null, null, null, null, null, null, 0, null, null, 0, 0, data.startAt); 
-                        } else if (data.status === "COMPLETED" && multiplayerState === "PLAYING") {
+                        } else if (data.status === "COMPLETED" && (multiplayerState === "PLAYING" || multiplayerState === "LOBBY" || multiplayerState === "STARTING")) {
                             setMultiplayerState("RESULT");
-                            if (window.addChestProgress) {
+                            if (window.addChestProgress && multiplayerState === "PLAYING") {
                                 setProfile(prev => {
                                     if (!prev) return prev;
                                     let next = { ...prev };
@@ -229,6 +229,13 @@ const GameUI = () => {
                         }
                     } else if (data.error) {
                         if (leaveIntentRef.current) return;
+                        
+                        // Ignore generic server errors and wait for the next poll
+                        if (data.error === 'Server error') {
+                            console.warn("Multiplayer API returned a server error, waiting for next sync...", data.details);
+                            return;
+                        }
+                        
                         // Prevent reverting to single player mid-game if there's a temporary disconnect
                         if (multiplayerState === 'PLAYING') {
                             setMultiplayerState('RESULT');
@@ -237,7 +244,7 @@ const GameUI = () => {
                             setMultiplayerState('IDLE'); 
                             window.isMultiplayerMatch = false;
                             setRoomData(null);
-                            window.Dialog.showError("Disconnected", "Room tidak ditemukan.");
+                            window.Dialog.showError("Disconnected", data.error === 'Room not found' ? "Room tidak ditemukan." : data.error);
                         }
                     }
                 }).catch(e => console.warn('Sync error:', e.message));
@@ -528,7 +535,7 @@ const GameUI = () => {
                                 </div>
                                 {/* Pause & Sound Right */}
                                 <div className="flex gap-1 shrink-0">
-                                    <button onClick={() => setIsMuted(m => !m)} className={`bg-white w-6 h-6 rounded-full flex items-center justify-center border theme-border shadow-sm active:scale-95 transition-transform ${isMuted ? 'text-gray-400' : 'theme-text-active'}`}>
+                                    <button onClick={() => { const newMuted = !isMuted; setIsMuted(newMuted); AudioEngine.updateSettings({ muteMusic: newMuted, muteSfx: newMuted }); }} className={`bg-white w-6 h-6 rounded-full flex items-center justify-center border theme-border shadow-sm active:scale-95 transition-transform ${isMuted ? 'text-gray-400' : 'theme-text-active'}`}>
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5">{isMuted ? <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.531V19.94a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.506-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.395C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" /> : <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.395C2.806 8.757 3.63 8.25 4.51 8.25H6.75z" />}</svg>
                                     </button>
                                     <button onClick={() => { AudioEngine.uiOpen(); setGameState('PAUSED'); }} className="bg-white w-6 h-6 rounded-full flex items-center justify-center border theme-border theme-text-active shadow-sm active:scale-95 transition-transform"><IconPause className="w-3.5 h-3.5"/></button>
@@ -1028,10 +1035,11 @@ const GameUI = () => {
                         setProfile={setProfile}
                         saveProfile={saveProfile}
                         playerName={playerName}
-                        onClose={() => setShowSettings(false)} 
+                        onClose={() => { setShowSettings(false); setIsMuted(AudioEngine.getSettings().muteMusic && AudioEngine.getSettings().muteSfx); }} 
                         onLogout={() => {
                             if (handleLogout) handleLogout();
                             setShowSettings(false);
+                            setIsMuted(AudioEngine.getSettings().muteMusic && AudioEngine.getSettings().muteSfx);
                         }} 
                     />
                 )}
