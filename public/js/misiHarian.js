@@ -1,38 +1,38 @@
 window.DAILY_MISSIONS_POOL = [
     // Progress - Clear
-    { id: "d_clear_easy", type: "clear", category: "progress", title: "Langkah Awal Petualang", desc: "Selesaikan 2 level.", target: 2, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
-    { id: "d_clear_med", type: "clear", category: "progress", title: "Penjelajah Ambisius", desc: "Selesaikan 4 level.", target: 4, difficulty: "Menengah", rewardType: "coins", rewardAmount: 1500 },
-    { id: "d_clear_hard", type: "clear", category: "progress", title: "Sang Penakluk Dunia", desc: "Selesaikan 7 level.", target: 7, difficulty: "Sulit", rewardType: "gems", rewardAmount: 15 },
+    { id: "d_clear_easy", type: "clear", category: "progress", title: "Pemanasan", desc: "Selesaikan 2 level.", target: 2, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
+    { id: "d_clear_med", type: "clear", category: "progress", title: "Makin Jago", desc: "Selesaikan 4 level.", target: 4, difficulty: "Menengah", rewardType: "coins", rewardAmount: 1500 },
+    { id: "d_clear_hard", type: "clear", category: "progress", title: "Hebat Banget Sayang", desc: "Selesaikan 7 level.", target: 7, difficulty: "Sulit", rewardType: "gems", rewardAmount: 15 },
     
     // Progress - Match
-    { id: "d_match_easy", type: "match", category: "progress", title: "Tangan Cekatan", desc: "Hancurkan 40 pasang blok.", target: 40, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
-    { id: "d_match_med", type: "match", category: "progress", title: "Naluri Penghancur", desc: "Hancurkan 80 pasang blok.", target: 80, difficulty: "Menengah", rewardType: "coins", rewardAmount: 1500 },
-    { id: "d_match_hard", type: "match", category: "progress", title: "Badai Kehancuran", desc: "Hancurkan 150 pasang blok.", target: 150, difficulty: "Sulit", rewardType: "gems", rewardAmount: 15 },
+    { id: "d_match_easy", type: "match", category: "progress", title: "Mulai Fokus", desc: "Hancurkan 40 pasang blok.", target: 40, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
+    { id: "d_match_med", type: "match", category: "progress", title: "Rajin Bersihin Papan", desc: "Hancurkan 80 pasang blok.", target: 80, difficulty: "Menengah", rewardType: "coins", rewardAmount: 1500 },
+    { id: "d_match_hard", type: "match", category: "progress", title: "Nggak Ada yang Sisa", desc: "Hancurkan 150 pasang blok.", target: 150, difficulty: "Sulit", rewardType: "gems", rewardAmount: 15 },
 
     // Progress - Score
-    { id: "d_score_easy", type: "score", category: "progress", title: "Pundi-Pundi Poin", desc: "Kumpulkan 3.000 skor.", target: 3000, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
-    { id: "d_score_med", type: "score", category: "progress", title: "Mesin Penghasil Poin", desc: "Kumpulkan 8.000 skor.", target: 8000, difficulty: "Menengah", rewardType: "coins", rewardAmount: 1500 },
-    { id: "d_score_hard", type: "score", category: "progress", title: "Gunung Emas Poin", desc: "Kumpulkan 15.000 skor.", target: 15000, difficulty: "Sulit", rewardType: "gems", rewardAmount: 15 },
+    { id: "d_score_easy", type: "score", category: "progress", title: "Dikit-dikit Lama-lama Bukit", desc: "Kumpulkan 3.000 skor.", target: 3000, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
+    { id: "d_score_med", type: "score", category: "progress", title: "Poinnya Banyak", desc: "Kumpulkan 8.000 skor.", target: 8000, difficulty: "Menengah", rewardType: "coins", rewardAmount: 1500 },
+    { id: "d_score_hard", type: "score", category: "progress", title: "Jago Kumpulin Poin", desc: "Kumpulkan 15.000 skor.", target: 15000, difficulty: "Sulit", rewardType: "gems", rewardAmount: 15 },
 
     // Skill - Combo
-    { id: "d_combo_easy", type: "combo", category: "skill", title: "Kombo Pemanasan", desc: "Capai Combo x4.", target: 4, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
-    { id: "d_combo_med", type: "combo", category: "skill", title: "Rentetan Kombo", desc: "Capai Combo x7.", target: 7, difficulty: "Menengah", rewardType: "gems", rewardAmount: 5 },
-    { id: "d_combo_hard", type: "combo", category: "skill", title: "Rantai Kemenangan", desc: "Capai Combo x12.", target: 12, difficulty: "Sulit", rewardType: "gems", rewardAmount: 15 },
+    { id: "d_combo_easy", type: "combo", category: "skill", title: "Kombo Santai", desc: "Capai Combo x4.", target: 4, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
+    { id: "d_combo_med", type: "combo", category: "skill", title: "Makin Lincah", desc: "Capai Combo x7.", target: 7, difficulty: "Menengah", rewardType: "gems", rewardAmount: 5 },
+    { id: "d_combo_hard", type: "combo", category: "skill", title: "Nggak Ada Matinya", desc: "Capai Combo x12.", target: 12, difficulty: "Sulit", rewardType: "gems", rewardAmount: 15 },
 
     // Skill - Flawless
-    { id: "d_flawless_easy", type: "flawless", category: "skill", title: "Langkah Presisi", desc: "Selesaikan 1 level tanpa salah (Flawless).", target: 1, difficulty: "Mudah", rewardType: "gems", rewardAmount: 3 },
-    { id: "d_flawless_med", type: "flawless", category: "skill", title: "Fokus Baja", desc: "Selesaikan 2 level tanpa salah (Flawless).", target: 2, difficulty: "Menengah", rewardType: "gems", rewardAmount: 10 },
-    { id: "d_flawless_hard", type: "flawless", category: "skill", title: "Dewa Tanpa Celah", desc: "Selesaikan 4 level tanpa salah (Flawless).", target: 4, difficulty: "Sulit", rewardType: "gacha_vouchers", rewardAmount: 3 },
+    { id: "d_flawless_easy", type: "flawless", category: "skill", title: "Pelan Tapi Pasti", desc: "Selesaikan 1 level tanpa salah (Flawless).", target: 1, difficulty: "Mudah", rewardType: "gems", rewardAmount: 3 },
+    { id: "d_flawless_med", type: "flawless", category: "skill", title: "Fokus Banget", desc: "Selesaikan 2 level tanpa salah (Flawless).", target: 2, difficulty: "Menengah", rewardType: "gems", rewardAmount: 10 },
+    { id: "d_flawless_hard", type: "flawless", category: "skill", title: "Sempurna!", desc: "Selesaikan 4 level tanpa salah (Flawless).", target: 4, difficulty: "Sulit", rewardType: "gacha_vouchers", rewardAmount: 3 },
 
     // Speed - Survivor
-    { id: "d_survivor_easy", type: "survivor", category: "speed", title: "Bertahan Hidup", desc: "Selesaikan 1 level dengan sisa waktu > 50%.", target: 1, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
-    { id: "d_survivor_med", type: "survivor", category: "speed", title: "Ahli Bertahan", desc: "Selesaikan 2 level dengan sisa waktu > 50%.", target: 2, difficulty: "Menengah", rewardType: "coins", rewardAmount: 1500 },
-    { id: "d_survivor_hard", type: "survivor", category: "speed", title: "Penguasa Waktu", desc: "Selesaikan 4 level dengan sisa waktu > 50%.", target: 4, difficulty: "Sulit", rewardType: "gems", rewardAmount: 15 },
+    { id: "d_survivor_easy", type: "survivor", category: "speed", title: "Santai Aja", desc: "Selesaikan 1 level dengan sisa waktu > 50%.", target: 1, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
+    { id: "d_survivor_med", type: "survivor", category: "speed", title: "Tenang", desc: "Selesaikan 2 level dengan sisa waktu > 50%.", target: 2, difficulty: "Menengah", rewardType: "coins", rewardAmount: 1500 },
+    { id: "d_survivor_hard", type: "survivor", category: "speed", title: "Sisa Waktu Banyak", desc: "Selesaikan 4 level dengan sisa waktu > 50%.", target: 4, difficulty: "Sulit", rewardType: "gems", rewardAmount: 15 },
 
     // Speed - Fast Clear
-    { id: "d_fastclear_easy", type: "fast_clear", category: "speed", title: "Langkah Gesit", desc: "Selesaikan 1 level di bawah 45 detik.", target: 1, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
-    { id: "d_fastclear_med", type: "fast_clear", category: "speed", title: "Si Kilat", desc: "Selesaikan 2 level di bawah 45 detik.", target: 2, difficulty: "Menengah", rewardType: "gems", rewardAmount: 5 },
-    { id: "d_fastclear_hard", type: "fast_clear", category: "speed", title: "Kecepatan Cahaya", desc: "Selesaikan 4 level di bawah 45 detik.", target: 4, difficulty: "Sulit", rewardType: "gacha_vouchers", rewardAmount: 3 },
+    { id: "d_fastclear_easy", type: "fast_clear", category: "speed", title: "Sat Set", desc: "Selesaikan 1 level di bawah 45 detik.", target: 1, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
+    { id: "d_fastclear_med", type: "fast_clear", category: "speed", title: "Cepet Juga", desc: "Selesaikan 2 level di bawah 45 detik.", target: 2, difficulty: "Menengah", rewardType: "gems", rewardAmount: 5 },
+    { id: "d_fastclear_hard", type: "fast_clear", category: "speed", title: "Kenceng Banget", desc: "Selesaikan 4 level di bawah 45 detik.", target: 4, difficulty: "Sulit", rewardType: "gacha_vouchers", rewardAmount: 3 },
 
     // Economy - Chest
     { id: "d_chest_easy", type: "openChest", category: "economy", title: "Pembuka Peti", desc: "Buka 1 Peti.", target: 1, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
@@ -40,10 +40,10 @@ window.DAILY_MISSIONS_POOL = [
     { id: "d_chest_hard", type: "openChest", category: "economy", title: "Pecinta Harta Karun", desc: "Buka 4 Peti.", target: 4, difficulty: "Sulit", rewardType: "gems", rewardAmount: 15 },
 
     // Feature (Wildcard) - Gacha, Hint, Shuffle
-    { id: "d_gacha_easy", type: "openMystery", category: "feature", title: "Sentuhan Keberuntungan", desc: "Mainkan 1 Gacha Hoki.", target: 1, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
-    { id: "d_gacha_med", type: "openMystery", category: "feature", title: "Sang Penjudi Hoki", desc: "Mainkan 2 Gacha Hoki.", target: 2, difficulty: "Menengah", rewardType: "gems", rewardAmount: 5 },
-    { id: "d_hint_easy", type: "useHint", category: "feature", title: "Bantuan Visual", desc: "Gunakan Hint 1 kali.", target: 1, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
-    { id: "d_shuffle_easy", type: "useShuffle", category: "feature", title: "Trik Sulap Papan", desc: "Gunakan Shuffle 1 kali.", target: 1, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
+    { id: "d_gacha_easy", type: "openMystery", category: "feature", title: "Coba Keberuntungan", desc: "Mainkan 1 Gacha Hoki.", target: 1, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
+    { id: "d_gacha_med", type: "openMystery", category: "feature", title: "Semoga Hoki Ya", desc: "Mainkan 2 Gacha Hoki.", target: 2, difficulty: "Menengah", rewardType: "gems", rewardAmount: 5 },
+    { id: "d_hint_easy", type: "useHint", category: "feature", title: "Boleh Pake Bantuan Kok", desc: "Gunakan Hint 1 kali.", target: 1, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
+    { id: "d_shuffle_easy", type: "useShuffle", category: "feature", title: "Acak-acak Dulu", desc: "Gunakan Shuffle 1 kali.", target: 1, difficulty: "Mudah", rewardType: "coins", rewardAmount: 500 },
 ];
 
 window.generateDailyMissions = function(profile) {

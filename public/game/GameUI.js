@@ -204,14 +204,15 @@ const GameUI = () => {
                             setMultiplayerState('STARTING');
                         } else if (data.status === 'LOBBY' && multiplayerState === 'STARTING') {
                             setMultiplayerState('LOBBY');
-                            window.Dialog.showError("Timeout", "Gagal memulai permainan. Salah satu pemain tidak merespon.");
+                            window.Dialog.showError("Timeout", "Gagal memulai permainan. Pasangan tidak merespon.");
                         } else if (data.status === 'ACTIVE' && (multiplayerState === 'STARTING' || multiplayerState === 'LOBBY')) {
                             setMultiplayerState('PLAYING'); 
                             window.isMultiplayerMatch = true;
                             prepareLevel(profile.currentLevel, data.board || null, null, null, null, null, null, 0, null, null, 0, 0, data.startAt); 
                         } else if (data.status === "COMPLETED" && (multiplayerState === "PLAYING" || multiplayerState === "LOBBY" || multiplayerState === "STARTING")) {
+                            const wasPlaying = multiplayerState === "PLAYING";
                             setMultiplayerState("RESULT");
-                            if (window.addChestProgress && multiplayerState === "PLAYING") {
+                            if (wasPlaying) {
                                 setProfile(prev => {
                                     if (!prev) return prev;
                                     let next = { ...prev };
@@ -220,7 +221,26 @@ const GameUI = () => {
                                             next[data.wager.currency] = data.wager.settledBalances[playerName];
                                         }
                                     }
-                                    next = window.addChestProgress(next, 10);
+                                    
+                                    // Flush pending stats if any
+                                    if (window.flushStats) {
+                                        next = window.flushStats(next);
+                                    }
+                                    
+                                    // Process Reward Engine
+                                    if (window.RewardEngine) {
+                                        const isWinner = data.winner === playerName;
+                                        // Give base progress just for playing, more for winning
+                                        next = window.RewardEngine.processWin(next, {
+                                            isMultiplayer: true,
+                                            isFlawless: false, // In multiplayer we might not track flawless easily here
+                                            timeElapsed: data.startAt ? (Date.now() - data.startAt) : null,
+                                            progress: progressRef.current,
+                                            highestCombo: 0,
+                                            isWinner: isWinner
+                                        });
+                                    }
+                                    
                                     if (window.saveProfile) window.saveProfile(playerName, next);
                                     return next;
                                 });
@@ -477,10 +497,19 @@ const GameUI = () => {
         }
     }, [gameState, profile]);
 
+    const activeThemeObj = THEMES[activeThemeRef.current || activeTheme] || {};
+    const isDarkMode = activeThemeObj.darkMode === true;
+    const themeBg = activeThemeObj.colors?.bg || (isDarkMode ? "#171717" : "#fdf2f8");
+    const themeBorder = activeThemeObj.colors?.border || (isDarkMode ? "#525252" : "#fbcfe8");
+    const themeText = activeThemeObj.colors?.text || (isDarkMode ? "#d946ef" : "#ec4899");
+    const themeAccent = activeThemeObj.colors?.accent || (isDarkMode ? "#c026d3" : "#ec4899");
+    const themeButtonActive = activeThemeObj.colors?.buttonActive || (isDarkMode ? "#a21caf" : "#e11d48");
+    const themeBackgroundImage = (activeThemeObj.background || activeThemeObj.menuBackgrounds?.['home']) ? `url(${activeThemeObj.background || activeThemeObj.menuBackgrounds['home']})` : 'none';
+
     return (
         <React.Fragment>
-        <div className="w-full h-[100dvh] flex items-center justify-center p-0 sm:p-2 bg-transparent" style={{ "--theme-bg": THEMES[activeThemeRef.current || activeTheme]?.colors.bg || "#fdf2f8", "--theme-border": THEMES[activeThemeRef.current || activeTheme]?.colors.border || "#fbcfe8", "--theme-text": THEMES[activeThemeRef.current || activeTheme]?.colors.text || "#ec4899", "--theme-accent": THEMES[activeThemeRef.current || activeTheme]?.colors.accent || "#ec4899", "--theme-buttonActive": THEMES[activeThemeRef.current || activeTheme]?.colors.buttonActive || "#e11d48", backgroundImage: (THEMES[activeThemeRef.current || activeTheme]?.background || THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home']) ? `url(${THEMES[activeThemeRef.current || activeTheme].background || THEMES[activeThemeRef.current || activeTheme].menuBackgrounds['home']})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-            <div className={`w-full max-w-[480px] h-full flex flex-col sm:border sm:border-gray-200 sm:rounded-3xl sm:shadow-xl overflow-hidden relative ${(THEMES[activeThemeRef.current || activeTheme]?.background || THEMES[activeThemeRef.current || activeTheme]?.menuBackgrounds?.['home']) ? 'bg-white/30 backdrop-blur-md' : 'theme-bg'}`}>
+        <div className="w-full h-[100dvh] flex items-center justify-center p-0 sm:p-2 bg-transparent" style={{ "--theme-bg": themeBg, "--theme-border": themeBorder, "--theme-text": themeText, "--theme-accent": themeAccent, "--theme-buttonActive": themeButtonActive, backgroundImage: themeBackgroundImage, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+            <div className={`w-full max-w-[480px] h-full flex flex-col sm:border sm:border-gray-200 sm:rounded-3xl sm:shadow-xl overflow-hidden relative ${(activeThemeObj.background || activeThemeObj.menuBackgrounds?.['home']) ? 'bg-white/30 backdrop-blur-md' : 'theme-bg'}`}>
                 
                 {/* ===================== IN-GAME HEADER ===================== */}
                 {(gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'COUNTDOWN') && (

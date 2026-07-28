@@ -1,7 +1,7 @@
 window.WEEKLY_MISSIONS_POOL = [
     // Consistency (Meta)
-    { id: "w_daily_med", type: "complete_daily", category: "consistency", title: "Pemain Super Aktif", desc: "Selesaikan 15 Misi Harian minggu ini.", target: 15, difficulty: "Menengah", rewardType: "coins", rewardAmount: 5000 },
-    { id: "w_daily_hard", type: "complete_daily", category: "consistency", title: "Pemain Paling Setia", desc: "Selesaikan 20 Misi Harian minggu ini.", target: 20, difficulty: "Sulit", rewardType: "gems", rewardAmount: 40 },
+    { id: "w_daily_med", type: "complete_daily", category: "consistency", title: "Rajin Banget Mainnya", desc: "Selesaikan 15 Misi Harian minggu ini.", target: 15, difficulty: "Menengah", rewardType: "coins", rewardAmount: 5000 },
+    { id: "w_daily_hard", type: "complete_daily", category: "consistency", title: "Kamu Paling Setia", desc: "Selesaikan 20 Misi Harian minggu ini.", target: 20, difficulty: "Sulit", rewardType: "gems", rewardAmount: 40 },
     { id: "w_daily_all_med", type: "complete_daily_all", category: "consistency", title: "Dedikasi Tiada Henti", desc: "Klaim 3 Bonus Harian (Selesaikan semua misi dalam sehari).", target: 3, difficulty: "Menengah", rewardType: "gems", rewardAmount: 20 },
     { id: "w_daily_all_hard", type: "complete_daily_all", category: "consistency", title: "Dedikasi Mutlak", desc: "Klaim 5 Bonus Harian (Selesaikan semua misi dalam sehari).", target: 5, difficulty: "Sangat Sulit", rewardType: "gacha_vouchers", rewardAmount: 5 },
 

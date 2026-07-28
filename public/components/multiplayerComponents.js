@@ -62,7 +62,7 @@ const HeroCarousel = ({ profile, activeTheme, THEMES, prepareLevel, onMultiplaye
                             {inRoom && isHost && allReady ? <IconPlay className="w-5 h-5"/> : <IconUsers className="w-5 h-5"/>}
                         </div>
                         <span className="text-white text-xl font-bold mb-0.5 tracking-wide relative z-10">{inRoom ? (isHost ? "Mulai Game" : "Match") : "Multiplayer"}</span>
-                        <span className="text-indigo-100 text-sm font-medium relative z-10">{inRoom ? (isHost ? (allReady ? "Ketuk untuk mulai!" : "Menunggu pemain siap...") : "Menunggu Host") : "Main bersama teman"}</span>
+                        <span className="text-indigo-100 text-sm font-medium relative z-10">{inRoom ? (isHost ? (allReady ? "Ketuk untuk mulai!" : "Menunggu pasangan siap...") : "Menunggu Host") : "Main bareng"}</span>
                     </button>
                 </div>
             </div>
@@ -135,7 +135,7 @@ const MultiplayerLobby = ({ roomData, profile, playerName, onLeaveRoom, onStartG
                 ))}
                 {(!roomData?.players || roomData.players.length < 2) && (
                     <div className="bg-white/60 border-2 border-dashed border-gray-200 rounded-[1.25rem] p-4 flex items-center justify-center min-h-[72px]">
-                        <span className="text-gray-400 font-medium text-sm">Menunggu pemain...</span>
+                        <span className="text-gray-400 font-medium text-sm">Menunggu pasangan...</span>
                     </div>
                 )}
             </div>
@@ -172,12 +172,12 @@ const MultiplayerPopup = ({ isOpen, onClose, onCreateRoom, onJoinRoom }) => {
             <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl scale-in-center relative overflow-hidden">
                 <div className="text-center mb-6">
                     <h2 className="text-2xl font-black text-gray-800 tracking-tight">Multiplayer</h2>
-                    <p className="text-gray-500 text-sm mt-1">Bermain bersama teman menggunakan Room Code.</p>
+                    <p className="text-gray-500 text-sm mt-1">Bermain bareng menggunakan Room Code.</p>
                 </div>
                 <div className="flex flex-col gap-3">
                     <button onClick={onCreateRoom} className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white p-4 rounded-2xl shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center">
                         <span className="font-bold text-lg mb-0.5">Buat Room</span>
-                        <span className="text-pink-100 text-xs text-center">Buat room baru lalu undang teman.</span>
+                        <span className="text-pink-100 text-xs text-center">Buat room baru lalu kasih kodenya ke pasangan.</span>
                     </button>
                     <button onClick={onJoinRoom} className="w-full bg-white border-2 border-pink-100 text-pink-600 p-4 rounded-2xl shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center">
                         <span className="font-bold text-lg mb-0.5">Gabung Room</span>
@@ -228,7 +228,7 @@ const GameModeSheet = ({ isOpen, onClose, onSelect, currentMode, isHost }) => {
                     </button>
                     <button onClick={() => { if(!isHost) return; onSelect('Match Berhadiah'); }} className={`w-full text-left p-4 rounded-2xl border-2 transition-all ${currentMode === 'Match Berhadiah' ? 'border-pink-500 bg-pink-50' : 'border-gray-100 bg-white'} ${!isHost && 'opacity-70'}`}>
                         <div className="font-bold text-gray-800 text-lg">Match Berhadiah</div>
-                        <div className="text-gray-500 text-xs mt-1">Taruhan Coin atau Gem ditentukan oleh Host. Semua pemain harus setuju.</div>
+                        <div className="text-gray-500 text-xs mt-1">Taruhan Coin atau Gem ditentukan oleh Host. Kalian berdua harus setuju.</div>
                     </button>
                 </div>
             </div>
@@ -365,7 +365,7 @@ const MultiplayerResult = ({ roomData, playerName, onRematch, onLeave }) => {
                 <span>vs {opponentName}</span>
                 {roomData.finishReason === 'DISCONNECT' && (
                     <span className="text-xs font-black text-red-500 bg-red-50 border border-red-100 px-3 py-1 rounded-full mt-2">
-                        {isWinner ? 'Lawan terputus dari pertandingan' : 'Kamu terputus'}
+                        {isWinner ? 'Pasangan terputus dari pertandingan' : 'Kamu terputus'}
                     </span>
                 )}
             </div>
@@ -409,7 +409,7 @@ window.MultiplayerLoading = ({ roomData, playerName }) => {
                 </div>
                 
                 <h3 className="text-2xl font-black text-gray-800 mb-2">Menyiapkan Pertandingan</h3>
-                <p className="text-sm font-bold text-pink-500 mb-8">Sinkronisasi board dan pemain...</p>
+                <p className="text-sm font-bold text-pink-500 mb-8">Sinkronisasi permainan...</p>
                 
                 <div className="w-full flex flex-col gap-3">
                     {roomData?.players?.map(p => (

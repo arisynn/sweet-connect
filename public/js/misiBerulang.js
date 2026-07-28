@@ -6,7 +6,7 @@ window.REPEATABLE_MISSIONS_CONFIG = [
     {"id": "r_clear_5", "type": "clear", "title": "Pendaki Level", "desc": "Selesaikan 5 level.", "target": 5, "rewardLabel": "Koin x750", "rewardType": "coins", "rewardAmount": 750},
     {"id": "r_clear_6", "type": "clear", "title": "Penyintas Papan", "desc": "Selesaikan 6 level.", "target": 6, "rewardLabel": "Koin x400", "rewardType": "coins", "rewardAmount": 400},
     {"id": "r_clear_7", "type": "clear", "title": "Pejuang Papan", "desc": "Selesaikan 7 level.", "target": 7, "rewardLabel": "Koin x1.1k", "rewardType": "coins", "rewardAmount": 1050},
-    {"id": "r_clear_8", "type": "clear", "title": "Tantangan Tahap", "desc": "Selesaikan 8 level.", "target": 8, "rewardLabel": "Koin x1.2k", "rewardType": "coins", "rewardAmount": 1200},
+    {"id": "r_clear_8", "type": "clear", "title": "Terus Maju", "desc": "Selesaikan 8 level.", "target": 8, "rewardLabel": "Koin x1.2k", "rewardType": "coins", "rewardAmount": 1200},
     {"id": "r_clear_9", "type": "clear", "title": "Penguasa Level", "desc": "Selesaikan 9 level.", "target": 9, "rewardLabel": "Koin x600", "rewardType": "coins", "rewardAmount": 600},
     {"id": "r_clear_10", "type": "clear", "title": "Perjalanan Manis", "desc": "Selesaikan 10 level.", "target": 10, "rewardLabel": "Koin x1.5k", "rewardType": "coins", "rewardAmount": 1500},
     {"id": "r_score_500", "type": "score", "title": "Pecahan Skor", "desc": "Kumpulkan 500 skor.", "target": 500, "rewardLabel": "Koin x50", "rewardType": "coins", "rewardAmount": 50},

@@ -40,7 +40,7 @@ window.ACHIEVEMENTS_DATA = [
     {
         id: 'daily_missions',
         category: 'progression',
-        title: 'Pekerja Keras',
+        title: 'Semangat Terus',
         desc: (target) => `Selesaikan ${target} Misi Harian.`,
         tiers: [
             { target: 50, reward: { gacha_vouchers: 1 } },
@@ -68,7 +68,7 @@ window.ACHIEVEMENTS_DATA = [
     {
         id: 'blocks_cleared',
         category: 'progression',
-        title: 'Penghancur Masal',
+        title: 'Rajin Banget Bersihinnya',
         desc: (target) => `Hancurkan total ${target} blok.`,
         tiers: [
             { target: 5000, reward: { gems: 5 } },
@@ -82,7 +82,7 @@ window.ACHIEVEMENTS_DATA = [
     {
         id: 'flawless_victory',
         category: 'mastery',
-        title: 'Dewa Presisi',
+        title: 'Mainnya Sempurna',
         desc: (target) => `Selesaikan ${target} level tanpa melakukan kesalahan (Flawless).`,
         tiers: [
             { target: 5, reward: { gems: 10 } },
@@ -96,7 +96,7 @@ window.ACHIEVEMENTS_DATA = [
     {
         id: 'highest_combo',
         category: 'mastery',
-        title: 'Rantai Maut',
+        title: 'Kombo Mantap',
         desc: (target) => `Capai Combo x${target}.`,
         tiers: [
             { target: 10, reward: { gems: 5 } },
@@ -110,7 +110,7 @@ window.ACHIEVEMENTS_DATA = [
     {
         id: 'speedrun',
         category: 'mastery',
-        title: 'Lari Dari Waktu',
+        title: 'Cepat Banget Mainnya',
         desc: (target) => `Selesaikan ${target} level di bawah 45 detik.`,
         tiers: [
             { target: 10, reward: { coins: 1000 } },
@@ -138,7 +138,7 @@ window.ACHIEVEMENTS_DATA = [
     {
         id: 'theme_purchases',
         category: 'collection',
-        title: 'Kolektor Estetika',
+        title: 'Suka Ganti Tema Ya',
         desc: (target) => `Buka dan kumpulkan ${target} Tema.`,
         tiers: [
             { target: 3, reward: { gems: 10 } },
@@ -152,7 +152,7 @@ window.ACHIEVEMENTS_DATA = [
     {
         id: 'mystery_lucky',
         category: 'collection',
-        title: 'Ahli Gacha',
+        title: 'Suka Main Gacha',
         desc: (target) => `Tarik tuas Gacha ${target} kali.`,
         tiers: [
             { target: 10, reward: { coins: 2000 } },
@@ -180,7 +180,7 @@ window.ACHIEVEMENTS_DATA = [
     {
         id: 'overthinker',
         category: 'secret',
-        title: 'Pecinta Jalan Buntu',
+        title: 'Lagi Bingung Ya?',
         desc: (target) => `Gunakan Shuffle saat tidak ada pasangan yang bisa dimatch sebanyak ${target} kali.`,
         tiers: [
             { target: 10, reward: { gems: 50 } }
@@ -190,7 +190,7 @@ window.ACHIEVEMENTS_DATA = [
     {
         id: 'unlucky_streak',
         category: 'secret',
-        title: 'Kolektor Sampah',
+        title: 'Lagi Apes Aja',
         desc: (target) => `Mendapatkan "Zonk" atau hadiah kecil dari Gacha sebanyak ${target}x berturut-turut.`,
         tiers: [
             { target: 10, reward: { gacha_vouchers: 5 } }
@@ -200,7 +200,7 @@ window.ACHIEVEMENTS_DATA = [
     {
         id: 'near_death',
         category: 'secret',
-        title: 'Lolos Dari Kematian',
+        title: 'Deg-degan Ya?',
         desc: (target) => `Selesaikan level saat sisa waktu kurang dari 1 detik.`,
         tiers: [
             { target: 1, reward: { gems: 100 } }

@@ -1,10 +1,16 @@
 window.SaveEngine = {
     isStartupComplete: false,
     currentPayload: null,
+    isDirty: false,
+    dirtyPlayerName: null,
 
     init: () => {
         window.EngineUtils.log('System', 'Initializing Save Engine V2...');
         window.SessionEngine.init();
+        
+        setInterval(() => {
+            window.SaveEngine.flushDirty();
+        }, 5000);
     },
 
     loadProfile: async (playerName) => {
@@ -110,7 +116,20 @@ window.SaveEngine = {
 
         window.SaveEngine.currentPayload = payload;
         window.RecoveryEngine.saveLocalBackup(playerName, payload);
-        window.QueueEngine.enqueue(playerName, payload);
+        
+        window.SaveEngine.isDirty = true;
+        window.SaveEngine.dirtyPlayerName = playerName;
+
+        if (isImmediate) {
+            window.SaveEngine.flushDirty();
+        }
+    },
+    
+    flushDirty: () => {
+        if (window.SaveEngine.isDirty && window.SaveEngine.dirtyPlayerName && window.SaveEngine.currentPayload) {
+            window.QueueEngine.enqueue(window.SaveEngine.dirtyPlayerName, window.SaveEngine.currentPayload);
+            window.SaveEngine.isDirty = false;
+        }
     },
 
     saveProfileKeepalive: (playerName, gameData) => {
@@ -126,6 +145,8 @@ window.SaveEngine = {
         
         window.SaveEngine.currentPayload = payload;
         window.RecoveryEngine.saveLocalBackup(playerName, payload);
+        
+        window.SaveEngine.isDirty = false;
 
         try {
             fetch(`/api/profile?name=${encodeURIComponent(playerName)}`, {
@@ -138,9 +159,17 @@ window.SaveEngine = {
     },
 
     logout: () => {
+        if (window.SaveEngine.isDirty && window.SaveEngine.currentPayload && window.SaveEngine.dirtyPlayerName) {
+            window.SaveEngine.saveProfileKeepalive(window.SaveEngine.dirtyPlayerName, window.SaveEngine.currentPayload.gameData);
+        } else if (window.QueueEngine.queue.length > 0) {
+            // Also keepalive the latest queue item if it's there
+            const lastTask = window.QueueEngine.queue[window.QueueEngine.queue.length - 1];
+            window.SaveEngine.saveProfileKeepalive(lastTask.playerName, lastTask.payload.gameData);
+        }
         window.SessionEngine.clearSession();
         window.SaveEngine.isStartupComplete = false;
         window.SaveEngine.currentPayload = null;
+        window.SaveEngine.isDirty = false;
         window.QueueEngine.queue = [];
     }
 };
@@ -152,6 +181,7 @@ window.setStartupComplete = (val) => val ? window.SaveEngine.setStartupComplete(
 window.saveCloudProfile = async (name, profile) => window.SaveEngine.saveProfile(name, profile, true);
 window.getLocalProfile = (name) => window.SaveEngine.currentPayload ? window.SaveEngine.currentPayload.gameData : null;
 window.setLocalProfile = (name, profile) => {};
+window.flushDirtyProfile = () => window.SaveEngine.flushDirty();
 
 // Initialize early
 window.SaveEngine.init();

@@ -149,14 +149,14 @@ export default async function handler(req: Request, res: Response) {
 
                 // Check preference for the requested category
                 let allowSend = false;
-                let title = 'Sweet Connect';
-                let body = 'Halo!';
+                let title = req.body.title || 'Sweet Connect';
+                let body = req.body.body || 'Halo!';
 
                 const fs = await import('fs/promises');
                 const path = await import('path');
                 let affirmations = ["Semoga harimu menyenangkan."];
                 try {
-                    const affData = await fs.readFile(path.join(process.cwd(), `${timeCategory}.json`), 'utf-8');
+                    const affData = await fs.readFile(path.join(process.cwd(), 'public', 'notifications', `${timeCategory}.json`), 'utf-8');
                     affirmations = JSON.parse(affData);
                 } catch (e) {
                     console.error(`Could not read ${timeCategory}.json`, e);
@@ -282,7 +282,9 @@ export default async function handler(req: Request, res: Response) {
                         break;
                     default:
                         allowSend = true;
-                        body = randomAff;
+                        if (!req.body.body) {
+                            body = randomAff;
+                        }
                 }
 
                 if (!allowSend) {

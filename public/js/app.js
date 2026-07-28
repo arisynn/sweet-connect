@@ -26,6 +26,11 @@ async function initApp() {
             const data = await res.json();
             const loadedThemes = {};
             data.themes.forEach(t => { 
+                if (!t.colors) {
+                    t.colors = t.darkMode 
+                        ? { bg: '#171717', border: '#525252', text: '#d946ef', accent: '#c026d3', buttonActive: '#a21caf' }
+                        : { bg: '#fdf2f8', border: '#fbcfe8', text: '#ec4899', accent: '#ec4899', buttonActive: '#e11d48' };
+                }
                 loadedThemes[t.id] = t; 
             });
             // Ensure custom theme is always present

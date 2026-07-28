@@ -46,12 +46,15 @@ window.QueueEngine = {
                 window.EngineUtils.log('Queue', 'Save failed due to network. Will retry later.', error.message);
                 window.dispatchEvent(new CustomEvent('syncLog', { detail: { status: 'Offline', action: 'Upload failed', result: error.message || 'Timeout' } }));
                 task.retries++;
-                if (task.retries > 5) {
-                    window.EngineUtils.log('Queue', 'Max retries reached. Dropping from active queue (saved in local backup).');
-                    window.QueueEngine.queue.shift();
-                } else {
-                    await new Promise(r => setTimeout(r, 5000));
+                
+                // Exponential backoff
+                const backoffMs = Math.min(60000, 2000 * Math.pow(2, task.retries));
+                
+                if (task.retries > 10) {
+                    window.EngineUtils.log('Queue', 'Lots of retries. Will keep trying in background, but backing off.');
                 }
+                
+                await new Promise(r => setTimeout(r, backoffMs));
             }
         } finally {
             window.QueueEngine.isProcessing = false;

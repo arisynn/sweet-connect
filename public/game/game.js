@@ -270,6 +270,11 @@ const App = () => {
         combosPendingRef.current = 0; hintsPendingRef.current = 0; shufflesPendingRef.current = 0; highestComboPendingRef.current = 0; wrongPendingRef.current = 0;
         return p;
     };
+    
+    useEffect(() => {
+        window.flushStats = flushStats;
+        return () => { delete window.flushStats; };
+    }, []);
 
     useEffect(() => {
         // Load cached theme assets from LocalStorage
@@ -356,6 +361,13 @@ const App = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => { if(playerName && gameState === 'STARTUP') handleLoginSubmit(true); }, []);
 
+    useEffect(() => {
+        if (playerName && profile && window.NotificationScheduler) {
+            window.NotificationScheduler.restart(playerName, profile);
+        } else if (!playerName && window.NotificationScheduler) {
+            window.NotificationScheduler.stop();
+        }
+    }, [playerName, profile]);
 
         const logSync = (status, action, result) => {
         window.dispatchEvent(new CustomEvent('syncLog', { detail: { status, action, result } }));
@@ -675,36 +687,30 @@ const handleLoginSubmit = async (isColdStart = false) => {
             finalScore += flawlessBonus;
             
             const bonusGained = timeBonus + flawlessBonus;
+            let currentProfile = profile;
             if (bonusGained > 0) {
                 missionProgressRef.current.score += bonusGained;
-                setProfile(p => updateMissions(p, "score", bonusGained));
+                currentProfile = updateMissions(currentProfile, "score", bonusGained);
             }
             
             setScore(finalScore);
 
-            let p = flushStats(profile, { 
+            let p = flushStats(currentProfile, { 
                 scoreAchieved: finalScore, 
                 timeElapsedMs: timeElapsed,
                 remainingProgress: progress,
                 flawlessDelta: isFlawless ? 1 : 0
             });
             
-            // Chest progress (easier logic)
-            if (typeof addChestProgress === 'function') {
-                let chestPoints = 2; // base points
-                if (isFlawless) chestPoints += 1;
-                if (missionProgressRef.current.combo >= 15) chestPoints += 2;
-                else if (missionProgressRef.current.combo >= 8) chestPoints += 1;
-                
-                if (timeElapsed < 45000) chestPoints += 1; // Under 45 seconds
-                
-                p = addChestProgress(p, chestPoints);
+            if (window.RewardEngine) {
+                p = window.RewardEngine.processWin(p, {
+                    isMultiplayer: false,
+                    isFlawless: isFlawless,
+                    timeElapsed: timeElapsed,
+                    progress: progress,
+                    highestCombo: missionProgressRef.current.combo
+                });
             }
-            
-            p = updateMissions(p, 'winLevel', 1); 
-            if (isFlawless) { p = updateMissions(p, 'flawless', 1); }
-            if (progress >= 50) { p = updateMissions(p, 'survivor', 1); }
-            if (timeElapsed < 45000) { p = updateMissions(p, 'fast_clear', 1); }
             
             // Real-time mission updates now handle the rest during gameplay
             
@@ -930,9 +936,11 @@ const handleLoginSubmit = async (isColdStart = false) => {
             setShuffles(s => s - 1); missionProgressRef.current.shuffles += 1; setProfile(p => updateMissions(p, 'useShuffle', 1)); shufflesPendingRef.current += 1; AudioEngine.shuffle(); setHintActiveTiles([]); setHintPath(null); handleDeadlock(board); setSelectedTile(null); 
         } else if (hp > 1) {
             comboCountRef.current = 0; // Memutus combo aktif
-            setHp(h => h - 1); missionProgressRef.current.shuffles += 1; setProfile(p => updateMissions(p, 'useShuffle', 1)); AudioEngine.shuffle(); setHintActiveTiles([]); setHintPath(null); handleDeadlock(board); setSelectedTile(null);
+            setHp(h => h - 1); missionProgressRef.current.shuffles += 1; 
+            AudioEngine.shuffle(); setHintActiveTiles([]); setHintPath(null); handleDeadlock(board); setSelectedTile(null);
             window.Dialog.showInfo("Pakai Nyawa", "Kamu menggunakan 1 Nyawa untuk Shuffle!");
-            const p = flushStats(profile);
+            let p = updateMissions(profile, 'useShuffle', 1);
+            p = flushStats(p);
             setProfile(p);
             saveProfile(playerName, p);
         } else {
@@ -950,9 +958,11 @@ const handleLoginSubmit = async (isColdStart = false) => {
             setHints(h => h - 1); missionProgressRef.current.hints += 1; hintsPendingRef.current += 1; setProfile(p => updateMissions(p, 'useHint', 1)); AudioEngine.hint(); setHintActiveTiles([{r: hintData.p1.r, c: hintData.p1.c}, {r: hintData.p2.r, c: hintData.p2.c}]); setHintPath(hintData.path); 
         } else if (hp > 1) {
             comboCountRef.current = 0; // Memutus combo aktif
-            setHp(h => h - 1); missionProgressRef.current.hints += 1; setProfile(p => updateMissions(p, 'useHint', 1)); AudioEngine.hint(); setHintActiveTiles([{r: hintData.p1.r, c: hintData.p1.c}, {r: hintData.p2.r, c: hintData.p2.c}]); setHintPath(hintData.path); 
+            setHp(h => h - 1); missionProgressRef.current.hints += 1; 
+            AudioEngine.hint(); setHintActiveTiles([{r: hintData.p1.r, c: hintData.p1.c}, {r: hintData.p2.r, c: hintData.p2.c}]); setHintPath(hintData.path); 
             window.Dialog.showInfo("Pakai Nyawa", "Kamu menggunakan 1 Nyawa untuk Hint!");
-            const p = flushStats(profile);
+            let p = updateMissions(profile, 'useHint', 1);
+            p = flushStats(p);
             setProfile(p);
             saveProfile(playerName, p);
         } else {
