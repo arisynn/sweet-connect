@@ -65,9 +65,9 @@ const DiceGacha = ({ profile, onOpenComplete, opening, setOpening }) => {
     useEffect(() => { phaseRef.current = phase; }, [phase]);
     
     const PAYOUTS = {
-        SMALL: 2, BIG: 2, ODD: 2, EVEN: 2, TRIPLE: 25,
-        TOTAL_4: 50, TOTAL_5: 18, TOTAL_6: 14, TOTAL_7: 12, TOTAL_8: 8, TOTAL_9: 6, TOTAL_10: 6,
-        TOTAL_11: 6, TOTAL_12: 6, TOTAL_13: 8, TOTAL_14: 12, TOTAL_15: 14, TOTAL_16: 18, TOTAL_17: 50
+        SMALL: 2, BIG: 2, ODD: 2, EVEN: 2, TRIPLE: 34,
+        TOTAL_4: 65, TOTAL_5: 34, TOTAL_6: 20, TOTAL_7: 14, TOTAL_8: 10, TOTAL_9: 8, TOTAL_10: 7.5,
+        TOTAL_11: 7.5, TOTAL_12: 8, TOTAL_13: 10, TOTAL_14: 14, TOTAL_15: 20, TOTAL_16: 34, TOTAL_17: 65
     };
     
     const PAYOUTS_LABELS = {

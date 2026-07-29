@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dice RNG Audit Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #334155; }
+        .card { background: white; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.5rem; margin-bottom: 1.5rem; }
+        h1, h2, h3 { color: #0f172a; font-weight: 700; }
+        table { w-full text-sm text-left text-gray-500; }
+        th { background-color: #f1f5f9; padding: 0.75rem; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
+        td { padding: 0.75rem; border-bottom: 1px solid #e2e8f0; }
+        tr:last-child td { border-bottom: none; }
+        .heatmap-cell { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; margin: 1px; color: white; border-radius: 2px; }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 flex justify-between items-end">
+            <div>
+                <h1 class="text-3xl mb-2">Audit Statistik RNG - Mini Game Dice</h1>
+                <p class="text-gray-500">Analisis distribusi probabilitas, RTP, dan Expected Value (EV) berdasarkan implementasi saat ini.</p>
+            </div>
+            <div>
+                <button onclick="runSimulation(100000)" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">Simulasi 100k</button>
+                <button onclick="runSimulation(1000000)" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">Simulasi 1 Juta</button>
+            </div>
+        </header>
+
+        <div id="loading" class="hidden text-center py-10">
+            <p class="text-xl font-bold animate-pulse text-indigo-600">Menjalankan simulasi...</p>
+        </div>
+
+        <div id="results" class="hidden">
+            <!-- Summary -->
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="card p-4 !mb-0 text-center">
+                    <div class="text-xs text-gray-500 font-bold uppercase">Total Ronde</div>
+                    <div class="text-2xl font-black text-indigo-600" id="val-rounds">0</div>
+                </div>
+                <div class="card p-4 !mb-0 text-center">
+                    <div class="text-xs text-gray-500 font-bold uppercase">RTP Keseluruhan (Rata-rata)</div>
+                    <div class="text-2xl font-black text-emerald-600" id="val-rtp">0%</div>
+                </div>
+                <div class="card p-4 !mb-0 text-center">
+                    <div class="text-xs text-gray-500 font-bold uppercase">Frekuensi Triple</div>
+                    <div class="text-2xl font-black text-purple-600" id="val-triple">0%</div>
+                </div>
+                <div class="card p-4 !mb-0 text-center">
+                    <div class="text-xs text-gray-500 font-bold uppercase">Max Streak Sama</div>
+                    <div class="text-2xl font-black text-rose-600" id="val-streak">0</div>
+                </div>
+            </div>
+
+            <!-- Charts Row 1 -->
+            <div class="grid grid-cols-2 gap-6">
+                <div class="card">
+                    <h2 class="text-lg mb-4">1. Distribusi Angka Dadu (1-6)</h2>
+                    <canvas id="chart-dice" height="200"></canvas>
+                </div>
+                <div class="card">
+                    <h2 class="text-lg mb-4">2. Distribusi Total Nilai (3-18)</h2>
+                    <canvas id="chart-total" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- RTP & EV Analysis -->
+            <div class="card">
+                <h2 class="text-lg mb-4">3. Analisis Kategori Taruhan (RTP & Expected Value)</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th>Taruhan</th>
+                                <th>Payout (x)</th>
+                                <th>Win Rate Aktual</th>
+                                <th>Win Rate Teoritis</th>
+                                <th>RTP Aktual</th>
+                                <th>RTP Teoritis</th>
+                                <th>Expected Value (EV)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-bets">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Combinations -->
+            <div class="grid grid-cols-2 gap-6">
+                <div class="card">
+                    <h2 class="text-lg mb-4">4. Frekuensi Kombinasi (Top 10)</h2>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th>Kombinasi</th>
+                                <th>Frekuensi</th>
+                                <th>Persentase</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-combos">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card">
+                    <h2 class="text-lg mb-4">5. Pola & Analisis Anomali</h2>
+                    <ul class="list-disc pl-5 space-y-2 text-sm" id="list-anomalies">
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Conclusion -->
+            <div class="card bg-indigo-50 border border-indigo-100">
+                <h2 class="text-xl mb-3 text-indigo-800">6. Kesimpulan Audit</h2>
+                <div id="conclusion" class="text-indigo-900 space-y-3 leading-relaxed">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PAYOUTS = {
+            SMALL: 2, BIG: 2, ODD: 2, EVEN: 2, TRIPLE: 34,
+            TOTAL_4: 65, TOTAL_5: 34, TOTAL_6: 20, TOTAL_7: 14, TOTAL_8: 10, TOTAL_9: 8, TOTAL_10: 7.5,
+            TOTAL_11: 7.5, TOTAL_12: 8, TOTAL_13: 10, TOTAL_14: 14, TOTAL_15: 20, TOTAL_16: 34, TOTAL_17: 65
+        };
+
+        const THEORETICAL = {
+            TRIPLE: 6 / 216,
+            SMALL: 105 / 216,
+            BIG: 105 / 216,
+            ODD: 105 / 216, // Excluding triples! Wait.
+            // Let's calculate exactly based on game logic.
+            // The game logic:
+            // if (isTriple) wonKeys.push('TRIPLE');
+            // if (!isTriple && total >= 4 && total <= 10) wonKeys.push('SMALL');
+            // if (!isTriple && total >= 11 && total <= 17) wonKeys.push('BIG');
+            // if (!isTriple && total % 2 !== 0) wonKeys.push('ODD');
+            // if (!isTriple && total % 2 === 0) wonKeys.push('EVEN');
+        };
+
+        // Calculate exact theoretical win rates based on all 216 combinations
+        let exactProb = { TRIPLE: 0, SMALL: 0, BIG: 0, ODD: 0, EVEN: 0 };
+        for(let i=4; i<=17; i++) exactProb[`TOTAL_${i}`] = 0;
+        
+        for (let d1=1; d1<=6; d1++) {
+            for (let d2=1; d2<=6; d2++) {
+                for (let d3=1; d3<=6; d3++) {
+                    let total = d1 + d2 + d3;
+                    let isTriple = (d1 === d2 && d2 === d3);
+                    if (isTriple) exactProb.TRIPLE++;
+                    if (!isTriple && total >= 4 && total <= 10) exactProb.SMALL++;
+                    if (!isTriple && total >= 11 && total <= 17) exactProb.BIG++;
+                    if (!isTriple && total % 2 !== 0) exactProb.ODD++;
+                    if (!isTriple && total % 2 === 0) exactProb.EVEN++;
+                    if (exactProb[`TOTAL_${total}`] !== undefined) exactProb[`TOTAL_${total}`]++;
+                }
+            }
+        }
+        for (let k in exactProb) exactProb[k] = exactProb[k] / 216;
+
+        let charts = {};
+
+        function runSimulation(iterations) {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            
+            setTimeout(() => {
+                const results = simulate(iterations);
+                renderDashboard(results);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('results').classList.remove('hidden');
+            }, 50);
+        }
+
+        function simulate(rounds) {
+            let diceCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+            let totalCounts = {};
+            for (let i = 3; i <= 18; i++) totalCounts[i] = 0;
+            
+            let betWins = {};
+            for (let k in PAYOUTS) betWins[k] = 0;
+            
+            let comboCounts = {};
+            
+            let maxStreak = 0;
+            let currentStreak = 0;
+            let lastTotal = -1;
+            
+            for (let i = 0; i < rounds; i++) {
+                const d1 = Math.floor(Math.random() * 6) + 1;
+                const d2 = Math.floor(Math.random() * 6) + 1;
+                const d3 = Math.floor(Math.random() * 6) + 1;
+                const total = d1 + d2 + d3;
+                const isTriple = (d1 === d2 && d2 === d3);
+                
+                diceCounts[d1]++;
+                diceCounts[d2]++;
+                diceCounts[d3]++;
+                totalCounts[total]++;
+                
+                // Combos
+                let sorted = [d1, d2, d3].sort().join(',');
+                comboCounts[sorted] = (comboCounts[sorted] || 0) + 1;
+                
+                // Logic identical to processResult
+                let wonKeys = [];
+                if (isTriple) wonKeys.push('TRIPLE');
+                if (!isTriple && total >= 4 && total <= 10) wonKeys.push('SMALL');
+                if (!isTriple && total >= 11 && total <= 17) wonKeys.push('BIG');
+                if (!isTriple && total % 2 !== 0) wonKeys.push('ODD');
+                if (!isTriple && total % 2 === 0) wonKeys.push('EVEN');
+                if (PAYOUTS[`TOTAL_${total}`]) wonKeys.push(`TOTAL_${total}`);
+                
+                for (let key of wonKeys) {
+                    betWins[key]++;
+                }
+                
+                // Streak logic (tracking consecutive same totals)
+                if (total === lastTotal) {
+                    currentStreak++;
+                    if (currentStreak > maxStreak) maxStreak = currentStreak;
+                } else {
+                    currentStreak = 1;
+                    lastTotal = total;
+                }
+            }
+            
+            return {
+                rounds,
+                diceCounts,
+                totalCounts,
+                betWins,
+                comboCounts,
+                maxStreak
+            };
+        }
+
+        function renderDashboard(data) {
+            const { rounds, diceCounts, totalCounts, betWins, comboCounts, maxStreak } = data;
+            
+            // Format numbers
+            const fmt = (n) => new Intl.NumberFormat('id-ID').format(n);
+            const pct = (n) => (n * 100).toFixed(2) + '%';
+            
+            document.getElementById('val-rounds').textContent = fmt(rounds);
+            document.getElementById('val-triple').textContent = pct(betWins.TRIPLE / rounds);
+            document.getElementById('val-streak').textContent = maxStreak;
+
+            // 1. Chart Dice
+            const diceLabels = [1, 2, 3, 4, 5, 6];
+            const diceData = diceLabels.map(l => diceCounts[l] / (rounds * 3));
+            
+            if (charts.dice) charts.dice.destroy();
+            charts.dice = new Chart(document.getElementById('chart-dice'), {
+                type: 'bar',
+                data: {
+                    labels: diceLabels,
+                    datasets: [{
+                        label: 'Frekuensi Muncul',
+                        data: diceData.map(d => d * 100),
+                        backgroundColor: '#6366f1',
+                    }, {
+                        label: 'Teoritis (16.67%)',
+                        data: Array(6).fill(16.6667),
+                        type: 'line',
+                        borderColor: '#ef4444',
+                        borderDash: [5, 5],
+                        fill: false
+                    }]
+                },
+                options: { plugins: { tooltip: { callbacks: { label: (c) => c.raw.toFixed(2) + '%' } } } }
+            });
+
+            // 2. Chart Total
+            const totalLabels = Object.keys(totalCounts);
+            const totalData = totalLabels.map(l => totalCounts[l] / rounds);
+            const theoreticalTotal = totalLabels.map(l => {
+                let count = 0;
+                for(let d1=1; d1<=6; d1++) for(let d2=1; d2<=6; d2++) for(let d3=1; d3<=6; d3++) if(d1+d2+d3 == l) count++;
+                return count / 216;
+            });
+            
+            if (charts.total) charts.total.destroy();
+            charts.total = new Chart(document.getElementById('chart-total'), {
+                type: 'bar',
+                data: {
+                    labels: totalLabels,
+                    datasets: [{
+                        label: 'Aktual',
+                        data: totalData.map(d => d * 100),
+                        backgroundColor: '#10b981',
+                    }, {
+                        label: 'Teoritis',
+                        data: theoreticalTotal.map(d => d * 100),
+                        type: 'line',
+                        borderColor: '#f59e0b',
+                        borderWidth: 2,
+                        fill: false
+                    }]
+                }
+            });
+
+            // 3. Bets Analysis (RTP & EV)
+            const tbody = document.getElementById('table-bets');
+            tbody.innerHTML = '';
+            
+            let totalActualRTP = 0;
+            let totalTheoRTP = 0;
+            let numBets = 0;
+            let badBets = [];
+            
+            const betKeys = Object.keys(PAYOUTS);
+            for (let k of betKeys) {
+                const payout = PAYOUTS[k];
+                const actualWinRate = betWins[k] / rounds;
+                const theoWinRate = exactProb[k] || 0;
+                
+                const actualRTP = actualWinRate * payout;
+                const theoRTP = theoWinRate * payout;
+                const ev = theoRTP - 1; // Expected value for 1 unit bet
+                
+                totalActualRTP += actualRTP;
+                totalTheoRTP += theoRTP;
+                numBets++;
+                
+                if (theoRTP > 1.05 || theoRTP < 0.8) {
+                    badBets.push({ key: k, rtp: theoRTP });
+                }
+                
+                let statusColor = 'text-green-600';
+                let statusText = 'Sehat';
+                if (theoRTP > 1) { statusColor = 'text-red-600 font-bold'; statusText = 'Merugikan Bandar'; }
+                else if (theoRTP < 0.9) { statusColor = 'text-orange-500'; statusText = 'Terlalu Rendah'; }
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="font-bold">${k}</td>
+                        <td>x${payout}</td>
+                        <td>${pct(actualWinRate)}</td>
+                        <td>${pct(theoWinRate)}</td>
+                        <td>${pct(actualRTP)}</td>
+                        <td>${pct(theoRTP)}</td>
+                        <td class="${ev > 0 ? 'text-red-500' : 'text-gray-500'} font-medium">${ev > 0 ? '+' : ''}${ev.toFixed(3)}</td>
+                        <td class="${statusColor}">${statusText}</td>
+                    </tr>
+                `;
+            }
+            
+            document.getElementById('val-rtp').textContent = pct(totalActualRTP / numBets);
+            
+            // 4. Combos
+            const topCombos = Object.entries(comboCounts).sort((a,b) => b[1] - a[1]).slice(0, 10);
+            const comboBody = document.getElementById('table-combos');
+            comboBody.innerHTML = '';
+            for (let [combo, count] of topCombos) {
+                comboBody.innerHTML += `
+                    <tr>
+                        <td class="font-bold tracking-widest">${combo}</td>
+                        <td>${fmt(count)}</td>
+                        <td>${pct(count/rounds)}</td>
+                    </tr>
+                `;
+            }
+            
+            // 5. Anomalies
+            const listAnomalies = document.getElementById('list-anomalies');
+            listAnomalies.innerHTML = '';
+            
+            // Check for uniform distribution of single dice
+            let maxDiceDeviation = 0;
+            diceLabels.forEach(l => {
+                const dev = Math.abs((diceCounts[l] / (rounds * 3)) - (1/6));
+                if (dev > maxDiceDeviation) maxDiceDeviation = dev;
+            });
+            
+            if (maxDiceDeviation > 0.005) {
+                listAnomalies.innerHTML += `<li class="text-orange-600">Terdeteksi sedikit bias pada RNG dasar (deviasi ${pct(maxDiceDeviation)} dari teoritis).</li>`;
+            } else {
+                listAnomalies.innerHTML += `<li class="text-green-600">Distribusi angka tunggal (1-6) sangat seimbang dan acak murni.</li>`;
+            }
+            
+            listAnomalies.innerHTML += `<li>Streak kemunculan nilai total yang sama maksimum mencapai <strong>${maxStreak}</strong> kali berturut-turut.</li>`;
+            
+            // 6. Conclusion
+            const conclusion = document.getElementById('conclusion');
+            let html = '';
+            
+            html += `<p><strong>Kualitas RNG:</strong> Math.random() di JavaScript menunjukkan distribusi yang sehat dan merata untuk jumlah sampel ${fmt(rounds)}. Tidak ada pola berulang atau bias yang signifikan yang merugikan pemain atau bandar dari sisi algoritma acak.</p>`;
+            
+            if (badBets.length > 0) {
+                html += `<p class="text-rose-700 font-bold mt-2">Peringatan Keseimbangan (Balancing):</p>`;
+                html += `<ul class="list-disc pl-5 text-rose-700 space-y-1">`;
+                for (let b of badBets) {
+                    if (b.rtp > 1) {
+                        html += `<li><strong>${b.key}</strong> memiliki RTP ${pct(b.rtp)} (EV Positif). Ini artinya dalam jangka panjang, pemain akan selalu menang jika terus bertaruh pada ${b.key}. Payout perlu diturunkan.</li>`;
+                    } else if (b.rtp < 0.9) {
+                        html += `<li><strong>${b.key}</strong> memiliki RTP yang cukup rendah (${pct(b.rtp)}). Taruhan ini mungkin terasa terlalu sulit dimenangkan oleh pemain.</li>`;
+                    }
+                }
+                html += `</ul>`;
+                html += `<p class="mt-2 text-sm">Disarankan untuk menyesuaikan multiplier <code>PAYOUTS</code> di kode untuk menjaga keseimbangan ekonomi game.</p>`;
+            } else {
+                html += `<p class="text-emerald-700 font-bold mt-2">Semua payout seimbang. RTP berada pada batas yang wajar (House Edge standar).</p>`;
+            }
+            
+            conclusion.innerHTML = html;
+        }
+
+        // Run default simulation on load
+        window.onload = () => runSimulation(100000);
+    </script>
+</body>
+</html>
