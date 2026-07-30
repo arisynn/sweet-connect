@@ -67,7 +67,7 @@ const CasinoChip = ({ amount }) => (
     </div>
 );
 
-const DiceGacha = ({ profile, onOpenComplete, opening, setOpening }) => {
+const DiceGacha = ({ profile, syncProfile, onOpenComplete, opening, setOpening }) => {
     const { useState, useEffect, useRef } = React;
     const formatNum = window.formatNumber || (n => n);
     
@@ -91,7 +91,7 @@ const DiceGacha = ({ profile, onOpenComplete, opening, setOpening }) => {
     const [statsOpen, setStatsOpen] = useState(false);
 
     const userGems = profile.gems || 0;
-    const defaultDiceStats = { rounds: 0, wins: 0, losses: 0, totalWagered: 0, totalReturned: 0, profit: 0, biggestWin: 0, recentWins: [] };
+    const defaultDiceStats = { rounds: 0, wins: 0, losses: 0, totalWagered: 0, totalReturned: 0, profit: 0, biggestWin: 0, recentHistory: [] };
     const diceStats = profile.diceStats || defaultDiceStats;
     
     // Refs for lifecycle
@@ -201,7 +201,7 @@ const DiceGacha = ({ profile, onOpenComplete, opening, setOpening }) => {
         }, 80);
     };
 
-    const processResult = (d1, d2, d3, total, isTriple) => {
+    const processResult = async (d1, d2, d3, total, isTriple) => {
         setPhase('result');
         setOpening(false);
         
@@ -239,25 +239,30 @@ const DiceGacha = ({ profile, onOpenComplete, opening, setOpening }) => {
             if (netDifference > 0) {
                 newStats.wins += 1;
                 if (netDifference > newStats.biggestWin) newStats.biggestWin = netDifference;
-                
-                const winLabels = Object.keys(currentBets).filter(k => wonKeys.includes(k)).map(getBetLabel).join(', ');
-                newStats.recentWins = [{
-                    timestamp: Date.now(),
-                    total: total,
-                    dice: [d1, d2, d3],
-                    bets: winLabels,
-                    profit: netDifference
-                }, ...(newStats.recentWins || [])].slice(0, 15);
             } else {
                 newStats.losses += 1;
             }
+            
+            const betLabels = Object.keys(currentBets).map(getBetLabel).join(', ');
+            newStats.recentHistory = [{
+                timestamp: Date.now(),
+                total: total,
+                dice: [d1, d2, d3],
+                bets: betLabels,
+                profit: netDifference,
+                type: netDifference > 0 ? 'win' : 'lose'
+            }, ...(newStats.recentHistory || newStats.recentWins || [])].slice(0, 15);
         }
         tempProfile.diceStats = newStats;
         
         if (netDifference !== 0) {
             tempProfile.gems = (tempProfile.gems || 0) + netDifference;
         }
-        onOpenComplete(tempProfile, netDifference > 0 ? netDifference : 0);
+        if (typeof syncProfile === "function") {
+            await syncProfile(tempProfile);
+        } else {
+            onOpenComplete(tempProfile, netDifference > 0 ? netDifference : 0);
+        }
         
         if (totalWin > 0) {
             if (typeof AudioEngine !== 'undefined') AudioEngine.uiReward();
@@ -810,17 +815,17 @@ const DiceGacha = ({ profile, onOpenComplete, opening, setOpening }) => {
                             </span>
                         </div>
 
-                        {/* Kemenangan Terbaru */}
+                        {/* Riwayat Terbaru */}
                         <div className="flex flex-col mt-1">
-                            <span className="text-[10px] font-black text-gray-800 mb-2 tracking-wide px-1">KEMENANGAN TERBARU</span>
+                            <span className="text-[10px] font-black text-gray-800 mb-2 tracking-wide px-1">RIWAYAT TERBARU</span>
                             <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto custom-scroll pr-1 pb-1 overscroll-contain">
-                                {(!diceStats.recentWins || diceStats.recentWins.length === 0) ? (
-                                    <div className="text-xs text-gray-400 text-center py-4 font-medium bg-gray-50 rounded-xl border border-gray-100">Belum ada riwayat kemenangan.</div>
+                                {(!diceStats.recentHistory || diceStats.recentHistory.length === 0) ? (
+                                    <div className="text-xs text-gray-400 text-center py-4 font-medium bg-gray-50 rounded-xl border border-gray-100">Belum ada riwayat permainan.</div>
                                 ) : (
-                                    diceStats.recentWins.map((w, i) => (
+                                    diceStats.recentHistory.map((w, i) => (
                                         <div key={i} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm shrink-0">
                                             <div className="flex flex-col gap-1">
-                                                <span className="text-xs font-black text-gray-700 uppercase tracking-tight">{w.bets || `TOTAL ${w.total}`}</span>
+                                                <span className="text-xs font-black text-gray-700 uppercase tracking-tight max-w-[120px] truncate">{w.bets || `TOTAL ${w.total}`}</span>
                                                 <div className="flex items-center gap-1.5 opacity-80">
                                                     {w.dice && w.dice.length === 3 ? (
                                                         <div className="flex gap-0.5">
@@ -832,12 +837,14 @@ const DiceGacha = ({ profile, onOpenComplete, opening, setOpening }) => {
                                                         <span className="text-[10px] font-bold text-gray-500">TOTAL {w.total}</span>
                                                     )}
                                                     <span className="text-[10px] text-gray-400 font-medium">•</span>
-                                                    <span className="text-[10px] font-bold text-gray-400">{w.time}</span>
+                                                    <span className="text-[10px] font-bold text-gray-400">{new Date(w.timestamp || Date.now()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-1 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-100/50">
-                                                <span className="text-xs font-black text-emerald-600">+{formatNum(w.profit)}</span>
-                                                <IconGem className="w-3.5 h-3.5 text-pink-500"/>
+                                            <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border ${w.type === 'win' ? 'bg-emerald-50 border-emerald-100/50' : 'bg-rose-50 border-rose-100/50'}`}>
+                                                <span className={`text-xs font-black ${w.type === 'win' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                    {w.type === 'win' ? '+' : ''}{formatNum(w.profit)}
+                                                </span>
+                                                <IconGem className={`w-3.5 h-3.5 ${w.type === 'win' ? 'text-pink-500' : 'grayscale opacity-50'}`}/>
                                             </div>
                                         </div>
                                     ))
@@ -1025,7 +1032,7 @@ const MagicWheelGacha = ({ profile, opening, setOpening, setShowPrizePool, curre
                     <span className="text-[7px] font-black text-gray-400 tracking-widest bg-white px-2 py-0.5 rounded-full shadow-sm border border-gray-100">SALDO ANDA</span>
                     <div className="flex gap-1.5">
                         <span className="text-[10px] font-black flex items-center gap-1 text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 shadow-sm">
-                            <IconCoin className="w-3.5 h-3.5"/> {typeof window.formatNumber === 'function' ? window.formatNumber(profile.coins || 0) : new Intl.NumberFormat('id-ID').format(profile.coins || 0)}
+                            <IconCoin className="w-3.5 h-3.5"/> {typeof window.formatNumber === 'function' ? window.formatNumber(profileRef.current.coins || 0) : new Intl.NumberFormat('id-ID').format(profileRef.current.coins || 0)}
                         </span>
                         <span className="text-[10px] font-black flex items-center gap-1 text-sky-500 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100 shadow-sm">
                             <IconGift className="w-3.5 h-3.5"/> {typeof window.formatNumber === 'function' ? window.formatNumber(profile.gacha_vouchers || 0) : new Intl.NumberFormat('id-ID').format(profile.gacha_vouchers || 0)}
@@ -1080,7 +1087,7 @@ const IconBomb = ({ className }) => (
   </svg>
 );
 
-const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
+const MinesGame = ({ profile, syncProfile, onOpenComplete, opening, setOpening }) => {
     const { useState, useEffect, useRef } = React;
     const [wager, setWager] = useState(100);
     const [bombCount, setBombCount] = useState(1);
@@ -1093,6 +1100,10 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
     const [animatingCell, setAnimatingCell] = useState(-1);
     const [showBanner, setShowBanner] = useState(false);
     const [winAmountDisplay, setWinAmountDisplay] = useState(0);
+
+    const profileRef = useRef(profile);
+    useEffect(() => { profileRef.current = profile; }, [profile]);
+
 
     const BET_OPTIONS = [100, 200, 300, 400, 500];
     const BOMB_OPTIONS = [1, 2, 3, 4, 5, 6, 7];
@@ -1134,15 +1145,15 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
         return () => clearInterval(interval);
     }, []);
 
-    const startGame = () => {
-        if ((profile.coins || 0) < wager) {
+    const startGame = async () => {
+        if ((profileRef.current.coins || 0) < wager) {
             if (typeof AudioEngine !== 'undefined') AudioEngine.uiError();
             return;
         }
         if (typeof AudioEngine !== 'undefined') AudioEngine.uiClick();
         
-        const newCoins = (profile.coins || 0) - wager;
-        const tempProfile = { ...profile, coins: newCoins };
+        const newCoins = (profileRef.current.coins || 0) - wager;
+        const tempProfile = { ...profileRef.current, coins: newCoins };
         
         let newStats = { ...(tempProfile.minesStats || defaultStats) };
         newStats.rounds = (newStats.rounds || 0) + 1;
@@ -1150,7 +1161,9 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
         newStats.profit = (newStats.profit || 0) - wager;
         tempProfile.minesStats = newStats;
         
-        if (typeof SaveEngine !== 'undefined') {
+        if (typeof syncProfile === 'function') {
+            await syncProfile(tempProfile);
+        } else if (typeof SaveEngine !== 'undefined') {
             SaveEngine.saveProfile(tempProfile);
             if (typeof onOpenComplete === 'function') onOpenComplete(tempProfile);
         }
@@ -1175,7 +1188,7 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
         setStatsOpen(false); // auto close accordion when starting
     };
 
-    const handleCellClick = (index) => {
+    const handleCellClick = async (index) => {
         if (gameState !== 'playing') return;
         if (grid[index].revealed) return;
         
@@ -1197,12 +1210,14 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
             setGameState('freeze');
             setOpening(false);
             
-            const tempProfile = { ...profile };
+            const tempProfile = { ...profileRef.current };
             let newStats = { ...(tempProfile.minesStats || defaultStats) };
             newStats.losses = (newStats.losses || 0) + 1;
             newStats.history = ['lose', ...(newStats.history || [])].slice(0, 10);
             tempProfile.minesStats = newStats;
-            if (typeof SaveEngine !== 'undefined') {
+            if (typeof syncProfile === 'function') {
+                await syncProfile(tempProfile);
+            } else if (typeof SaveEngine !== 'undefined') {
                 SaveEngine.saveProfile(tempProfile);
                 if (typeof onOpenComplete === 'function') onOpenComplete(tempProfile);
             }
@@ -1217,7 +1232,7 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
         }
     };
     
-    const cashout = (count = openedCount) => {
+    const cashout = async (count = openedCount) => {
         if (gameState !== 'playing' || count === 0) return;
         
         const isManualCashout = count < (9 - bombCount);
@@ -1231,7 +1246,7 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
         const multiplier = getMultiplier(bombCount, count);
         const winAmount = Math.floor(wager * multiplier);
         
-        const tempProfile = { ...profile };
+        const tempProfile = { ...profileRef.current };
         tempProfile.coins = (tempProfile.coins || 0) + winAmount;
         
         let newStats = { ...(tempProfile.minesStats || defaultStats) };
@@ -1247,7 +1262,9 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
         
         tempProfile.minesStats = newStats;
         
-        if (typeof SaveEngine !== 'undefined') {
+        if (typeof syncProfile === 'function') {
+            await syncProfile(tempProfile);
+        } else if (typeof SaveEngine !== 'undefined') {
             SaveEngine.saveProfile(tempProfile);
             if (typeof onOpenComplete === 'function') onOpenComplete(tempProfile);
         }
@@ -1456,7 +1473,7 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
                                     <div className="flex items-center gap-1.5">
                                         <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-500 rounded-full border border-amber-100 shadow-sm h-[26px]">
                                             <IconCoin className="w-3.5 h-3.5"/>
-                                            <span className="text-[11px] font-black">{formatNum(profile.coins || 0)}</span>
+                                            <span className="text-[11px] font-black">{formatNum(profileRef.current.coins || 0)}</span>
                                         </div>
                                         <button 
                                             onClick={() => { if(typeof AudioEngine !== 'undefined') AudioEngine.uiClick(); setHelpOpen(true); }}
@@ -1504,7 +1521,7 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
 
                             <button 
                                 onClick={startGame}
-                                disabled={(profile.coins || 0) < wager}
+                                disabled={(profileRef.current.coins || 0) < wager}
                                 className="w-full py-2.5 sm:py-3 rounded-xl bg-emerald-500 text-white font-black text-[13px] sm:text-base shadow-[0_4px_0_#059669] hover:bg-emerald-600 active:translate-y-1 active:shadow-[0_0px_0_#059669] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none transition-all tracking-wide mt-1"
                             >
                                 MULAI MAIN
@@ -1602,7 +1619,7 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
                                 </button>
                                 <button 
                                     onClick={startGame}
-                                    disabled={(profile.coins || 0) < wager}
+                                    disabled={(profileRef.current.coins || 0) < wager}
                                     className="flex-[2] py-2.5 sm:py-3 rounded-xl bg-indigo-500 text-white font-black text-[13px] sm:text-base shadow-[0_4px_0_#4f46e5] hover:bg-indigo-600 active:translate-y-1 active:shadow-[0_0px_0_#4f46e5] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none transition-all tracking-wide flex items-center justify-center gap-2"
                                 >
                                     <IconRefresh className="w-4 h-4 sm:w-5 sm:h-5"/> MAIN LAGI
@@ -1682,7 +1699,7 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
 };
 
 
-const MysteryGift = ({ profile, onOpenComplete, onClose, activeTheme, onActivateTrial, onThemeSelect }) => {
+const MysteryGift = ({ profile, setProfile, saveProfile, playerName, onOpenComplete, onClose, activeTheme, onActivateTrial, onThemeSelect }) => {
     const { useState, useEffect } = React;
     const [opening, setOpening] = useState(false);
     const [wonPrize, setWonPrize] = useState(null);
@@ -1693,6 +1710,29 @@ const MysteryGift = ({ profile, onOpenComplete, onClose, activeTheme, onActivate
     const [gachaMode, setGachaMode] = useState('dice'); // 'item' or 'theme'
     const [touchStart, setTouchStart] = useState(null);
     const [touchEnd, setTouchEnd] = useState(null);
+
+    const syncProfile = async (newProfile) => {
+        console.log("[MiniGame] Updating state...", newProfile);
+        setProfile(newProfile);
+        try {
+            console.log("[MiniGame] Saving to cloud...");
+            if (typeof window.saveCloudProfile === 'function' && playerName) {
+                await window.saveCloudProfile(playerName, newProfile);
+                console.log("[MiniGame] Save cloud success");
+            } else if (typeof saveProfile === 'function' && playerName) {
+                await saveProfile(playerName, newProfile);
+                console.log("[MiniGame] Save profile success");
+            } else if (typeof window.SaveEngine !== 'undefined') {
+                window.SaveEngine.saveProfile(playerName || 'default', newProfile, true);
+                console.log("[MiniGame] SaveEngine success");
+            }
+        } catch (error) {
+            console.error("[MiniGame] Save failed", error);
+            if (typeof window.Dialog !== 'undefined' && window.Dialog.showToast) {
+                window.Dialog.showToast("Gagal menyimpan ke cloud. Akan dicoba lagi otomatis.", "error");
+            }
+        }
+    };
 
     useEffect(() => {
         if (wonPrize && gachaMode === 'item') {
@@ -1968,9 +2008,9 @@ const MysteryGift = ({ profile, onOpenComplete, onClose, activeTheme, onActivate
             {/* Scrollable Content */}
             <div className="absolute top-[64px] bottom-0 left-0 right-0 z-10 w-full flex flex-col items-center custom-scroll overflow-y-auto pb-10">
             {gachaMode === 'dice' ? (
-                <DiceGacha profile={profile} onOpenComplete={onOpenComplete} opening={opening} setOpening={setOpening} />
+                <DiceGacha profile={profile} syncProfile={syncProfile} onOpenComplete={onOpenComplete} opening={opening} setOpening={setOpening} />
             ) : gachaMode === 'mines' ? (
-                <MinesGame profile={profile} onOpenComplete={onOpenComplete} opening={opening} setOpening={setOpening} />
+                <MinesGame profile={profile} syncProfile={syncProfile} onOpenComplete={onOpenComplete} opening={opening} setOpening={setOpening} />
             ) : gachaMode === 'item' ? (
                 <MagicWheelGacha 
                     profile={profile} 
