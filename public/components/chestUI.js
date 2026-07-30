@@ -279,7 +279,7 @@ const ChestSection = ({ profile, setProfile, saveProfile, playerName, setSweetMe
         if (success) {
             setProfile(newP);
             if (playerName) saveProfile(playerName, newP);
-            AudioEngine && AudioEngine.play && AudioEngine.play('buy');
+            if (typeof AudioEngine !== 'undefined' && typeof AudioEngine.uiBuy === 'function') AudioEngine.uiBuy();
         } else {
             if (setSweetMessage) setSweetMessage("Gem tidak cukup!");
         }
@@ -291,11 +291,11 @@ const ChestSection = ({ profile, setProfile, saveProfile, playerName, setSweetMe
         if (animatingSlot !== null) return;
         setAnimatingSlot(index);
         setChestAnimState('shaking');
-        AudioEngine && AudioEngine.play && AudioEngine.play('chestOpen'); // Example
+        if (typeof AudioEngine !== 'undefined' && typeof AudioEngine.uiOpen === 'function') AudioEngine.uiOpen();
         
         setTimeout(() => {
             setChestAnimState('opening');
-            // AudioEngine && AudioEngine.play && AudioEngine.play('chestReveal');
+            if (typeof AudioEngine !== 'undefined' && typeof AudioEngine.winPrize === 'function') AudioEngine.winPrize();
             setTimeout(() => {
                 let { profile: newP, rewards } = openChestAction(profile, index);
                 if (rewards) {

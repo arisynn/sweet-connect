@@ -570,7 +570,12 @@ const DiceGacha = ({ profile, onOpenComplete, opening, setOpening }) => {
 
             {/* Chips */}
             <div className="w-full flex flex-col items-center mb-2.5 mt-1">
-                <div className="text-[7px] font-black text-gray-400 tracking-widest mb-1.5 bg-white px-2 py-0.5 rounded-full shadow-sm border border-gray-100">PILIH CHIP GEM</div>
+                <div className="flex justify-between items-center w-full px-2 mb-1.5">
+                    <span className="text-[7px] font-black text-gray-400 tracking-widest bg-white px-2 py-0.5 rounded-full shadow-sm border border-gray-100">PILIH CHIP GEM</span>
+                    <span className="text-[10px] font-black flex items-center gap-1 text-pink-500 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100 shadow-sm">
+                        <IconGem className="w-3.5 h-3.5"/> {typeof window.formatNumber === 'function' ? window.formatNumber(profile.gems || 0) : new Intl.NumberFormat('id-ID').format(profile.gems || 0)}
+                    </span>
+                </div>
                 <div className="flex items-center gap-2">
                     {[1, 5, 10, 25, 50].map(val => (
                         <button 
@@ -858,6 +863,19 @@ const MagicWheelGacha = ({ profile, opening, setOpening, setShowPrizePool, curre
                 </div>
             </div>
 
+            <div className="w-full flex flex-col items-center mb-2 mt-1">
+                <div className="flex justify-between items-center w-full px-1 mb-2">
+                    <span className="text-[7px] font-black text-gray-400 tracking-widest bg-white px-2 py-0.5 rounded-full shadow-sm border border-gray-100">SALDO ANDA</span>
+                    <div className="flex gap-1.5">
+                        <span className="text-[10px] font-black flex items-center gap-1 text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 shadow-sm">
+                            <IconCoin className="w-3.5 h-3.5"/> {typeof window.formatNumber === 'function' ? window.formatNumber(profile.coins || 0) : new Intl.NumberFormat('id-ID').format(profile.coins || 0)}
+                        </span>
+                        <span className="text-[10px] font-black flex items-center gap-1 text-sky-500 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100 shadow-sm">
+                            <IconGift className="w-3.5 h-3.5"/> {typeof window.formatNumber === 'function' ? window.formatNumber(profile.gacha_vouchers || 0) : new Intl.NumberFormat('id-ID').format(profile.gacha_vouchers || 0)}
+                        </span>
+                    </div>
+                </div>
+            </div>
             {/* Spin Buttons */}
             <div className="flex gap-3 w-full mb-4">
                 <button 
@@ -895,6 +913,427 @@ const MagicWheelGacha = ({ profile, opening, setOpening, setShowPrizePool, curre
 const IconRainbowCandy = ({ className }) => <img src="/assets/gacha/permenpelangi.png" className={className || "w-5 h-5"} draggable="false" alt="Permen Pelangi" />;
 const IconGachaItem = ({ className }) => <img src="/assets/gacha/gachaitem.png" className={className || "w-5 h-5"} draggable="false" alt="Gacha Item" />;
 const IconGachaTheme = ({ className }) => <img src="/assets/gacha/gachatema.png" className={className || "w-5 h-5"} draggable="false" alt="Gacha Tema" />;
+
+// -- MINES GAME --
+const IconBomb = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="11" cy="13" r="9"/>
+    <path d="M14.35 4.65 16.3 2.7a2.41 2.41 0 0 1 3.4 0l1.6 1.6a2.4 2.4 0 0 1 0 3.4l-1.95 1.95"/>
+    <path d="m22 2-1.5 1.5"/>
+  </svg>
+);
+
+const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
+    const { useState, useEffect, useRef } = React;
+    const [wager, setWager] = useState(100);
+    const [bombCount, setBombCount] = useState(1);
+    const [gameState, setGameState] = useState('idle'); // idle, playing, result
+    const [grid, setGrid] = useState(Array(9).fill({ type: '', revealed: false }));
+    const [openedCount, setOpenedCount] = useState(0);
+    const [statsOpen, setStatsOpen] = useState(false);
+    const [animatingCell, setAnimatingCell] = useState(-1);
+    
+    const BET_OPTIONS = [100, 200, 300, 400, 500];
+    const BOMB_OPTIONS = [1, 2, 3, 4];
+    const RTP = 0.95;
+
+    const getMultiplier = (bombs, opened) => {
+        if (opened === 0) return 1.0;
+        const safeCells = 9 - bombs;
+        if (opened > safeCells) return 0;
+        let prob = 1;
+        for (let i = 0; i < opened; i++) {
+            prob *= (safeCells - i) / (9 - i);
+        }
+        return prob > 0 ? (RTP / prob) : 0;
+    };
+
+    const currentMultiplier = getMultiplier(bombCount, openedCount);
+    const nextMultiplier = getMultiplier(bombCount, openedCount + 1);
+    
+    const defaultStats = { rounds: 0, wins: 0, losses: 0, profit: 0, totalWagered: 0, maxWin: 0, history: [], dailyCashouts: 0, lastCashoutDate: '' };
+    const stats = profile.minesStats || defaultStats;
+    const today = new Date().toDateString();
+    const dailyCashouts = stats.lastCashoutDate === today ? (stats.dailyCashouts || 0) : 0;
+    const [timeLeftToReset, setTimeLeftToReset] = useState('');
+
+    useEffect(() => {
+        const calculateTimeLeft = () => {
+            const now = new Date();
+            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            const diff = tomorrow - now;
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            setTimeLeftToReset(`Reset dalam ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+        };
+        calculateTimeLeft();
+        const interval = setInterval(calculateTimeLeft, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const startGame = () => {
+        if ((profile.coins || 0) < wager) {
+            if (typeof AudioEngine !== 'undefined') AudioEngine.uiError();
+            return;
+        }
+        if (typeof AudioEngine !== 'undefined') AudioEngine.uiClick();
+        
+        const newCoins = (profile.coins || 0) - wager;
+        const tempProfile = { ...profile, coins: newCoins };
+        
+        let newStats = { ...(tempProfile.minesStats || defaultStats) };
+        newStats.rounds = (newStats.rounds || 0) + 1;
+        newStats.totalWagered = (newStats.totalWagered || 0) + wager;
+        newStats.profit = (newStats.profit || 0) - wager;
+        tempProfile.minesStats = newStats;
+        
+        if (typeof SaveEngine !== 'undefined') {
+            SaveEngine.saveProfile(tempProfile);
+            if (typeof onOpenComplete === 'function') onOpenComplete(tempProfile);
+        }
+        
+        // Place bombs
+        const positions = [0,1,2,3,4,5,6,7,8];
+        const bombs = [];
+        for (let i = 0; i < bombCount; i++) {
+            const idx = Math.floor(Math.random() * positions.length);
+            bombs.push(positions.splice(idx, 1)[0]);
+        }
+        
+        setGrid(Array(9).fill(null).map((_, i) => ({
+            type: bombs.includes(i) ? 'bomb' : 'gem',
+            revealed: false
+        })));
+        setOpenedCount(0);
+        setGameState('playing');
+        setOpening(true);
+    };
+
+    const handleCellClick = (index) => {
+        if (gameState !== 'playing') return;
+        if (grid[index].revealed) return;
+        
+        setAnimatingCell(index);
+        setTimeout(() => setAnimatingCell(-1), 300);
+
+        const newGrid = [...grid];
+        newGrid[index].revealed = true;
+        setGrid(newGrid);
+        
+        if (newGrid[index].type === 'bomb') {
+            if (typeof AudioEngine !== 'undefined') AudioEngine.wrong();
+            
+            // Reveal all
+            setTimeout(() => {
+                const revealedGrid = newGrid.map(cell => ({ ...cell, revealed: true }));
+                setGrid(revealedGrid);
+            }, 500);
+
+            setGameState('result');
+            setOpening(false);
+            
+            const tempProfile = { ...profile };
+            let newStats = { ...(tempProfile.minesStats || defaultStats) };
+            newStats.losses = (newStats.losses || 0) + 1;
+            newStats.history = ['lose', ...(newStats.history || [])].slice(0, 10);
+            tempProfile.minesStats = newStats;
+            if (typeof SaveEngine !== 'undefined') {
+                SaveEngine.saveProfile(tempProfile);
+                if (typeof onOpenComplete === 'function') onOpenComplete(tempProfile);
+            }
+        } else {
+            if (typeof AudioEngine !== 'undefined') AudioEngine.match();
+            const newOpenedCount = openedCount + 1;
+            setOpenedCount(newOpenedCount);
+            
+            if (newOpenedCount === 9 - bombCount) {
+                setTimeout(() => cashout(newOpenedCount), 500);
+            }
+        }
+    };
+    
+    const cashout = (count = openedCount) => {
+        if (gameState !== 'playing' || count === 0) return;
+        
+        const isManualCashout = count < (9 - bombCount);
+        if (isManualCashout && dailyCashouts >= 3) {
+            if (typeof AudioEngine !== 'undefined') AudioEngine.uiError();
+            return;
+        }
+
+        if (typeof AudioEngine !== 'undefined') AudioEngine.winPrize();
+        
+        const multiplier = getMultiplier(bombCount, count);
+        const winAmount = Math.floor(wager * multiplier);
+        const netWin = winAmount - wager;
+        
+        const tempProfile = { ...profile };
+        tempProfile.coins = (tempProfile.coins || 0) + winAmount;
+        
+        let newStats = { ...(tempProfile.minesStats || defaultStats) };
+        newStats.wins = (newStats.wins || 0) + 1;
+        newStats.profit = (newStats.profit || 0) + winAmount;
+        if (winAmount > (newStats.maxWin || 0)) newStats.maxWin = winAmount;
+        newStats.history = ['win', ...(newStats.history || [])].slice(0, 10);
+        
+        if (isManualCashout) {
+            newStats.lastCashoutDate = today;
+            newStats.dailyCashouts = dailyCashouts + 1;
+        }
+        
+        tempProfile.minesStats = newStats;
+        
+        if (typeof SaveEngine !== 'undefined') {
+            SaveEngine.saveProfile(tempProfile);
+            if (typeof onOpenComplete === 'function') onOpenComplete(tempProfile);
+        }
+        
+        const revealedGrid = grid.map(cell => ({ ...cell, revealed: true }));
+        setGrid(revealedGrid);
+        setGameState('result');
+        setOpening(false);
+    };
+
+    const formatNum = (n) => new Intl.NumberFormat('id-ID').format(n || 0);
+
+        return (
+        <div className="w-full h-full flex flex-col pt-4 pb-20 overflow-y-auto custom-scroll">
+            <div className="text-center mb-4">
+                <h2 className="text-2xl font-black text-emerald-600 mb-1 tracking-tight">Mines Harta</h2>
+                <p className="text-gray-500 text-sm">Temukan permata, hindari ranjau</p>
+            </div>
+
+            <div className="flex-1 px-4 max-w-sm mx-auto w-full">
+                
+                {/* Board */}
+                <div className="bg-white rounded-3xl p-4 mb-3 shadow-sm border border-gray-100 relative overflow-hidden">
+                    <div className="grid grid-cols-3 gap-3">
+                        {grid.map((cell, i) => (
+                            <button 
+                                key={i}
+                                disabled={gameState !== 'playing' || cell.revealed}
+                                onClick={() => handleCellClick(i)}
+                                className={`relative aspect-square rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                                    !cell.revealed ? 
+                                        (gameState === 'playing' ? 
+                                            `bg-emerald-50 shadow-[0_4px_0_#d1fae5] border-2 border-emerald-100 cursor-pointer hover:bg-emerald-100 active:translate-y-1 active:shadow-[0_0px_0_#d1fae5] ${animatingCell === i ? 'scale-95' : ''}` : 
+                                            'bg-gray-50 shadow-[0_4px_0_#f3f4f6] border-2 border-gray-100 cursor-not-allowed') : 
+                                    (cell.type === 'bomb' ? 
+                                        'bg-rose-50 border-2 border-rose-200' : 
+                                        'bg-emerald-100 border-2 border-emerald-200')
+                                }`}
+                            >
+                                <div className={`transition-all duration-300 ${!cell.revealed ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}>
+                                    {cell.revealed && (
+                                        cell.type === 'bomb' ? 
+                                        <IconBomb className={`w-10 h-10 text-rose-500 drop-shadow-sm ${gameState==='result' ? 'animate-[pulse_1s_ease-in-out_infinite]' : ''}`}/> : 
+                                        <IconCoin className="w-10 h-10 drop-shadow-sm"/>
+                                    )}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                    
+                    {gameState === 'result' && (
+                        <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/70 backdrop-blur-[2px] rounded-3xl animate-[fadeIn_0.3s_ease-out]">
+                            <div className={`bg-white px-8 py-5 rounded-2xl shadow-xl border-2 font-black text-xl text-center transform animate-[bounce_0.5s_ease-out] ${openedCount > 0 && grid.some(c => c.revealed && c.type === 'bomb') ? 'border-rose-200' : 'border-emerald-200'}`}>
+                                {openedCount > 0 && grid.some(c => c.revealed && c.type === 'bomb') ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="w-12 h-12 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mb-1">
+                                            <IconBomb className="w-6 h-6"/>
+                                        </div>
+                                        <span className="text-rose-500">KABOOM!</span>
+                                        <span className="text-xs font-bold text-gray-400">Ranjau meledak</span>
+                                    </div>
+                                ) : openedCount > 0 ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="w-12 h-12 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mb-1">
+                                            <IconCoin className="w-6 h-6"/>
+                                        </div>
+                                        <span className="text-emerald-500 text-2xl">MENANG!</span>
+                                        <div className="bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-full mt-1 border border-emerald-100 flex items-center gap-1.5">
+                                            <IconCoin className="w-4 h-4"/>
+                                            <span>{formatNum(Math.floor(wager * currentMultiplier))}</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <span className="text-gray-500">Kalah Cepat</span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Controls and Accordion */}
+                <div className="w-full flex flex-col bg-white rounded-2xl shadow-sm border theme-border overflow-hidden transition-all duration-300">
+                    <div className="p-4 flex flex-col">
+                        <div className="mb-4">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-[10px] font-black text-gray-400 tracking-wider">TARUHAN</span>
+                                <span className="text-xs font-black flex items-center gap-1 text-amber-500 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100">
+                                    <IconCoin className="w-3.5 h-3.5"/> {formatNum(profile.coins || 0)}
+                                </span>
+                            </div>
+                            <div className="flex flex-nowrap gap-1.5 w-full">
+                                {BET_OPTIONS.map(amount => (
+                                    <button 
+                                        key={amount}
+                                        disabled={gameState === 'playing' || (profile.coins || 0) < amount}
+                                        onClick={() => setWager(amount)}
+                                        className={`flex-1 py-2 rounded-xl text-[10px] font-black transition-all ${
+                                            wager === amount ? 
+                                            'bg-amber-400 text-white shadow-[0_3px_0_#d97706] -translate-y-1' : 
+                                            'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100 disabled:opacity-50'
+                                        }`}
+                                    >
+                                        {amount}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-[10px] font-black text-gray-400 tracking-wider">JUMLAH RANJAU</span>
+                            </div>
+                            <div className="flex gap-1.5 w-full">
+                                {BOMB_OPTIONS.map(amount => (
+                                    <button 
+                                        key={amount}
+                                        disabled={gameState === 'playing'}
+                                        onClick={() => setBombCount(amount)}
+                                        className={`flex-1 py-2 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1 ${
+                                            bombCount === amount ? 
+                                            'bg-rose-500 text-white shadow-[0_3px_0_#be123c] -translate-y-1' : 
+                                            'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100 disabled:opacity-50'
+                                        }`}
+                                    >
+                                        <IconBomb className={`w-2.5 h-2.5 ${bombCount === amount ? 'text-white' : 'text-gray-400'}`}/>
+                                        {amount}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        
+                        {gameState === 'playing' ? (
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Pengali Saat Ini</span>
+                                        <span className="text-base font-black text-emerald-500">x{currentMultiplier.toFixed(2)}</span>
+                                    </div>
+                                    <div className="h-6 w-[1px] bg-gray-200"></div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Tebak Berikutnya</span>
+                                        <span className="text-xs font-black text-gray-400">x{nextMultiplier?.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                                
+                                <button 
+                                    onClick={() => cashout()}
+                                    disabled={openedCount === 0 || (openedCount < (9 - bombCount) && dailyCashouts >= 3)}
+                                    className="w-full py-3 rounded-xl bg-amber-400 text-white font-black text-base shadow-[0_4px_0_#d97706] active:translate-y-1 active:shadow-[0_0px_0_#d97706] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none transition-all flex flex-col items-center justify-center relative"
+                                >
+                                    <div className="flex flex-col items-center gap-0.5">
+                                        {openedCount < (9 - bombCount) && dailyCashouts >= 3 ? (
+                                            <>
+                                                <span className="text-sm">Batas Cash Out Harian Tercapai (3/3)</span>
+                                                <span className="text-[10px] font-bold text-amber-100">{timeLeftToReset}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="flex items-center gap-2">
+                                                    <IconCoin className="w-4 h-4"/> AMBIL ({formatNum(Math.floor(wager * currentMultiplier))})
+                                                </div>
+                                                {openedCount < (9 - bombCount) && dailyCashouts < 3 && (
+                                                    <span className="text-[9px] font-bold text-amber-100 uppercase tracking-wider mt-0.5">Sisa Cashout Harian: {3 - dailyCashouts}</span>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </button>
+                            </div>
+                        ) : (
+                            <button 
+                                onClick={startGame}
+                                disabled={(profile.coins || 0) < wager}
+                                className="w-full py-3 rounded-xl bg-emerald-500 text-white font-black text-base shadow-[0_4px_0_#059669] active:translate-y-1 active:shadow-[0_0px_0_#059669] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none transition-all"
+                            >
+                                MULAI MAIN
+                            </button>
+                        )}
+                    </div>
+                    
+                    <button onClick={() => setStatsOpen(!statsOpen)} className="w-full pt-1.5 pb-2 border-t border-gray-50 flex items-center justify-center gap-1 text-[8px] font-black text-gray-400 bg-gray-50/50 hover:bg-gray-100/50">
+                        STATISTIK MINES {statsOpen ? <IconChevronUp className="w-3 h-3"/> : <IconChevronDown className="w-3 h-3"/>}
+                    </button>
+                    
+                    {statsOpen && (
+                        <div className="w-full p-4 pt-2 flex flex-col gap-3 animate-popup text-left">
+                            {/* Summary Grid */}
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex justify-between items-center">
+                                    <span className="text-[10px] font-bold text-gray-500">Total Ronde</span>
+                                    <span className="text-xs font-black text-gray-700">{formatNum(stats.rounds)}</span>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex justify-between items-center">
+                                    <span className="text-[10px] font-bold text-gray-500">Win Rate</span>
+                                    <span className="text-xs font-black text-gray-700">{stats.rounds > 0 ? Math.floor((stats.wins / stats.rounds) * 100) : 0}%</span>
+                                </div>
+                                <div className="bg-emerald-50/50 rounded-xl p-2.5 border border-emerald-50 flex justify-between items-center">
+                                    <span className="text-[10px] font-bold text-gray-500">Total Menang</span>
+                                    <span className="text-xs font-black text-emerald-600">{formatNum(stats.wins)}</span>
+                                </div>
+                                <div className="bg-rose-50/50 rounded-xl p-2.5 border border-rose-50 flex justify-between items-center">
+                                    <span className="text-[10px] font-bold text-gray-500">Total Kalah</span>
+                                    <span className="text-xs font-black text-rose-500">{formatNum(stats.losses)}</span>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex justify-between items-center">
+                                    <span className="text-[10px] font-bold text-gray-500">Total Taruhan</span>
+                                    <span className="text-xs font-black text-gray-700 flex items-center gap-1">{formatNum(stats.totalWagered)}</span>
+                                </div>
+                                <div className="bg-amber-50/50 rounded-xl p-2.5 border border-amber-100 flex justify-between items-center">
+                                    <span className="text-[10px] font-bold text-gray-500">Max Menang</span>
+                                    <span className="text-xs font-black text-amber-600 flex items-center gap-1">{formatNum(stats.maxWin)}</span>
+                                </div>
+                            </div>
+
+                            {/* Total Profit Full Width */}
+                            <div className={`rounded-xl p-3 border flex flex-col items-center justify-center text-center ${stats.profit > 0 ? 'bg-emerald-50/50 border-emerald-100' : stats.profit < 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-gray-50 border-gray-100'}`}>
+                                <span className="text-[10px] font-bold text-gray-500 mb-0.5">Total Profit</span>
+                                <span className={`text-base font-black flex items-center gap-1 ${stats.profit > 0 ? 'text-emerald-600' : stats.profit < 0 ? 'text-rose-600' : 'text-gray-700'}`}>
+                                    {stats.profit > 0 ? '+' : ''}{formatNum(stats.profit)} <IconCoin className="w-4 h-4 text-amber-500"/>
+                                </span>
+                            </div>
+
+                            {/* Kemenangan Terbaru */}
+                            <div className="flex flex-col mt-1">
+                                <span className="text-[10px] font-black text-gray-800 mb-2 tracking-wide px-1">KEMENANGAN TERBARU</span>
+                                <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto custom-scroll pr-1 pb-1 overscroll-contain">
+                                    {(!stats.history || stats.history.length === 0) ? (
+                                        <div className="text-xs text-gray-400 text-center py-4 font-medium bg-gray-50 rounded-xl border border-gray-100">Belum ada riwayat kemenangan.</div>
+                                    ) : (
+                                        stats.history.map((res, i) => (
+                                            <div key={i} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm shrink-0">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-xs font-black text-gray-700 uppercase tracking-tight">RONDE LALU</span>
+                                                </div>
+                                                <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border ${res === 'win' ? 'bg-emerald-50 border-emerald-100/50 text-emerald-600' : 'bg-rose-50 border-rose-100/50 text-rose-600'}`}>
+                                                    <span className="text-xs font-black">{res === 'win' ? 'MENANG' : 'KALAH'}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const MysteryGift = ({ profile, onOpenComplete, onClose, activeTheme, onActivateTrial, onThemeSelect }) => {
     const { useState, useEffect } = React;
@@ -1158,46 +1597,33 @@ const MysteryGift = ({ profile, onOpenComplete, onClose, activeTheme, onActivate
             {THEMES[activeTheme]?.menuBackgrounds?.['gacha'] && (
                 <img src={THEMES[activeTheme].menuBackgrounds['gacha']} className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0" alt=""/>
             )}
-            <div className="absolute inset-0 z-10 w-full h-full flex flex-col items-center custom-scroll overflow-y-auto pb-10">
-
-            <div className="w-full flex items-center justify-between mb-4 mt-2 px-2 sticky top-0 bg-white/50 backdrop-blur-md z-20 py-2 border-b theme-border shadow-sm">
-                <button disabled={opening} onClick={onClose} className="p-2 bg-white rounded-full disabled:opacity-50 text-gray-500 shadow-sm transition-colors"><IconChevronLeft /></button>
-                <div className="flex bg-white rounded-xl p-1 shadow-sm border theme-border">
-                    <button disabled={opening} onClick={() => setGachaMode('dice')} className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${gachaMode === 'dice' ? 'bg-indigo-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>DICE</button>
-                    <button disabled={opening} onClick={() => setGachaMode('item')} className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${gachaMode === 'item' ? 'bg-amber-400 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>ITEM</button>
-                    <button disabled={opening} onClick={() => setGachaMode('theme')} className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${gachaMode === 'theme' ? 'bg-pink-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>TEMA</button>
+                        {/* Fixed Header */}
+            <div className="absolute top-0 left-0 right-0 h-[64px] bg-white/90 backdrop-blur-md z-30 border-b border-gray-100 shadow-sm flex items-center px-4">
+                {/* Left: Back Button */}
+                <div className="flex-1 flex justify-start">
+                    <button disabled={opening} onClick={onClose} className="w-9 h-9 flex items-center justify-center bg-gray-50 rounded-full disabled:opacity-50 text-gray-500 hover:bg-gray-100 transition-colors shadow-sm border border-gray-100/50">
+                        <IconChevronLeft className="w-5 h-5"/>
+                    </button>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                    {gachaMode === 'dice' && (
-                        <div className="flex items-center justify-end gap-1 bg-white px-2 py-0.5 rounded-md font-bold text-[10px] shadow-sm text-gray-600">
-                            <IconGem className="w-3 h-3 text-pink-500" /> {formatNumber ? formatNumber(profile.gems || 0) : (profile.gems || 0)}
-                        </div>
-                    )}
-                    {gachaMode === 'item' && (
-                        <div className="flex flex-col gap-1">
-                            <div className="flex items-center justify-end gap-1 bg-white px-2 py-0.5 rounded-md font-bold text-[10px] shadow-sm text-gray-600">
-                                <IconCoin className="w-3 h-3 text-amber-500" /> {formatNumber ? formatNumber(profile.coins) : profile.coins}
-                            </div>
-                            <div className="flex items-center justify-end gap-1 bg-white px-2 py-0.5 rounded-md font-bold text-[10px] shadow-sm text-gray-600">
-                                <IconGift className="w-3 h-3 text-sky-500" /> {formatNumber ? formatNumber(profile.gacha_vouchers || 0) : (profile.gacha_vouchers || 0)}
-                            </div>
-                        </div>
-                    )}
-                    {gachaMode === 'theme' && (
-                        <div className="flex flex-col gap-1">
-                            <div className="flex items-center justify-end gap-1 bg-white px-2 py-0.5 rounded-md font-bold text-[10px] shadow-sm text-gray-600">
-                                <IconGem className="w-3 h-3 text-pink-500" /> {formatNumber ? formatNumber(profile.gems || 0) : (profile.gems || 0)}
-                            </div>
-                            <div className="flex items-center justify-end gap-1 bg-white px-2 py-0.5 rounded-md font-bold text-[10px] shadow-sm text-gray-600">
-                                <IconRainbowCandy className="w-3 h-3 text-fuchsia-500" /> {formatNumber ? formatNumber(profile.rainbow_candy || 0) : (profile.rainbow_candy || 0)}
-                            </div>
-                        </div>
-                    )}
+                
+                {/* Center: Tabs */}
+                <div className="flex-none bg-gray-50/80 p-1 rounded-xl flex items-center shadow-inner border border-gray-100/50">
+                    <button disabled={opening} onClick={() => setGachaMode('dice')} className={`px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black tracking-widest transition-all ${gachaMode === 'dice' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>DICE</button>
+                    <button disabled={opening} onClick={() => setGachaMode('item')} className={`px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black tracking-widest transition-all ${gachaMode === 'item' ? 'bg-white text-amber-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>ITEM</button>
+                    <button disabled={opening} onClick={() => setGachaMode('theme')} className={`px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black tracking-widest transition-all ${gachaMode === 'theme' ? 'bg-white text-pink-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>TEMA</button>
+                    <button disabled={opening} onClick={() => setGachaMode('mines')} className={`px-3 sm:px-4 py-2 rounded-lg text-[10px] font-black tracking-widest transition-all ${gachaMode === 'mines' ? 'bg-white text-emerald-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>MINES</button>
                 </div>
+                
+                {/* Right: Spacer */}
+                <div className="flex-1"></div>
             </div>
 
+            {/* Scrollable Content */}
+            <div className="absolute top-[64px] bottom-0 left-0 right-0 z-10 w-full flex flex-col items-center custom-scroll overflow-y-auto pb-10">
             {gachaMode === 'dice' ? (
                 <DiceGacha profile={profile} onOpenComplete={onOpenComplete} opening={opening} setOpening={setOpening} />
+            ) : gachaMode === 'mines' ? (
+                <MinesGame profile={profile} onOpenComplete={onOpenComplete} opening={opening} setOpening={setOpening} />
             ) : gachaMode === 'item' ? (
                 <MagicWheelGacha 
                     profile={profile} 
@@ -1275,6 +1701,19 @@ const MysteryGift = ({ profile, onOpenComplete, onClose, activeTheme, onActivate
                     />
                 </div>
 
+                <div className="w-full flex flex-col items-center mb-2 mt-1">
+                    <div className="flex justify-between items-center w-full mb-2">
+                        <span className="text-[7px] font-black text-gray-400 tracking-widest bg-white/80 px-2 py-0.5 rounded-full shadow-sm border border-gray-100">SALDO ANDA</span>
+                        <div className="flex gap-1.5">
+                            <span className="text-[10px] font-black flex items-center gap-1 text-pink-500 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100 shadow-sm">
+                                <IconGem className="w-3.5 h-3.5"/> {typeof window.formatNumber === 'function' ? window.formatNumber(profile.gems || 0) : new Intl.NumberFormat('id-ID').format(profile.gems || 0)}
+                            </span>
+                            <span className="text-[10px] font-black flex items-center gap-1 text-fuchsia-500 bg-fuchsia-50 px-2 py-0.5 rounded-full border border-fuchsia-100 shadow-sm">
+                                <IconRainbowCandy className="w-3.5 h-3.5"/> {typeof window.formatNumber === 'function' ? window.formatNumber(profile.rainbow_candy || 0) : new Intl.NumberFormat('id-ID').format(profile.rainbow_candy || 0)}
+                            </span>
+                        </div>
+                    </div>
+                </div>
                 {/* Spin Buttons */}
                 <div className="flex gap-3 w-full mb-6">
                     <button 
