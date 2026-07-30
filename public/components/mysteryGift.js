@@ -927,14 +927,17 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
     const { useState, useEffect, useRef } = React;
     const [wager, setWager] = useState(100);
     const [bombCount, setBombCount] = useState(1);
-    const [gameState, setGameState] = useState('idle'); // idle, playing, result
+    const [gameState, setGameState] = useState('idle'); // idle, playing, result, freeze
+    const [resultType, setResultType] = useState(null); // 'win', 'lose'
     const [grid, setGrid] = useState(Array(9).fill({ type: '', revealed: false }));
     const [openedCount, setOpenedCount] = useState(0);
     const [statsOpen, setStatsOpen] = useState(false);
     const [animatingCell, setAnimatingCell] = useState(-1);
-    
+    const [showBanner, setShowBanner] = useState(false);
+    const [winAmountDisplay, setWinAmountDisplay] = useState(0);
+
     const BET_OPTIONS = [100, 200, 300, 400, 500];
-    const BOMB_OPTIONS = [1, 2, 3, 4];
+    const BOMB_OPTIONS = [1, 2, 3, 4, 5, 6, 7];
     const RTP = 0.95;
 
     const getMultiplier = (bombs, opened) => {
@@ -950,6 +953,8 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
 
     const currentMultiplier = getMultiplier(bombCount, openedCount);
     const nextMultiplier = getMultiplier(bombCount, openedCount + 1);
+    const safeCells = 9 - bombCount;
+    const remainingSafe = safeCells - openedCount;
     
     const defaultStats = { rounds: 0, wins: 0, losses: 0, profit: 0, totalWagered: 0, maxWin: 0, history: [], dailyCashouts: 0, lastCashoutDate: '' };
     const stats = profile.minesStats || defaultStats;
@@ -992,7 +997,6 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
             if (typeof onOpenComplete === 'function') onOpenComplete(tempProfile);
         }
         
-        // Place bombs
         const positions = [0,1,2,3,4,5,6,7,8];
         const bombs = [];
         for (let i = 0; i < bombCount; i++) {
@@ -1005,8 +1009,12 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
             revealed: false
         })));
         setOpenedCount(0);
+        setResultType(null);
+        setShowBanner(false);
+        setWinAmountDisplay(0);
         setGameState('playing');
         setOpening(true);
+        setStatsOpen(false); // auto close accordion when starting
     };
 
     const handleCellClick = (index) => {
@@ -1023,13 +1031,13 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
         if (newGrid[index].type === 'bomb') {
             if (typeof AudioEngine !== 'undefined') AudioEngine.wrong();
             
-            // Reveal all
             setTimeout(() => {
                 const revealedGrid = newGrid.map(cell => ({ ...cell, revealed: true }));
                 setGrid(revealedGrid);
-            }, 500);
-
-            setGameState('result');
+            }, 300);
+            setResultType('lose');
+            setGameState('freeze');
+            setShowBanner(true);
             setOpening(false);
             
             const tempProfile = { ...profile };
@@ -1065,7 +1073,6 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
         
         const multiplier = getMultiplier(bombCount, count);
         const winAmount = Math.floor(wager * multiplier);
-        const netWin = winAmount - wager;
         
         const tempProfile = { ...profile };
         tempProfile.coins = (tempProfile.coins || 0) + winAmount;
@@ -1090,83 +1097,135 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
         
         const revealedGrid = grid.map(cell => ({ ...cell, revealed: true }));
         setGrid(revealedGrid);
-        setGameState('result');
+        setWinAmountDisplay(winAmount);
+        setResultType('win');
+        setGameState('freeze');
+        setShowBanner(true);
+        setTimeout(() => setShowBanner(false), 2000); // Hide banner after 2s for win
         setOpening(false);
+    };
+
+    const resetGame = () => {
+        if (typeof AudioEngine !== 'undefined') AudioEngine.uiClick();
+        setGameState('idle');
+        setGrid(Array(9).fill({ type: '', revealed: false }));
+        setOpenedCount(0);
+        setShowBanner(false);
+        setResultType(null);
     };
 
     const formatNum = (n) => new Intl.NumberFormat('id-ID').format(n || 0);
 
-        return (
-        <div className="w-full h-full flex flex-col pt-4 pb-20 overflow-y-auto custom-scroll">
-            <div className="text-center mb-4">
+    return (
+        <div className="w-full flex-1 flex flex-col pt-4 px-4 pb-20 custom-scroll overflow-y-auto max-w-sm mx-auto">
+            <div className="text-center mb-4 shrink-0">
                 <h2 className="text-2xl font-black text-emerald-600 mb-1 tracking-tight">Mines Harta</h2>
                 <p className="text-gray-500 text-sm">Temukan permata, hindari ranjau</p>
             </div>
 
-            <div className="flex-1 px-4 max-w-sm mx-auto w-full">
-                
-                {/* Board */}
-                <div className="bg-white rounded-3xl p-4 mb-3 shadow-sm border border-gray-100 relative overflow-hidden">
-                    <div className="grid grid-cols-3 gap-3">
-                        {grid.map((cell, i) => (
-                            <button 
-                                key={i}
-                                disabled={gameState !== 'playing' || cell.revealed}
-                                onClick={() => handleCellClick(i)}
-                                className={`relative aspect-square rounded-2xl flex items-center justify-center transition-all duration-300 ${
-                                    !cell.revealed ? 
-                                        (gameState === 'playing' ? 
-                                            `bg-emerald-50 shadow-[0_4px_0_#d1fae5] border-2 border-emerald-100 cursor-pointer hover:bg-emerald-100 active:translate-y-1 active:shadow-[0_0px_0_#d1fae5] ${animatingCell === i ? 'scale-95' : ''}` : 
-                                            'bg-gray-50 shadow-[0_4px_0_#f3f4f6] border-2 border-gray-100 cursor-not-allowed') : 
-                                    (cell.type === 'bomb' ? 
-                                        'bg-rose-50 border-2 border-rose-200' : 
-                                        'bg-emerald-100 border-2 border-emerald-200')
-                                }`}
-                            >
-                                <div className={`transition-all duration-300 ${!cell.revealed ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}>
-                                    {cell.revealed && (
-                                        cell.type === 'bomb' ? 
-                                        <IconBomb className={`w-10 h-10 text-rose-500 drop-shadow-sm ${gameState==='result' ? 'animate-[pulse_1s_ease-in-out_infinite]' : ''}`}/> : 
-                                        <IconCoin className="w-10 h-10 drop-shadow-sm"/>
-                                    )}
-                                </div>
-                            </button>
-                        ))}
+            <style>{`
+                @keyframes flipIn {
+                    0% { transform: perspective(400px) rotateY(-90deg); opacity: 0; }
+                    100% { transform: perspective(400px) rotateY(0deg); opacity: 1; }
+                }
+                .animate-flip {
+                    animation: flipIn 0.3s ease-out forwards;
+                }
+                @keyframes popBounce {
+                    0% { transform: scale(0.5); opacity: 0; }
+                    50% { transform: scale(1.15); }
+                    100% { transform: scale(1); opacity: 1; }
+                }
+                .animate-pop-bounce {
+                    animation: popBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                }
+                @keyframes slideDownHeader {
+                    from { transform: translateY(-100%); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+                @keyframes popUp {
+                    0% { transform: scale(0.9); opacity: 0; }
+                    100% { transform: scale(1); opacity: 1; }
+                }
+                @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    20% { transform: translateX(-4px) rotate(-2deg); }
+                    40% { transform: translateX(4px) rotate(2deg); }
+                    60% { transform: translateX(-4px) rotate(-2deg); }
+                    80% { transform: translateX(4px) rotate(2deg); }
+                }
+                .animate-shake {
+                    animation: shake 0.4s ease-in-out;
+                }
+                @keyframes countUp {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-count-up {
+                    animation: countUp 0.3s ease-out;
+                }
+            `}</style>
+
+            {/* BOARD CARD */}
+            <div className="bg-white rounded-3xl p-4 mb-3 shadow-sm border border-gray-100 relative overflow-hidden shrink-0">
+                {/* Banner Overlay for Result */}
+                {showBanner && gameState === 'freeze' && (
+                    <div className={`absolute top-0 left-0 right-0 py-2.5 px-4 z-20 flex flex-col items-center justify-center shadow-md border-b backdrop-blur-md ${
+                        resultType === 'win' ? 'bg-emerald-500/95 border-emerald-600 text-white' : 'bg-rose-500/95 border-rose-600 text-white'
+                    }`} style={{ animation: 'slideDownHeader 0.4s ease-out' }}>
+                        <span className="text-sm font-black flex items-center gap-2">
+                            {resultType === 'win' ? '✔ Cash Out Berhasil' : '💥 Terkena Ranjau'}
+                        </span>
+                        <span className="text-[11px] font-bold opacity-90 mt-0.5">
+                            {resultType === 'win' ? `+${formatNum(winAmountDisplay)} Koin` : 'Taruhan Hangus'}
+                        </span>
                     </div>
-                    
-                    {gameState === 'result' && (
-                        <div className="absolute inset-0 flex items-center justify-center z-10 bg-white/70 backdrop-blur-[2px] rounded-3xl animate-[fadeIn_0.3s_ease-out]">
-                            <div className={`bg-white px-8 py-5 rounded-2xl shadow-xl border-2 font-black text-xl text-center transform animate-[bounce_0.5s_ease-out] ${openedCount > 0 && grid.some(c => c.revealed && c.type === 'bomb') ? 'border-rose-200' : 'border-emerald-200'}`}>
-                                {openedCount > 0 && grid.some(c => c.revealed && c.type === 'bomb') ? (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="w-12 h-12 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mb-1">
-                                            <IconBomb className="w-6 h-6"/>
-                                        </div>
-                                        <span className="text-rose-500">KABOOM!</span>
-                                        <span className="text-xs font-bold text-gray-400">Ranjau meledak</span>
-                                    </div>
-                                ) : openedCount > 0 ? (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="w-12 h-12 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mb-1">
-                                            <IconCoin className="w-6 h-6"/>
-                                        </div>
-                                        <span className="text-emerald-500 text-2xl">MENANG!</span>
-                                        <div className="bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-full mt-1 border border-emerald-100 flex items-center gap-1.5">
-                                            <IconCoin className="w-4 h-4"/>
-                                            <span>{formatNum(Math.floor(wager * currentMultiplier))}</span>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <span className="text-gray-500">Kalah Cepat</span>
+                )}
+
+                {(gameState === 'playing' || gameState === 'freeze') && (
+                    <div className="flex justify-between items-center mb-3 px-1 mt-1">
+                        <span className="text-xs font-bold text-gray-500">Aman: <span className="text-emerald-500 font-black">{openedCount}/{safeCells}</span></span>
+                        <span className="text-xs font-bold text-gray-500">Tersisa: <span className="text-gray-700 font-black">{remainingSafe}</span></span>
+                    </div>
+                )}
+                {gameState === 'idle' && (
+                    <div className="flex justify-center items-center mb-3 px-1 mt-1 opacity-50">
+                        <span className="text-xs font-bold text-gray-500">Siap Bermain</span>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-3 gap-3 relative z-10">
+                    {grid.map((cell, i) => (
+                        <button 
+                            key={i}
+                            disabled={gameState !== 'playing' || cell.revealed}
+                            onClick={() => handleCellClick(i)}
+                            className={`relative aspect-square rounded-2xl flex items-center justify-center transition-all duration-300 transform outline-none ${
+                                !cell.revealed ? 
+                                    (gameState === 'playing' ? 
+                                        `bg-emerald-50 shadow-[0_4px_0_#d1fae5] border-2 border-emerald-100 cursor-pointer hover:bg-emerald-100 active:translate-y-1 active:shadow-[0_0px_0_#d1fae5] ${animatingCell === i ? 'scale-95' : ''}` : 
+                                        'bg-gray-50 shadow-[0_4px_0_#f3f4f6] border-2 border-gray-100 cursor-default') : 
+                                (cell.type === 'bomb' ? 
+                                    'bg-rose-50 border-2 border-rose-200 shadow-inner' : 
+                                    'bg-emerald-100 border-2 border-emerald-200 shadow-inner')
+                            }`}
+                        >
+                            <div className="w-full h-full flex items-center justify-center">
+                                {cell.revealed && (
+                                    cell.type === 'bomb' ? 
+                                    <IconBomb className={`w-10 h-10 text-rose-500 drop-shadow-sm animate-flip ${gameState === 'freeze' && resultType === 'lose' ? 'animate-shake' : ''}`} /> : 
+                                    <IconCoin className="w-10 h-10 drop-shadow-sm animate-pop-bounce text-amber-500" />
                                 )}
                             </div>
-                        </div>
-                    )}
+                        </button>
+                    ))}
                 </div>
+            </div>
 
-                {/* Controls and Accordion */}
-                <div className="w-full flex flex-col bg-white rounded-2xl shadow-sm border theme-border overflow-hidden transition-all duration-300">
-                    <div className="p-4 flex flex-col">
+            {/* SINGLE CONTROLS CARD */}
+            <div className="w-full flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300">
+                {gameState === 'idle' && (
+                    <div className="p-4 flex flex-col animate-[fadeIn_0.3s_ease-out]">
                         <div className="mb-4">
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-[10px] font-black text-gray-400 tracking-wider">TARUHAN</span>
@@ -1174,161 +1233,200 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
                                     <IconCoin className="w-3.5 h-3.5"/> {formatNum(profile.coins || 0)}
                                 </span>
                             </div>
-                            <div className="flex flex-nowrap gap-1.5 w-full">
-                                {BET_OPTIONS.map(amount => (
+                            <div className="grid grid-cols-5 gap-1.5">
+                                {BET_OPTIONS.map(b => (
                                     <button 
-                                        key={amount}
-                                        disabled={gameState === 'playing' || (profile.coins || 0) < amount}
-                                        onClick={() => setWager(amount)}
-                                        className={`flex-1 py-2 rounded-xl text-[10px] font-black transition-all ${
-                                            wager === amount ? 
-                                            'bg-amber-400 text-white shadow-[0_3px_0_#d97706] -translate-y-1' : 
-                                            'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100 disabled:opacity-50'
+                                        key={b}
+                                        onClick={() => setWager(b)}
+                                        className={`py-2 rounded-xl text-xs font-black transition-all ${
+                                            wager === b 
+                                                ? 'bg-amber-400 text-white shadow-sm ring-2 ring-amber-400 ring-offset-1' 
+                                                : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-100'
                                         }`}
                                     >
-                                        {amount}
+                                        {formatNum(b)}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="mb-4">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-[10px] font-black text-gray-400 tracking-wider">JUMLAH RANJAU</span>
-                            </div>
-                            <div className="flex gap-1.5 w-full">
-                                {BOMB_OPTIONS.map(amount => (
+                        <div className="mb-5">
+                            <span className="text-[10px] font-black text-gray-400 tracking-wider block mb-2">JUMLAH RANJAU</span>
+                            <div className="grid grid-cols-7 gap-1">
+                                {BOMB_OPTIONS.map(b => (
                                     <button 
-                                        key={amount}
-                                        disabled={gameState === 'playing'}
-                                        onClick={() => setBombCount(amount)}
-                                        className={`flex-1 py-2 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1 ${
-                                            bombCount === amount ? 
-                                            'bg-rose-500 text-white shadow-[0_3px_0_#be123c] -translate-y-1' : 
-                                            'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100 disabled:opacity-50'
+                                        key={b}
+                                        onClick={() => setBombCount(b)}
+                                        className={`py-1.5 rounded-lg text-xs font-black transition-all ${
+                                            bombCount === b 
+                                                ? 'bg-rose-500 text-white shadow-sm ring-2 ring-rose-500 ring-offset-1' 
+                                                : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-100'
                                         }`}
                                     >
-                                        <IconBomb className={`w-2.5 h-2.5 ${bombCount === amount ? 'text-white' : 'text-gray-400'}`}/>
-                                        {amount}
+                                        {b}
                                     </button>
                                 ))}
                             </div>
                         </div>
-                        
-                        {gameState === 'playing' ? (
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                                    <div className="flex flex-col">
-                                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Pengali Saat Ini</span>
-                                        <span className="text-base font-black text-emerald-500">x{currentMultiplier.toFixed(2)}</span>
-                                    </div>
-                                    <div className="h-6 w-[1px] bg-gray-200"></div>
-                                    <div className="flex flex-col items-end">
-                                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Tebak Berikutnya</span>
-                                        <span className="text-xs font-black text-gray-400">x{nextMultiplier?.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                                
-                                <button 
-                                    onClick={() => cashout()}
-                                    disabled={openedCount === 0 || (openedCount < (9 - bombCount) && dailyCashouts >= 3)}
-                                    className="w-full py-3 rounded-xl bg-amber-400 text-white font-black text-base shadow-[0_4px_0_#d97706] active:translate-y-1 active:shadow-[0_0px_0_#d97706] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none transition-all flex flex-col items-center justify-center relative"
-                                >
-                                    <div className="flex flex-col items-center gap-0.5">
-                                        {openedCount < (9 - bombCount) && dailyCashouts >= 3 ? (
-                                            <>
-                                                <span className="text-sm">Batas Cash Out Harian Tercapai (3/3)</span>
-                                                <span className="text-[10px] font-bold text-amber-100">{timeLeftToReset}</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="flex items-center gap-2">
-                                                    <IconCoin className="w-4 h-4"/> AMBIL ({formatNum(Math.floor(wager * currentMultiplier))})
-                                                </div>
-                                                {openedCount < (9 - bombCount) && dailyCashouts < 3 && (
-                                                    <span className="text-[9px] font-bold text-amber-100 uppercase tracking-wider mt-0.5">Sisa Cashout Harian: {3 - dailyCashouts}</span>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-                                </button>
-                            </div>
-                        ) : (
-                            <button 
-                                onClick={startGame}
-                                disabled={(profile.coins || 0) < wager}
-                                className="w-full py-3 rounded-xl bg-emerald-500 text-white font-black text-base shadow-[0_4px_0_#059669] active:translate-y-1 active:shadow-[0_0px_0_#059669] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none transition-all"
-                            >
-                                MULAI MAIN
-                            </button>
-                        )}
+
+                        <button 
+                            onClick={startGame}
+                            disabled={(profile.coins || 0) < wager}
+                            className="w-full py-3.5 rounded-xl bg-emerald-500 text-white font-black text-base shadow-[0_4px_0_#059669] active:translate-y-1 active:shadow-[0_0px_0_#059669] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none transition-all tracking-wide"
+                        >
+                            MULAI MAIN
+                        </button>
                     </div>
-                    
-                    <button onClick={() => setStatsOpen(!statsOpen)} className="w-full pt-1.5 pb-2 border-t border-gray-50 flex items-center justify-center gap-1 text-[8px] font-black text-gray-400 bg-gray-50/50 hover:bg-gray-100/50">
-                        STATISTIK MINES {statsOpen ? <IconChevronUp className="w-3 h-3"/> : <IconChevronDown className="w-3 h-3"/>}
-                    </button>
-                    
-                    {statsOpen && (
-                        <div className="w-full p-4 pt-2 flex flex-col gap-3 animate-popup text-left">
-                            {/* Summary Grid */}
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex justify-between items-center">
-                                    <span className="text-[10px] font-bold text-gray-500">Total Ronde</span>
-                                    <span className="text-xs font-black text-gray-700">{formatNum(stats.rounds)}</span>
-                                </div>
-                                <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex justify-between items-center">
-                                    <span className="text-[10px] font-bold text-gray-500">Win Rate</span>
-                                    <span className="text-xs font-black text-gray-700">{stats.rounds > 0 ? Math.floor((stats.wins / stats.rounds) * 100) : 0}%</span>
-                                </div>
-                                <div className="bg-emerald-50/50 rounded-xl p-2.5 border border-emerald-50 flex justify-between items-center">
-                                    <span className="text-[10px] font-bold text-gray-500">Total Menang</span>
-                                    <span className="text-xs font-black text-emerald-600">{formatNum(stats.wins)}</span>
-                                </div>
-                                <div className="bg-rose-50/50 rounded-xl p-2.5 border border-rose-50 flex justify-between items-center">
-                                    <span className="text-[10px] font-bold text-gray-500">Total Kalah</span>
-                                    <span className="text-xs font-black text-rose-500">{formatNum(stats.losses)}</span>
-                                </div>
-                                <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex justify-between items-center">
-                                    <span className="text-[10px] font-bold text-gray-500">Total Taruhan</span>
-                                    <span className="text-xs font-black text-gray-700 flex items-center gap-1">{formatNum(stats.totalWagered)}</span>
-                                </div>
-                                <div className="bg-amber-50/50 rounded-xl p-2.5 border border-amber-100 flex justify-between items-center">
-                                    <span className="text-[10px] font-bold text-gray-500">Max Menang</span>
-                                    <span className="text-xs font-black text-amber-600 flex items-center gap-1">{formatNum(stats.maxWin)}</span>
+                )}
+
+                {gameState === 'playing' && (
+                    <div className="p-4 flex flex-col animate-[fadeIn_0.3s_ease-out]">
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-gray-400 tracking-wider">REWARD SAAT INI</span>
+                                <div className="flex items-center gap-1 text-amber-500 font-black text-2xl animate-count-up" key={currentMultiplier}>
+                                    <IconCoin className="w-6 h-6"/>
+                                    <span>{formatNum(Math.floor(wager * currentMultiplier))}</span>
                                 </div>
                             </div>
-
-                            {/* Total Profit Full Width */}
-                            <div className={`rounded-xl p-3 border flex flex-col items-center justify-center text-center ${stats.profit > 0 ? 'bg-emerald-50/50 border-emerald-100' : stats.profit < 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-gray-50 border-gray-100'}`}>
-                                <span className="text-[10px] font-bold text-gray-500 mb-0.5">Total Profit</span>
-                                <span className={`text-base font-black flex items-center gap-1 ${stats.profit > 0 ? 'text-emerald-600' : stats.profit < 0 ? 'text-rose-600' : 'text-gray-700'}`}>
-                                    {stats.profit > 0 ? '+' : ''}{formatNum(stats.profit)} <IconCoin className="w-4 h-4 text-amber-500"/>
-                                </span>
-                            </div>
-
-                            {/* Kemenangan Terbaru */}
-                            <div className="flex flex-col mt-1">
-                                <span className="text-[10px] font-black text-gray-800 mb-2 tracking-wide px-1">KEMENANGAN TERBARU</span>
-                                <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto custom-scroll pr-1 pb-1 overscroll-contain">
-                                    {(!stats.history || stats.history.length === 0) ? (
-                                        <div className="text-xs text-gray-400 text-center py-4 font-medium bg-gray-50 rounded-xl border border-gray-100">Belum ada riwayat kemenangan.</div>
-                                    ) : (
-                                        stats.history.map((res, i) => (
-                                            <div key={i} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm shrink-0">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-xs font-black text-gray-700 uppercase tracking-tight">RONDE LALU</span>
-                                                </div>
-                                                <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border ${res === 'win' ? 'bg-emerald-50 border-emerald-100/50 text-emerald-600' : 'bg-rose-50 border-rose-100/50 text-rose-600'}`}>
-                                                    <span className="text-xs font-black">{res === 'win' ? 'MENANG' : 'KALAH'}</span>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
+                            <div className="flex flex-col items-end text-right gap-1.5">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-gray-100">M. SAAT INI</span>
+                                    <span className="text-sm font-black text-emerald-600 animate-count-up" key={'cur'+currentMultiplier}>{currentMultiplier.toFixed(2)}x</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-gray-100">M. BERIKUTNYA</span>
+                                    <span className="text-sm font-black text-gray-600 animate-count-up" key={'next'+nextMultiplier}>{nextMultiplier.toFixed(2)}x</span>
                                 </div>
                             </div>
                         </div>
-                    )}
-                </div>
+
+                        <button 
+                            onClick={() => cashout()}
+                            disabled={openedCount === 0 || (openedCount < safeCells && dailyCashouts >= 3)}
+                            className={`w-full py-4 rounded-xl text-white font-black text-base transition-all flex flex-col items-center justify-center relative ${
+                                openedCount === 0 ? 'bg-gray-300 shadow-[0_4px_0_#9ca3af] cursor-not-allowed opacity-80' : 
+                                'bg-amber-400 shadow-[0_4px_0_#d97706] active:translate-y-1 active:shadow-[0_0px_0_#d97706]'
+                            } ${(openedCount < safeCells && dailyCashouts >= 3) ? 'opacity-50 translate-y-0 shadow-none' : ''}`}
+                        >
+                            <div className="flex flex-col items-center gap-0.5">
+                                {openedCount < safeCells && dailyCashouts >= 3 ? (
+                                    <>
+                                        <span className="text-sm">Batas Cash Out Harian Tercapai (3/3)</span>
+                                        <span className="text-[10px] font-bold text-amber-100">{timeLeftToReset}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-2">
+                                            <IconCoin className="w-5 h-5"/> 
+                                            <span className="text-lg">AMBIL ({formatNum(Math.floor(wager * currentMultiplier))})</span>
+                                        </div>
+                                        {openedCount > 0 && openedCount < safeCells && dailyCashouts < 3 && (
+                                            <span className="text-[10px] font-bold text-amber-100 uppercase tracking-wider mt-1">Sisa Cashout Harian: {3 - dailyCashouts}</span>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </button>
+                    </div>
+                )}
+
+                {gameState === 'freeze' && (
+                    <div className="p-4 flex flex-col animate-[fadeIn_0.3s_ease-out]">
+                        <div className="flex justify-between items-center mb-4 opacity-50">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-gray-400 tracking-wider">REWARD SAAT INI</span>
+                                <div className="flex items-center gap-1 text-amber-500 font-black text-2xl">
+                                    <IconCoin className="w-6 h-6"/>
+                                    <span>{formatNum(Math.floor(wager * currentMultiplier))}</span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-end text-right gap-1.5">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-gray-100">M. SAAT INI</span>
+                                    <span className="text-sm font-black text-emerald-600">{currentMultiplier.toFixed(2)}x</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-gray-100">M. BERIKUTNYA</span>
+                                    <span className="text-sm font-black text-gray-600">{nextMultiplier.toFixed(2)}x</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={resetGame}
+                            className="w-full py-4 rounded-xl bg-indigo-500 text-white font-black text-base shadow-[0_4px_0_#4f46e5] active:translate-y-1 active:shadow-[0_0px_0_#4f46e5] transition-all tracking-wide"
+                        >
+                            MAIN LAGI
+                        </button>
+                    </div>
+                )}
+
+                {/* ACCORDION STATS (Part of the same card) */}
+                <button onClick={() => setStatsOpen(!statsOpen)} className="w-full pt-1.5 pb-2 border-t border-gray-50 flex items-center justify-center gap-1 text-[8px] font-black text-gray-400 bg-gray-50/50 hover:bg-gray-100/50 transition-colors">
+                    STATISTIK MINES {statsOpen ? <IconChevronUp className="w-3 h-3"/> : <IconChevronDown className="w-3 h-3"/>}
+                </button>
+                
+                {statsOpen && (
+                    <div className="w-full p-4 pt-2 flex flex-col gap-3 animate-popup text-left bg-white">
+                        {/* Summary Grid */}
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-gray-500">Total Ronde</span>
+                                <span className="text-xs font-black text-gray-700">{formatNum(stats.rounds)}</span>
+                            </div>
+                            <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-gray-500">Win Rate</span>
+                                <span className="text-xs font-black text-gray-700">{stats.rounds > 0 ? Math.floor((stats.wins / stats.rounds) * 100) : 0}%</span>
+                            </div>
+                            <div className="bg-emerald-50/50 rounded-xl p-2.5 border border-emerald-50 flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-gray-500">Total Menang</span>
+                                <span className="text-xs font-black text-emerald-600">{formatNum(stats.wins)}</span>
+                            </div>
+                            <div className="bg-rose-50/50 rounded-xl p-2.5 border border-rose-50 flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-gray-500">Total Kalah</span>
+                                <span className="text-xs font-black text-rose-500">{formatNum(stats.losses)}</span>
+                            </div>
+                            <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-gray-500">Total Taruhan</span>
+                                <span className="text-xs font-black text-gray-700 flex items-center gap-1">{formatNum(stats.totalWagered)}</span>
+                            </div>
+                            <div className="bg-amber-50/50 rounded-xl p-2.5 border border-amber-100 flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-gray-500">Max Menang</span>
+                                <span className="text-xs font-black text-amber-600 flex items-center gap-1">{formatNum(stats.maxWin)}</span>
+                            </div>
+                        </div>
+
+                        {/* Total Profit Full Width */}
+                        <div className={`rounded-xl p-3 border flex flex-col items-center justify-center text-center ${stats.profit > 0 ? 'bg-emerald-50/50 border-emerald-100' : stats.profit < 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-gray-50 border-gray-100'}`}>
+                            <span className="text-[10px] font-bold text-gray-500 mb-0.5">Total Profit</span>
+                            <span className={`text-base font-black flex items-center gap-1 ${stats.profit > 0 ? 'text-emerald-600' : stats.profit < 0 ? 'text-rose-600' : 'text-gray-700'}`}>
+                                {stats.profit > 0 ? '+' : ''}{formatNum(stats.profit)} <IconCoin className="w-4 h-4 text-amber-500"/>
+                            </span>
+                        </div>
+
+                        {/* Kemenangan Terbaru */}
+                        <div className="flex flex-col mt-1">
+                            <span className="text-[10px] font-black text-gray-800 mb-2 tracking-wide px-1">KEMENANGAN TERBARU</span>
+                            <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto custom-scroll pr-1 pb-1 overscroll-contain">
+                                {(!stats.history || stats.history.length === 0) ? (
+                                    <div className="text-xs text-gray-400 text-center py-4 font-medium bg-gray-50 rounded-xl border border-gray-100">Belum ada riwayat kemenangan.</div>
+                                ) : (
+                                    stats.history.map((res, i) => (
+                                        <div key={i} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm shrink-0">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-xs font-black text-gray-700 uppercase tracking-tight">RONDE LALU</span>
+                                            </div>
+                                            <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border ${res === 'win' ? 'bg-emerald-50 border-emerald-100/50 text-emerald-600' : 'bg-rose-50 border-rose-100/50 text-rose-600'}`}>
+                                                <span className="text-xs font-black">{res === 'win' ? 'MENANG' : 'KALAH'}</span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
