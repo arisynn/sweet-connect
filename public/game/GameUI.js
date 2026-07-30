@@ -763,7 +763,7 @@ const GameUI = () => {
                         )}
                         <div className="w-full flex justify-between items-center px-4 pt-6 pb-2 shrink-0 relative z-10">
                             <div className="flex flex-col drop-shadow-sm">
-                                <button onClick={() => { AudioEngine.uiOpen(); setShowSettings(true); }} className="flex bg-white/30 backdrop-blur-md border border-white/40 pl-3 pr-4 py-1.5 rounded-full items-center shadow-sm gap-2 hover:bg-white/40 transition-colors">
+                                <button onClick={() => { AudioEngine.uiOpen(); setShowSettings(true); window.history.pushState({ isAppHistory: true, modal: 'SETTINGS' }, '', ''); }} className="flex bg-white/30 backdrop-blur-md border border-white/40 pl-3 pr-4 py-1.5 rounded-full items-center shadow-sm gap-2 hover:bg-white/40 transition-colors">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4 text-gray-800 drop-shadow-sm"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                     <span className="text-xl font-black text-gray-800 tracking-tight leading-none drop-shadow-sm">{playerName}</span>
                                     {profile.flexCrown && <IconCrown className="w-5 h-5 ml-1 drop-shadow-sm" />}
@@ -1064,10 +1064,10 @@ const GameUI = () => {
                         setProfile={setProfile}
                         saveProfile={saveProfile}
                         playerName={playerName}
-                        onClose={() => { setShowSettings(false); setIsMuted(AudioEngine.getSettings().muteMusic && AudioEngine.getSettings().muteSfx); }} 
+                        onClose={() => { window.history.back(); setIsMuted(AudioEngine.getSettings().muteMusic && AudioEngine.getSettings().muteSfx); }} 
                         onLogout={() => {
                             if (handleLogout) handleLogout();
-                            setShowSettings(false);
+                            window.history.back();
                             setIsMuted(AudioEngine.getSettings().muteMusic && AudioEngine.getSettings().muteSfx);
                         }} 
                     />
@@ -1087,9 +1087,9 @@ const GameUI = () => {
                                 });
                                 setAlertData({ title: 'Tersimpan!', content: 'Emoji custom berhasil diperbarui. Berlaku di game selanjutnya.' });
                             }
-                            setShowCustomThemeEditor(false);
+                            window.history.back();
                         }}
-                        onClose={() => setShowCustomThemeEditor(false)}
+                        onClose={() => window.history.back()}
                     />
                 )}
         

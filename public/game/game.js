@@ -29,7 +29,93 @@ const App = () => {
     
     const [playerName, setPlayerName] = useState(() => localStorage.getItem('pkmnPlayerName') || '');
     const [loginError, setLoginError] = useState('');
-    const [gameState, setGameState] = useState(() => localStorage.getItem('pkmnPlayerName') ? 'STARTUP' : 'LOGIN'); 
+    const [gameState, setGameStateInternal] = useState(() => localStorage.getItem('pkmnPlayerName') ? 'STARTUP' : 'LOGIN');
+
+    const gameStateRef = useRef(localStorage.getItem('pkmnPlayerName') ? 'STARTUP' : 'LOGIN');
+    useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+
+    const historyDepthRef = useRef(0);
+    const backPressTimeRef = useRef(0);
+
+    const setGameState = useCallback((newState) => {
+        const navigableStates = ['SHOP', 'THEMES', 'ROULETTE', 'DAILY_REWARD', 'ACHIEVEMENTS', 'STATISTICS', 'LOGIN_REWARD', 'MULTIPLAYER_LOBBY'];
+        
+        if (newState === 'LOBBY_MAIN' && navigableStates.includes(gameStateRef.current)) {
+            if (historyDepthRef.current > 0) {
+                // Let the popstate listener handle the actual state change
+                window.history.back();
+                return;
+            }
+        }
+
+        if (navigableStates.includes(newState) && newState !== gameStateRef.current) {
+            historyDepthRef.current += 1;
+            window.history.pushState({ isAppHistory: true, gameState: newState, depth: historyDepthRef.current }, '', '');
+        } else {
+            window.history.replaceState({ isAppHistory: true, gameState: newState, depth: historyDepthRef.current }, '', '');
+        }
+        
+        setGameStateInternal(newState);
+    }, []);
+
+    useEffect(() => {
+        if (!window.history.state || !window.history.state.isAppHistory) {
+            window.history.replaceState({ isAppHistory: true, gameState: gameState, depth: 0 }, '', '');
+            window.history.pushState({ isAppHistory: true, gameState: gameState, depth: 0 }, '', ''); 
+        } else {
+            historyDepthRef.current = window.history.state.depth || 0;
+            // If we reloaded at depth 0, we might have lost our dummy state (because reload replaces the current entry, or we are at the bottom).
+            // Let's just safely push a state if depth is 0 so we can catch the first back press.
+            if (historyDepthRef.current === 0) {
+                window.history.pushState({ isAppHistory: true, gameState: gameState, depth: 0 }, '', ''); 
+            }
+        }
+
+        const handlePopState = (event) => {
+            if (showSettingsRef.current) {
+                setShowSettings(false);
+                return;
+            }
+            if (showCustomThemeEditorRef.current) {
+                setShowCustomThemeEditor(false);
+                return;
+            }
+            
+
+            if (event.state && typeof event.state.depth === 'number') {
+                historyDepthRef.current = event.state.depth;
+            } else {
+                historyDepthRef.current = Math.max(0, historyDepthRef.current - 1);
+            }
+
+            if (gameStateRef.current === 'LOBBY_MAIN') {
+                const now = Date.now();
+                if (now - backPressTimeRef.current < 2000) {
+                    window.history.back(); 
+                } else {
+                    if (typeof window.Dialog !== 'undefined' && window.Dialog.showToast) {
+                        window.Dialog.showToast("Tekan sekali lagi untuk keluar.");
+                    }
+                    backPressTimeRef.current = now;
+                    window.history.pushState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: historyDepthRef.current }, '', '');
+                }
+            } else if (event.state && event.state.gameState) {
+                if (event.state.gameState === 'STARTUP' || event.state.gameState === 'LOGIN') {
+                    setGameStateInternal('LOBBY_MAIN');
+                    window.history.replaceState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: historyDepthRef.current }, '', '');
+                } else {
+                    setGameStateInternal(event.state.gameState);
+                }
+            } else {
+                setGameStateInternal('LOBBY_MAIN');
+                window.history.replaceState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: 0 }, '', '');
+                window.history.pushState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: 0 }, '', '');
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []); 
     
     const lobbyBadgeText = useMemo(() => {
         if (gameState === 'LOBBY_MAIN') {
@@ -44,10 +130,14 @@ const App = () => {
     const [syncStatus, setSyncStatus] = useState('Connected');
     const [syncLogs, setSyncLogs] = useState([]);
     const [showSyncLog, setShowSyncLog] = useState(false);
+    const showSyncLogRef = useRef(false);
+    useEffect(() => { showSyncLogRef.current = showSyncLog; }, [showSyncLog]);
     const [startupStep, setStartupStep] = useState(0);
     const [startupMessage, setStartupMessage] = useState('');
     const [startupProgress, setStartupProgress] = useState(0);
     const [showCloudRecovery, setShowCloudRecovery] = useState(false);
+    const showCloudRecoveryRef = useRef(false);
+    useEffect(() => { showCloudRecoveryRef.current = showCloudRecovery; }, [showCloudRecovery]);
     const [localRecoveryProfile, setLocalRecoveryProfile] = useState(null);
     
     useEffect(() => {
@@ -95,7 +185,11 @@ const App = () => {
     const [alertData, setAlertData] = useState(null);
     const [splashText, setSplashText] = useState(SPLASH_TEXTS[0]);
     const [showCustomThemeEditor, setShowCustomThemeEditor] = useState(false);
+    const showCustomThemeEditorRef = useRef(false);
+    useEffect(() => { showCustomThemeEditorRef.current = showCustomThemeEditor; }, [showCustomThemeEditor]);
     const [showSettings, setShowSettings] = useState(false);
+    const showSettingsRef = useRef(false);
+    useEffect(() => { showSettingsRef.current = showSettings; }, [showSettings]);
 
     // Combo, sweet message & progress-reward feature state
     const [comboDisplay, setComboDisplay] = useState(null);
@@ -103,8 +197,7 @@ const App = () => {
 
     const boardRef = useRef(board);
     const activeThemeRef = useRef(activeTheme);
-    const gameStateRef = useRef(gameState);
-    const matchesPendingRef = useRef(0);
+        const matchesPendingRef = useRef(0);
     const combosPendingRef = useRef(0);
     const hintsPendingRef = useRef(0);
     const shufflesPendingRef = useRef(0);
@@ -310,7 +403,7 @@ const App = () => {
 
     useEffect(() => { boardRef.current = board; activeThemeRef.current = activeTheme; gameStateRef.current = gameState; }, [board, activeTheme, gameState]);
     useEffect(() => {
-        const handleEditCustomTheme = () => setShowCustomThemeEditor(true);
+        const handleEditCustomTheme = () => { setShowCustomThemeEditor(true); window.history.pushState({ isAppHistory: true, modal: 'CUSTOM_THEME' }, '', ''); };
         window.addEventListener('editCustomTheme', handleEditCustomTheme);
         return () => window.removeEventListener('editCustomTheme', handleEditCustomTheme);
     }, []);
