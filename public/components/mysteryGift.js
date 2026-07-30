@@ -1593,12 +1593,21 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
                                 </div>
                             </div>
                             
-                            <button 
-                                onClick={resetGame}
-                                className="w-full py-2.5 sm:py-3 rounded-xl bg-indigo-500 text-white font-black text-[13px] sm:text-base shadow-[0_4px_0_#4f46e5] hover:bg-indigo-600 active:translate-y-1 active:shadow-[0_0px_0_#4f46e5] transition-all tracking-wide flex items-center justify-center gap-2"
-                            >
-                                <IconRefresh className="w-4 h-4 sm:w-5 sm:h-5"/> MAIN LAGI
-                            </button>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={resetGame}
+                                    className="flex-1 py-2.5 sm:py-3 rounded-xl bg-gray-100 text-gray-600 font-black text-[11px] sm:text-xs shadow-[0_4px_0_#e5e7eb] hover:bg-gray-200 active:translate-y-1 active:shadow-[0_0px_0_#e5e7eb] transition-all tracking-wide flex items-center justify-center"
+                                >
+                                    UBAH TARUHAN
+                                </button>
+                                <button 
+                                    onClick={startGame}
+                                    disabled={(profile.coins || 0) < wager}
+                                    className="flex-[2] py-2.5 sm:py-3 rounded-xl bg-indigo-500 text-white font-black text-[13px] sm:text-base shadow-[0_4px_0_#4f46e5] hover:bg-indigo-600 active:translate-y-1 active:shadow-[0_0px_0_#4f46e5] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none transition-all tracking-wide flex items-center justify-center gap-2"
+                                >
+                                    <IconRefresh className="w-4 h-4 sm:w-5 sm:h-5"/> MAIN LAGI
+                                </button>
+                            </div>
                         </div>
                     )}
 
