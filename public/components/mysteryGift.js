@@ -1032,7 +1032,7 @@ const MagicWheelGacha = ({ profile, opening, setOpening, setShowPrizePool, curre
                     <span className="text-[7px] font-black text-gray-400 tracking-widest bg-white px-2 py-0.5 rounded-full shadow-sm border border-gray-100">SALDO ANDA</span>
                     <div className="flex gap-1.5">
                         <span className="text-[10px] font-black flex items-center gap-1 text-amber-500 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100 shadow-sm">
-                            <IconCoin className="w-3.5 h-3.5"/> {typeof window.formatNumber === 'function' ? window.formatNumber(profileRef.current.coins || 0) : new Intl.NumberFormat('id-ID').format(profileRef.current.coins || 0)}
+                            <IconCoin className="w-3.5 h-3.5"/> {typeof window.formatNumber === 'function' ? window.formatNumber(profile.coins || 0) : new Intl.NumberFormat('id-ID').format(profile.coins || 0)}
                         </span>
                         <span className="text-[10px] font-black flex items-center gap-1 text-sky-500 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100 shadow-sm">
                             <IconGift className="w-3.5 h-3.5"/> {typeof window.formatNumber === 'function' ? window.formatNumber(profile.gacha_vouchers || 0) : new Intl.NumberFormat('id-ID').format(profile.gacha_vouchers || 0)}
