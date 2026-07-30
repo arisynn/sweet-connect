@@ -1,4 +1,62 @@
 
+const GuideModal = ({ isOpen, onClose, title, children }) => {
+    const { useEffect, useState } = React;
+    const [isClosing, setIsClosing] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) setIsClosing(false);
+    }, [isOpen]);
+
+    const handleClose = () => {
+        if(typeof AudioEngine !== 'undefined') AudioEngine.uiClick();
+        setIsClosing(true);
+        setTimeout(() => onClose(), 300);
+    };
+
+    if (!isOpen && !isClosing) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center pointer-events-none">
+            <div 
+                className={`absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`}
+                onClick={handleClose}
+            ></div>
+            
+            <div 
+                className={`w-full sm:w-[400px] h-[85vh] sm:h-[80vh] sm:max-h-[700px] bg-white rounded-t-3xl sm:rounded-3xl flex flex-col relative pointer-events-auto shadow-2xl transition-transform duration-300 ${isClosing ? 'translate-y-full sm:scale-95 sm:translate-y-0 sm:opacity-0' : 'translate-y-0 sm:scale-100 sm:opacity-100'}`}
+            >
+                <div className="w-full flex justify-center pt-3 pb-1 sm:hidden" onClick={handleClose}>
+                    <div className="w-12 h-1.5 bg-gray-200 rounded-full"></div>
+                </div>
+
+                <div className="px-5 pt-2 sm:pt-5 pb-3 flex justify-between items-center border-b border-gray-100">
+                    <h2 className="text-lg font-black text-gray-800">{title}</h2>
+                    <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center bg-gray-50 hover:bg-gray-100 rounded-full text-gray-500 transition-colors">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scroll p-5 bg-[#fcfcfd]">
+                    {children}
+                </div>
+            </div>
+            
+            <style>{`
+                .guide-section-title { font-size: 13px; font-weight: 900; color: #374151; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+                .guide-section { background: white; border: 1px solid #f3f4f6; border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+                .guide-text { font-size: 13px; color: #4b5563; line-height: 1.6; font-weight: 500; }
+                .guide-list { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+                .guide-list li { font-size: 13px; color: #4b5563; line-height: 1.5; font-weight: 500; display: flex; align-items: flex-start; gap: 8px; }
+                .guide-list li::before { content: "•"; color: #818cf8; font-weight: bold; font-size: 16px; line-height: 1.2; }
+                .guide-table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 8px; border-radius: 8px; overflow: hidden; border: 1px solid #f3f4f6; }
+                .guide-table th { background: #f9fafb; font-size: 11px; font-weight: 800; color: #6b7280; text-transform: uppercase; padding: 10px 12px; text-align: left; }
+                .guide-table td { font-size: 12px; font-weight: 600; color: #374151; padding: 10px 12px; border-top: 1px solid #f3f4f6; }
+            `}</style>
+        </div>
+    );
+};
+
+
 const CasinoChip = ({ amount }) => (
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 
         w-7 h-7 sm:w-8 sm:h-8 rounded-full shadow-[0_4px_6px_rgba(0,0,0,0.6),0_1px_1px_rgba(0,0,0,0.3)] 
@@ -14,6 +72,7 @@ const DiceGacha = ({ profile, onOpenComplete, opening, setOpening }) => {
     const formatNum = window.formatNumber || (n => n);
     
     // Core states
+    const [helpOpen, setHelpOpen] = useState(false);
     const [phase, setPhase] = useState('betting'); // betting, rolling, result
     const [timeLeft, setTimeLeft] = useState(15);
     
@@ -313,6 +372,95 @@ const DiceGacha = ({ profile, onOpenComplete, opening, setOpening }) => {
 
     return (
         <div className="flex-1 w-full flex flex-col items-center z-10 px-2 sm:px-4 mt-2 mb-2 max-w-[400px] relative">
+            
+            <GuideModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} title="Panduan Dice Gacha">
+                <div className="guide-section">
+                    <h3 className="guide-section-title">Cara Bermain</h3>
+                    <ul className="guide-list">
+                        <li>Pilih jumlah taruhan pada chip di bawah layar.</li>
+                        <li>Pilih satu atau beberapa jenis taruhan (Besar, Kecil, Ganjil, Genap, dll).</li>
+                        <li>Tekan tombol <strong>Putar</strong> (jika ada) atau tunggu waktu habis.</li>
+                        <li>Tiga dadu akan dikocok otomatis saat waktu habis.</li>
+                        <li>Jika hasil penjumlahan dadu sesuai taruhan, Anda menang dan hadiah otomatis masuk ke saldo.</li>
+                    </ul>
+                </div>
+                
+                <div className="guide-section">
+                    <h3 className="guide-section-title">Jenis Taruhan, Peluang & Pengali</h3>
+                    <p className="guide-text mb-2">Peluang menang dan pengali hadiah diambil langsung dari sistem:</p>
+                    <table className="guide-table">
+                        <thead>
+                            <tr>
+                                <th>Jenis Taruhan</th>
+                                <th>Kondisi</th>
+                                <th>Pengali</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Kecil</td>
+                                <td>Total 4 - 10</td>
+                                <td className="text-indigo-600 font-bold">x{PAYOUTS.SMALL}</td>
+                            </tr>
+                            <tr>
+                                <td>Besar</td>
+                                <td>Total 11 - 17</td>
+                                <td className="text-indigo-600 font-bold">x{PAYOUTS.BIG}</td>
+                            </tr>
+                            <tr>
+                                <td>Ganjil</td>
+                                <td>Total Ganjil</td>
+                                <td className="text-indigo-600 font-bold">x{PAYOUTS.ODD}</td>
+                            </tr>
+                            <tr>
+                                <td>Genap</td>
+                                <td>Total Genap</td>
+                                <td className="text-indigo-600 font-bold">x{PAYOUTS.EVEN}</td>
+                            </tr>
+                            <tr>
+                                <td>Triple</td>
+                                <td>Tiga Dadu Sama</td>
+                                <td className="text-indigo-600 font-bold">x{PAYOUTS.TRIPLE}</td>
+                            </tr>
+                            <tr>
+                                <td>Total Tertentu</td>
+                                <td>Tebak Total Dadu</td>
+                                <td className="text-indigo-600 font-bold">x{PAYOUTS.TOTAL_4} - x{PAYOUTS.TOTAL_10}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="guide-section">
+                    <h3 className="guide-section-title">Contoh Hasil</h3>
+                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col gap-2">
+                        <div className="flex gap-2">
+                            <span className="w-7 h-7 bg-white border border-gray-200 rounded flex items-center justify-center font-bold text-gray-700 shadow-sm">2</span>
+                            <span className="w-7 h-7 bg-white border border-gray-200 rounded flex items-center justify-center font-bold text-gray-700 shadow-sm">5</span>
+                            <span className="w-7 h-7 bg-white border border-gray-200 rounded flex items-center justify-center font-bold text-gray-700 shadow-sm">6</span>
+                            <span className="ml-2 font-black text-indigo-600 flex items-center">= Total 13</span>
+                        </div>
+                        <p className="guide-text mt-1">
+                            Hasil di atas <strong>Menang</strong> pada taruhan: 
+                        </p>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                            <span className="bg-indigo-50 text-indigo-600 px-2 py-1 text-xs rounded font-bold border border-indigo-100">✔ Besar</span> 
+                            <span className="bg-indigo-50 text-indigo-600 px-2 py-1 text-xs rounded font-bold border border-indigo-100">✔ Ganjil</span>
+                            <span className="bg-indigo-50 text-indigo-600 px-2 py-1 text-xs rounded font-bold border border-indigo-100">✔ Total 13</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="guide-section border-l-4 border-l-amber-400">
+                    <h3 className="guide-section-title">Tips Bermain</h3>
+                    <ul className="guide-list">
+                        <li>Taruhan <strong>Besar/Kecil</strong> memiliki peluang menang lebih tinggi.</li>
+                        <li>Taruhan <strong>Triple</strong> memiliki peluang kecil tetapi hadiah lebih besar.</li>
+                        <li>Kombinasikan strategi sesuai risiko yang diinginkan.</li>
+                    </ul>
+                </div>
+            </GuideModal>
+
                                     <style>{`
                 .dice-container { perspective: 800px; }
                 .dice-cube-wrapper {
@@ -570,11 +718,20 @@ const DiceGacha = ({ profile, onOpenComplete, opening, setOpening }) => {
 
             {/* Chips */}
             <div className="w-full flex flex-col items-center mb-2.5 mt-1">
-                <div className="flex justify-between items-center w-full px-2 mb-1.5">
-                    <span className="text-[7px] font-black text-gray-400 tracking-widest bg-white px-2 py-0.5 rounded-full shadow-sm border border-gray-100">PILIH CHIP GEM</span>
-                    <span className="text-[10px] font-black flex items-center gap-1 text-pink-500 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-100 shadow-sm">
-                        <IconGem className="w-3.5 h-3.5"/> {typeof window.formatNumber === 'function' ? window.formatNumber(profile.gems || 0) : new Intl.NumberFormat('id-ID').format(profile.gems || 0)}
-                    </span>
+                <div className="flex justify-between items-center w-full px-2 mb-2">
+                    <span className="text-[9px] font-black text-gray-400 tracking-wider">PILIH CHIP GEM</span>
+                    <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 px-3 py-1 bg-pink-50 text-pink-500 rounded-full border border-pink-100 shadow-sm h-[26px]">
+                            <IconGem className="w-3.5 h-3.5"/>
+                            <span className="text-[11px] font-black">{typeof window.formatNumber === 'function' ? window.formatNumber(profile.gems || 0) : new Intl.NumberFormat('id-ID').format(profile.gems || 0)}</span>
+                        </div>
+                        <button 
+                            onClick={() => { if(typeof AudioEngine !== 'undefined') AudioEngine.uiClick(); setHelpOpen(true); }}
+                            className="text-[11px] font-black text-gray-500 bg-white hover:bg-gray-50 hover:text-indigo-500 active:scale-95 transition-all px-3 py-1 rounded-full border border-gray-200 shadow-sm flex items-center h-[26px]"
+                        >
+                            BANTUAN
+                        </button>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     {[1, 5, 10, 25, 50].map(val => (
@@ -927,6 +1084,7 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
     const { useState, useEffect, useRef } = React;
     const [wager, setWager] = useState(100);
     const [bombCount, setBombCount] = useState(1);
+    const [helpOpen, setHelpOpen] = useState(false);
     const [gameState, setGameState] = useState('idle'); // idle, playing, result, freeze
     const [resultType, setResultType] = useState(null); // 'win', 'lose'
     const [grid, setGrid] = useState(Array(9).fill({ type: '', revealed: false }));
@@ -1037,7 +1195,6 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
             }, 300);
             setResultType('lose');
             setGameState('freeze');
-            setShowBanner(true);
             setOpening(false);
             
             const tempProfile = { ...profile };
@@ -1100,8 +1257,6 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
         setWinAmountDisplay(winAmount);
         setResultType('win');
         setGameState('freeze');
-        setShowBanner(true);
-        setTimeout(() => setShowBanner(false), 2000); // Hide banner after 2s for win
         setOpening(false);
     };
 
@@ -1117,10 +1272,91 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
     const formatNum = (n) => new Intl.NumberFormat('id-ID').format(n || 0);
 
     return (
-        <div className="w-full flex-1 flex flex-col pt-4 px-4 pb-20 custom-scroll overflow-y-auto max-w-sm mx-auto">
-            <div className="text-center mb-4 shrink-0">
-                <h2 className="text-2xl font-black text-emerald-600 mb-1 tracking-tight">Mines Harta</h2>
-                <p className="text-gray-500 text-sm">Temukan permata, hindari ranjau</p>
+        <div className="w-full h-full flex flex-col pt-2 px-4 pb-20 max-w-sm mx-auto relative">
+            
+            <GuideModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} title="Panduan Mines Harta">
+                <div className="guide-section">
+                    <h3 className="guide-section-title">Cara Bermain</h3>
+                    <ul className="guide-list">
+                        <li>Pilih jumlah taruhan dan jumlah ranjau yang diinginkan.</li>
+                        <li>Tekan tombol <strong>Mulai Bermain</strong>.</li>
+                        <li>Buka kotak satu per satu. Setiap permata yang ditemukan akan menaikkan hadiah (multiplier).</li>
+                        <li>Anda dapat melakukan <strong>Cash Out</strong> (ambil hadiah) kapan saja sebelum terkena ranjau.</li>
+                        <li>Jika membuka kotak berisi ranjau, taruhan hangus!</li>
+                    </ul>
+                </div>
+
+                <div className="guide-section">
+                    <h3 className="guide-section-title">Risiko & Hadiah</h3>
+                    <ul className="guide-list">
+                        <li>Semakin <strong>banyak ranjau</strong> yang dipasang, peluang menang lebih kecil, tetapi <strong>pengali (multiplier) akan naik lebih cepat</strong>.</li>
+                        <li>Setiap permata berikutnya akan memberikan keuntungan eksponensial.</li>
+                    </ul>
+                </div>
+                
+                <div className="guide-section">
+                    <h3 className="guide-section-title">Tabel Pengali (Berdasarkan Ranjau Terpilih: {bombCount})</h3>
+                    <p className="guide-text mb-2">Semakin banyak permata yang dibuka, semakin besar pengali:</p>
+                    <table className="guide-table">
+                        <thead>
+                            <tr>
+                                <th>Permata Dibuka</th>
+                                <th>Pengali (Multiplier)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {[1, 2, 3, 4, 5].map(p => {
+                                if (p > 9 - bombCount) return null;
+                                return (
+                                    <tr key={p}>
+                                        <td>{p} Permata</td>
+                                        <td className="text-emerald-600 font-bold">x{getMultiplier(bombCount, p).toFixed(2)}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="guide-section">
+                    <h3 className="guide-section-title">Contoh Perhitungan</h3>
+                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col gap-1.5">
+                        <div className="flex justify-between items-center pb-1 border-b border-gray-200">
+                            <span className="text-xs font-bold text-gray-500">Taruhan Awal</span>
+                            <span className="text-sm font-black text-gray-700">100 Koin</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-1 border-b border-gray-200">
+                            <span className="text-xs font-bold text-gray-500">Jumlah Ranjau</span>
+                            <span className="text-sm font-black text-gray-700">{bombCount} Ranjau</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-1 border-b border-gray-200">
+                            <span className="text-xs font-bold text-gray-500">Buka Permata</span>
+                            <span className="text-sm font-black text-gray-700">2 Permata</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-1 border-b border-gray-200">
+                            <span className="text-xs font-bold text-gray-500">Pengali (Multiplier)</span>
+                            <span className="text-sm font-black text-emerald-600">x{getMultiplier(bombCount, 2).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1">
+                            <span className="text-xs font-black text-gray-600">Total Cash Out</span>
+                            <span className="text-base font-black text-amber-500">{Math.floor(100 * getMultiplier(bombCount, 2))} Koin</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="guide-section border-l-4 border-l-amber-400">
+                    <h3 className="guide-section-title">Tips Bermain</h3>
+                    <ul className="guide-list">
+                        <li>Semakin lama Anda bertahan, hadiah semakin besar.</li>
+                        <li>Cash Out lebih awal memiliki risiko lebih kecil.</li>
+                        <li>Jangan terlalu serakah jika sudah memperoleh keuntungan yang memuaskan.</li>
+                    </ul>
+                </div>
+            </GuideModal>
+
+            <div className="text-center mb-2 sm:mb-4 shrink-0">
+                <h2 className="text-xl sm:text-2xl font-black text-emerald-600 mb-0.5 sm:mb-1 tracking-tight">Mines Harta</h2>
+                <p className="text-gray-500 text-[11px] sm:text-sm">Temukan permata, hindari ranjau</p>
             </div>
 
             <style>{`
@@ -1139,8 +1375,8 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
                 .animate-pop-bounce {
                     animation: popBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
                 }
-                @keyframes slideDownHeader {
-                    from { transform: translateY(-100%); opacity: 0; }
+                @keyframes slideDownResult {
+                    from { transform: translateY(-20px); opacity: 0; }
                     to { transform: translateY(0); opacity: 1; }
                 }
                 @keyframes popUp {
@@ -1166,35 +1402,64 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
                 }
             `}</style>
 
-            {/* BOARD CARD */}
-            <div className="bg-white rounded-3xl p-4 mb-3 shadow-sm border border-gray-100 relative overflow-hidden shrink-0">
-                {/* Banner Overlay for Result */}
-                {showBanner && gameState === 'freeze' && (
-                    <div className={`absolute top-0 left-0 right-0 py-2.5 px-4 z-20 flex flex-col items-center justify-center shadow-md border-b backdrop-blur-md ${
-                        resultType === 'win' ? 'bg-emerald-500/95 border-emerald-600 text-white' : 'bg-rose-500/95 border-rose-600 text-white'
-                    }`} style={{ animation: 'slideDownHeader 0.4s ease-out' }}>
-                        <span className="text-sm font-black flex items-center gap-2">
-                            {resultType === 'win' ? '✔ Cash Out Berhasil' : '💥 Terkena Ranjau'}
-                        </span>
-                        <span className="text-[11px] font-bold opacity-90 mt-0.5">
-                            {resultType === 'win' ? `+${formatNum(winAmountDisplay)} Koin` : 'Taruhan Hangus'}
-                        </span>
+            {/* PREMIUM RESULT CARD */}
+            {gameState === 'freeze' && (
+                <div className="w-full bg-white rounded-3xl p-4 sm:p-5 mb-2 shadow-sm border border-gray-100 flex flex-col items-center shrink-0 z-20 relative" style={{ animation: 'slideDownResult 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 shadow-sm ${resultType === 'win' ? 'bg-emerald-100 text-emerald-500' : 'bg-rose-100 text-rose-500'}`}>
+                        {resultType === 'win' ? <IconCoin className="w-7 h-7" /> : <IconBomb className="w-7 h-7" />}
                     </div>
-                )}
+                    <h3 className={`text-[17px] sm:text-lg font-black tracking-tight ${resultType === 'win' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {resultType === 'win' ? 'Cash Out Berhasil' : 'Kalah'}
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-gray-500 font-bold text-center mb-3">
+                        {resultType === 'win' ? 'Hadiah berhasil ditambahkan ke saldo.' : 'Anda membuka kotak yang berisi ranjau.'}
+                    </p>
+                    
+                    <div className="w-full bg-gray-50 rounded-2xl p-3 border border-gray-100 flex flex-col gap-1.5 mb-3.5">
+                        <div className="flex justify-between items-center border-b border-gray-200/50 pb-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wide">Taruhan</span>
+                            <span className="text-[11px] sm:text-xs font-black text-gray-700 flex items-center gap-1">{formatNum(wager)} <IconCoin className="w-3.5 h-3.5 text-amber-500"/></span>
+                        </div>
+                        <div className="flex justify-between items-center border-b border-gray-200/50 pb-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wide">Permata Dibuka</span>
+                            <span className="text-[11px] sm:text-xs font-black text-gray-700">{openedCount}</span>
+                        </div>
+                        <div className="flex justify-between items-center border-b border-gray-200/50 pb-1.5">
+                            <span className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wide">{resultType === 'win' ? 'Multiplier' : 'Multiplier Terakhir'}</span>
+                            <span className="text-[11px] sm:text-xs font-black text-emerald-600">x{getMultiplier(bombCount, openedCount).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-0.5">
+                            <span className="text-[11px] sm:text-[12px] font-black text-gray-600 uppercase tracking-wide">Hadiah</span>
+                            <span className={`text-[13px] sm:text-sm font-black flex items-center gap-1 ${resultType === 'win' ? 'text-amber-500' : 'text-gray-400'}`}>
+                                {formatNum(resultType === 'win' ? winAmountDisplay : 0)} <IconCoin className={`w-4 h-4 ${resultType === 'win' ? 'text-amber-500' : 'text-gray-300 grayscale'}`}/>
+                            </span>
+                        </div>
+                    </div>
 
+                    <button 
+                        onClick={resetGame}
+                        className="w-full py-3 sm:py-3.5 rounded-xl bg-indigo-500 text-white font-black text-[13px] sm:text-base shadow-[0_4px_0_#4f46e5] hover:bg-indigo-600 active:translate-y-1 active:shadow-[0_0px_0_#4f46e5] transition-all tracking-wide flex items-center justify-center gap-2"
+                    >
+                        <IconRefresh className="w-4 h-4 sm:w-5 sm:h-5"/> MAIN LAGI
+                    </button>
+                </div>
+            )}
+
+            {/* BOARD CARD */}
+            <div className={`bg-white rounded-3xl p-3 sm:p-4 mb-2 shadow-sm border border-gray-100 relative overflow-hidden shrink-0 transition-all duration-300 ${gameState === 'freeze' ? 'opacity-80 scale-[0.98]' : ''}`}>
                 {(gameState === 'playing' || gameState === 'freeze') && (
-                    <div className="flex justify-between items-center mb-3 px-1 mt-1">
-                        <span className="text-xs font-bold text-gray-500">Aman: <span className="text-emerald-500 font-black">{openedCount}/{safeCells}</span></span>
-                        <span className="text-xs font-bold text-gray-500">Tersisa: <span className="text-gray-700 font-black">{remainingSafe}</span></span>
+                    <div className="flex justify-between items-center mb-2 px-1 mt-1">
+                        <span className="text-[11px] sm:text-xs font-bold text-gray-500">Aman: <span className="text-emerald-500 font-black">{openedCount}/{safeCells}</span></span>
+                        <span className="text-[11px] sm:text-xs font-bold text-gray-500">Tersisa: <span className="text-gray-700 font-black">{remainingSafe}</span></span>
                     </div>
                 )}
                 {gameState === 'idle' && (
-                    <div className="flex justify-center items-center mb-3 px-1 mt-1 opacity-50">
-                        <span className="text-xs font-bold text-gray-500">Siap Bermain</span>
+                    <div className="flex justify-center items-center mb-2 px-1 mt-1 opacity-50">
+                        <span className="text-[11px] sm:text-xs font-bold text-gray-500">Siap Bermain</span>
                     </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-3 relative z-10">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 relative z-10">
                     {grid.map((cell, i) => (
                         <button 
                             key={i}
@@ -1213,8 +1478,8 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
                             <div className="w-full h-full flex items-center justify-center">
                                 {cell.revealed && (
                                     cell.type === 'bomb' ? 
-                                    <IconBomb className={`w-10 h-10 text-rose-500 drop-shadow-sm animate-flip ${gameState === 'freeze' && resultType === 'lose' ? 'animate-shake' : ''}`} /> : 
-                                    <IconCoin className="w-10 h-10 drop-shadow-sm animate-pop-bounce text-amber-500" />
+                                    <IconBomb className={`w-8 h-8 sm:w-10 sm:h-10 text-rose-500 drop-shadow-sm animate-flip ${gameState === 'freeze' && resultType === 'lose' ? 'animate-shake' : ''}`} /> : 
+                                    <IconCoin className="w-8 h-8 sm:w-10 sm:h-10 drop-shadow-sm animate-pop-bounce text-amber-500" />
                                 )}
                             </div>
                         </button>
@@ -1223,211 +1488,191 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
             </div>
 
             {/* SINGLE CONTROLS CARD */}
-            <div className="w-full flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300">
-                {gameState === 'idle' && (
-                    <div className="p-4 flex flex-col animate-[fadeIn_0.3s_ease-out]">
-                        <div className="mb-4">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-[10px] font-black text-gray-400 tracking-wider">TARUHAN</span>
-                                <span className="text-xs font-black flex items-center gap-1 text-amber-500 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100">
-                                    <IconCoin className="w-3.5 h-3.5"/> {formatNum(profile.coins || 0)}
+            {gameState !== 'freeze' && (
+                <div className="w-full flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible transition-all duration-300 relative z-20">
+                    {gameState === 'idle' && (
+                        <div className="p-3 flex flex-col animate-[fadeIn_0.3s_ease-out]">
+                            <div className="mb-2">
+                                <div className="flex justify-between items-center mb-2 px-1">
+                                    <span className="text-[9px] font-black text-gray-400 tracking-wider">TARUHAN</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-500 rounded-full border border-amber-100 shadow-sm h-[26px]">
+                                            <IconCoin className="w-3.5 h-3.5"/>
+                                            <span className="text-[11px] font-black">{formatNum(profile.coins || 0)}</span>
+                                        </div>
+                                        <button 
+                                            onClick={() => { if(typeof AudioEngine !== 'undefined') AudioEngine.uiClick(); setHelpOpen(true); }}
+                                            className="text-[11px] font-black text-gray-500 bg-white hover:bg-gray-50 hover:text-emerald-500 active:scale-95 transition-all px-3 py-1 rounded-full border border-gray-200 shadow-sm flex items-center h-[26px]"
+                                        >
+                                            BANTUAN
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-5 gap-1">
+                                    {BET_OPTIONS.map(b => (
+                                        <button 
+                                            key={b}
+                                            onClick={() => setWager(b)}
+                                            className={`py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black transition-all ${
+                                                wager === b 
+                                                    ? 'bg-amber-400 text-white shadow-sm ring-2 ring-amber-400 ring-offset-1' 
+                                                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-100'
+                                            }`}
+                                        >
+                                            {formatNum(b)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mb-2.5">
+                                <span className="text-[9px] sm:text-[10px] font-black text-gray-400 tracking-wider block mb-1.5">JUMLAH RANJAU</span>
+                                <div className="grid grid-cols-7 gap-1">
+                                    {BOMB_OPTIONS.map(b => (
+                                        <button 
+                                            key={b}
+                                            onClick={() => setBombCount(b)}
+                                            className={`py-1.5 rounded-lg text-[10px] sm:text-xs font-black transition-all ${
+                                                bombCount === b 
+                                                    ? 'bg-rose-500 text-white shadow-sm ring-2 ring-rose-500 ring-offset-1' 
+                                                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-100'
+                                            }`}
+                                        >
+                                            {b}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={startGame}
+                                disabled={(profile.coins || 0) < wager}
+                                className="w-full py-2.5 sm:py-3 rounded-xl bg-emerald-500 text-white font-black text-[13px] sm:text-base shadow-[0_4px_0_#059669] hover:bg-emerald-600 active:translate-y-1 active:shadow-[0_0px_0_#059669] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none transition-all tracking-wide mt-1"
+                            >
+                                MULAI MAIN
+                            </button>
+                        </div>
+                    )}
+
+                    {gameState === 'playing' && (
+                        <div className="p-3 sm:p-4 flex flex-col animate-[fadeIn_0.3s_ease-out]">
+                            <div className="flex justify-between items-center mb-3">
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] sm:text-[10px] font-black text-gray-400 tracking-wider">REWARD SAAT INI</span>
+                                    <div className="flex items-center gap-1 text-amber-500 font-black text-xl sm:text-2xl animate-count-up" key={currentMultiplier}>
+                                        <IconCoin className="w-5 h-5 sm:w-6 sm:h-6"/>
+                                        <span>{formatNum(Math.floor(wager * currentMultiplier))}</span>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end text-right gap-1 sm:gap-1.5">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[8px] sm:text-[9px] font-black text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-gray-100">M. SAAT INI</span>
+                                        <span className="text-xs sm:text-sm font-black text-emerald-600 animate-count-up" key={'cur'+currentMultiplier}>{currentMultiplier.toFixed(2)}x</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[8px] sm:text-[9px] font-black text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-gray-100">M. BERIKUTNYA</span>
+                                        <span className="text-xs sm:text-sm font-black text-gray-600 animate-count-up" key={'next'+nextMultiplier}>{nextMultiplier.toFixed(2)}x</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={() => cashout()}
+                                disabled={openedCount === 0 || (openedCount < safeCells && dailyCashouts >= 3)}
+                                className={`w-full py-3 sm:py-4 rounded-xl text-white font-black text-[13px] sm:text-base transition-all flex flex-col items-center justify-center relative ${
+                                    openedCount === 0 ? 'bg-gray-300 shadow-[0_4px_0_#9ca3af] cursor-not-allowed opacity-80' : 
+                                    'bg-amber-400 shadow-[0_4px_0_#d97706] hover:bg-amber-500 active:translate-y-1 active:shadow-[0_0px_0_#d97706]'
+                                } ${(openedCount < safeCells && dailyCashouts >= 3) ? 'opacity-50 translate-y-0 shadow-none' : ''}`}
+                            >
+                                <div className="flex flex-col items-center gap-0.5">
+                                    {openedCount < safeCells && dailyCashouts >= 3 ? (
+                                        <>
+                                            <span className="text-xs sm:text-sm">Batas Cash Out Harian Tercapai (3/3)</span>
+                                            <span className="text-[9px] sm:text-[10px] font-bold text-amber-100">{timeLeftToReset}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="flex items-center gap-1.5 sm:gap-2">
+                                                <IconCoin className="w-4 h-4 sm:w-5 sm:h-5"/> 
+                                                <span className="text-sm sm:text-lg">AMBIL ({formatNum(Math.floor(wager * currentMultiplier))})</span>
+                                            </div>
+                                            {openedCount > 0 && openedCount < safeCells && dailyCashouts < 3 && (
+                                                <span className="text-[9px] sm:text-[10px] font-bold text-amber-100 uppercase tracking-wider mt-0.5 sm:mt-1">Sisa Cashout Harian: {3 - dailyCashouts}</span>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ACCORDION STATS */}
+                    <button onClick={() => setStatsOpen(!statsOpen)} className={`w-full pt-1.5 pb-2 border-t border-gray-50 flex items-center justify-center gap-1 text-[8px] font-black text-gray-400 bg-gray-50/50 hover:bg-gray-100/50 transition-colors ${!statsOpen ? 'rounded-b-2xl' : ''}`}>
+                        STATISTIK MINES {statsOpen ? <IconChevronUp className="w-3 h-3"/> : <IconChevronDown className="w-3 h-3"/>}
+                    </button>
+                    
+                    {statsOpen && (
+                        <div className="w-full p-3 sm:p-4 pt-2 flex flex-col gap-2 sm:gap-3 animate-popup text-left bg-white rounded-b-2xl">
+                            {/* Summary Grid */}
+                            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                                <div className="bg-gray-50 rounded-xl p-2 sm:p-2.5 border border-gray-100 flex justify-between items-center">
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-500">Total Ronde</span>
+                                    <span className="text-[11px] sm:text-xs font-black text-gray-700">{formatNum(stats.rounds)}</span>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-2 sm:p-2.5 border border-gray-100 flex justify-between items-center">
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-500">Win Rate</span>
+                                    <span className="text-[11px] sm:text-xs font-black text-gray-700">{stats.rounds > 0 ? Math.floor((stats.wins / stats.rounds) * 100) : 0}%</span>
+                                </div>
+                                <div className="bg-emerald-50/50 rounded-xl p-2 sm:p-2.5 border border-emerald-50 flex justify-between items-center">
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-500">Total Menang</span>
+                                    <span className="text-[11px] sm:text-xs font-black text-emerald-600">{formatNum(stats.wins)}</span>
+                                </div>
+                                <div className="bg-rose-50/50 rounded-xl p-2 sm:p-2.5 border border-rose-50 flex justify-between items-center">
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-500">Total Kalah</span>
+                                    <span className="text-[11px] sm:text-xs font-black text-rose-500">{formatNum(stats.losses)}</span>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-2 sm:p-2.5 border border-gray-100 flex justify-between items-center">
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-500">Total Taruhan</span>
+                                    <span className="text-[11px] sm:text-xs font-black text-gray-700 flex items-center gap-1">{formatNum(stats.totalWagered)}</span>
+                                </div>
+                                <div className="bg-amber-50/50 rounded-xl p-2 sm:p-2.5 border border-amber-100 flex justify-between items-center">
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-500">Max Menang</span>
+                                    <span className="text-[11px] sm:text-xs font-black text-amber-600 flex items-center gap-1">{formatNum(stats.maxWin)}</span>
+                                </div>
+                            </div>
+
+                            {/* Total Profit Full Width */}
+                            <div className={`rounded-xl p-2.5 sm:p-3 border flex flex-col items-center justify-center text-center ${stats.profit > 0 ? 'bg-emerald-50/50 border-emerald-100' : stats.profit < 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-gray-50 border-gray-100'}`}>
+                                <span className="text-[9px] sm:text-[10px] font-bold text-gray-500 mb-0.5">Total Profit</span>
+                                <span className={`text-sm sm:text-base font-black flex items-center gap-1 ${stats.profit > 0 ? 'text-emerald-600' : stats.profit < 0 ? 'text-rose-600' : 'text-gray-700'}`}>
+                                    {stats.profit > 0 ? '+' : ''}{formatNum(stats.profit)} <IconCoin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500"/>
                                 </span>
                             </div>
-                            <div className="grid grid-cols-5 gap-1.5">
-                                {BET_OPTIONS.map(b => (
-                                    <button 
-                                        key={b}
-                                        onClick={() => setWager(b)}
-                                        className={`py-2 rounded-xl text-xs font-black transition-all ${
-                                            wager === b 
-                                                ? 'bg-amber-400 text-white shadow-sm ring-2 ring-amber-400 ring-offset-1' 
-                                                : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-100'
-                                        }`}
-                                    >
-                                        {formatNum(b)}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
 
-                        <div className="mb-5">
-                            <span className="text-[10px] font-black text-gray-400 tracking-wider block mb-2">JUMLAH RANJAU</span>
-                            <div className="grid grid-cols-7 gap-1">
-                                {BOMB_OPTIONS.map(b => (
-                                    <button 
-                                        key={b}
-                                        onClick={() => setBombCount(b)}
-                                        className={`py-1.5 rounded-lg text-xs font-black transition-all ${
-                                            bombCount === b 
-                                                ? 'bg-rose-500 text-white shadow-sm ring-2 ring-rose-500 ring-offset-1' 
-                                                : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-100'
-                                        }`}
-                                    >
-                                        {b}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <button 
-                            onClick={startGame}
-                            disabled={(profile.coins || 0) < wager}
-                            className="w-full py-3.5 rounded-xl bg-emerald-500 text-white font-black text-base shadow-[0_4px_0_#059669] active:translate-y-1 active:shadow-[0_0px_0_#059669] disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none transition-all tracking-wide"
-                        >
-                            MULAI MAIN
-                        </button>
-                    </div>
-                )}
-
-                {gameState === 'playing' && (
-                    <div className="p-4 flex flex-col animate-[fadeIn_0.3s_ease-out]">
-                        <div className="flex justify-between items-center mb-4">
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-gray-400 tracking-wider">REWARD SAAT INI</span>
-                                <div className="flex items-center gap-1 text-amber-500 font-black text-2xl animate-count-up" key={currentMultiplier}>
-                                    <IconCoin className="w-6 h-6"/>
-                                    <span>{formatNum(Math.floor(wager * currentMultiplier))}</span>
-                                </div>
-                            </div>
-                            <div className="flex flex-col items-end text-right gap-1.5">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-gray-100">M. SAAT INI</span>
-                                    <span className="text-sm font-black text-emerald-600 animate-count-up" key={'cur'+currentMultiplier}>{currentMultiplier.toFixed(2)}x</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-gray-100">M. BERIKUTNYA</span>
-                                    <span className="text-sm font-black text-gray-600 animate-count-up" key={'next'+nextMultiplier}>{nextMultiplier.toFixed(2)}x</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button 
-                            onClick={() => cashout()}
-                            disabled={openedCount === 0 || (openedCount < safeCells && dailyCashouts >= 3)}
-                            className={`w-full py-4 rounded-xl text-white font-black text-base transition-all flex flex-col items-center justify-center relative ${
-                                openedCount === 0 ? 'bg-gray-300 shadow-[0_4px_0_#9ca3af] cursor-not-allowed opacity-80' : 
-                                'bg-amber-400 shadow-[0_4px_0_#d97706] active:translate-y-1 active:shadow-[0_0px_0_#d97706]'
-                            } ${(openedCount < safeCells && dailyCashouts >= 3) ? 'opacity-50 translate-y-0 shadow-none' : ''}`}
-                        >
-                            <div className="flex flex-col items-center gap-0.5">
-                                {openedCount < safeCells && dailyCashouts >= 3 ? (
-                                    <>
-                                        <span className="text-sm">Batas Cash Out Harian Tercapai (3/3)</span>
-                                        <span className="text-[10px] font-bold text-amber-100">{timeLeftToReset}</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="flex items-center gap-2">
-                                            <IconCoin className="w-5 h-5"/> 
-                                            <span className="text-lg">AMBIL ({formatNum(Math.floor(wager * currentMultiplier))})</span>
-                                        </div>
-                                        {openedCount > 0 && openedCount < safeCells && dailyCashouts < 3 && (
-                                            <span className="text-[10px] font-bold text-amber-100 uppercase tracking-wider mt-1">Sisa Cashout Harian: {3 - dailyCashouts}</span>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        </button>
-                    </div>
-                )}
-
-                {gameState === 'freeze' && (
-                    <div className="p-4 flex flex-col animate-[fadeIn_0.3s_ease-out]">
-                        <div className="flex justify-between items-center mb-4 opacity-50">
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-gray-400 tracking-wider">REWARD SAAT INI</span>
-                                <div className="flex items-center gap-1 text-amber-500 font-black text-2xl">
-                                    <IconCoin className="w-6 h-6"/>
-                                    <span>{formatNum(Math.floor(wager * currentMultiplier))}</span>
-                                </div>
-                            </div>
-                            <div className="flex flex-col items-end text-right gap-1.5">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-gray-100">M. SAAT INI</span>
-                                    <span className="text-sm font-black text-emerald-600">{currentMultiplier.toFixed(2)}x</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-gray-100">M. BERIKUTNYA</span>
-                                    <span className="text-sm font-black text-gray-600">{nextMultiplier.toFixed(2)}x</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button 
-                            onClick={resetGame}
-                            className="w-full py-4 rounded-xl bg-indigo-500 text-white font-black text-base shadow-[0_4px_0_#4f46e5] active:translate-y-1 active:shadow-[0_0px_0_#4f46e5] transition-all tracking-wide"
-                        >
-                            MAIN LAGI
-                        </button>
-                    </div>
-                )}
-
-                {/* ACCORDION STATS (Part of the same card) */}
-                <button onClick={() => setStatsOpen(!statsOpen)} className="w-full pt-1.5 pb-2 border-t border-gray-50 flex items-center justify-center gap-1 text-[8px] font-black text-gray-400 bg-gray-50/50 hover:bg-gray-100/50 transition-colors">
-                    STATISTIK MINES {statsOpen ? <IconChevronUp className="w-3 h-3"/> : <IconChevronDown className="w-3 h-3"/>}
-                </button>
-                
-                {statsOpen && (
-                    <div className="w-full p-4 pt-2 flex flex-col gap-3 animate-popup text-left bg-white">
-                        {/* Summary Grid */}
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-gray-500">Total Ronde</span>
-                                <span className="text-xs font-black text-gray-700">{formatNum(stats.rounds)}</span>
-                            </div>
-                            <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-gray-500">Win Rate</span>
-                                <span className="text-xs font-black text-gray-700">{stats.rounds > 0 ? Math.floor((stats.wins / stats.rounds) * 100) : 0}%</span>
-                            </div>
-                            <div className="bg-emerald-50/50 rounded-xl p-2.5 border border-emerald-50 flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-gray-500">Total Menang</span>
-                                <span className="text-xs font-black text-emerald-600">{formatNum(stats.wins)}</span>
-                            </div>
-                            <div className="bg-rose-50/50 rounded-xl p-2.5 border border-rose-50 flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-gray-500">Total Kalah</span>
-                                <span className="text-xs font-black text-rose-500">{formatNum(stats.losses)}</span>
-                            </div>
-                            <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-gray-500">Total Taruhan</span>
-                                <span className="text-xs font-black text-gray-700 flex items-center gap-1">{formatNum(stats.totalWagered)}</span>
-                            </div>
-                            <div className="bg-amber-50/50 rounded-xl p-2.5 border border-amber-100 flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-gray-500">Max Menang</span>
-                                <span className="text-xs font-black text-amber-600 flex items-center gap-1">{formatNum(stats.maxWin)}</span>
-                            </div>
-                        </div>
-
-                        {/* Total Profit Full Width */}
-                        <div className={`rounded-xl p-3 border flex flex-col items-center justify-center text-center ${stats.profit > 0 ? 'bg-emerald-50/50 border-emerald-100' : stats.profit < 0 ? 'bg-rose-50/50 border-rose-100' : 'bg-gray-50 border-gray-100'}`}>
-                            <span className="text-[10px] font-bold text-gray-500 mb-0.5">Total Profit</span>
-                            <span className={`text-base font-black flex items-center gap-1 ${stats.profit > 0 ? 'text-emerald-600' : stats.profit < 0 ? 'text-rose-600' : 'text-gray-700'}`}>
-                                {stats.profit > 0 ? '+' : ''}{formatNum(stats.profit)} <IconCoin className="w-4 h-4 text-amber-500"/>
-                            </span>
-                        </div>
-
-                        {/* Kemenangan Terbaru */}
-                        <div className="flex flex-col mt-1">
-                            <span className="text-[10px] font-black text-gray-800 mb-2 tracking-wide px-1">KEMENANGAN TERBARU</span>
-                            <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto custom-scroll pr-1 pb-1 overscroll-contain">
-                                {(!stats.history || stats.history.length === 0) ? (
-                                    <div className="text-xs text-gray-400 text-center py-4 font-medium bg-gray-50 rounded-xl border border-gray-100">Belum ada riwayat kemenangan.</div>
-                                ) : (
-                                    stats.history.map((res, i) => (
-                                        <div key={i} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm shrink-0">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-xs font-black text-gray-700 uppercase tracking-tight">RONDE LALU</span>
+                            {/* Kemenangan Terbaru */}
+                            <div className="flex flex-col mt-1">
+                                <span className="text-[9px] sm:text-[10px] font-black text-gray-800 mb-1.5 sm:mb-2 tracking-wide px-1">KEMENANGAN TERBARU</span>
+                                <div className="flex flex-col gap-1.5 sm:gap-2 max-h-[140px] overflow-y-auto custom-scroll pr-1 pb-1 overscroll-contain">
+                                    {(!stats.history || stats.history.length === 0) ? (
+                                        <div className="text-[10px] sm:text-xs text-gray-400 text-center py-3 sm:py-4 font-medium bg-gray-50 rounded-xl border border-gray-100">Belum ada riwayat kemenangan.</div>
+                                    ) : (
+                                        stats.history.map((res, i) => (
+                                            <div key={i} className="flex justify-between items-center bg-white p-2.5 sm:p-3 rounded-xl border border-gray-100 shadow-sm shrink-0">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[10px] sm:text-xs font-black text-gray-700 uppercase tracking-tight">RONDE LALU</span>
+                                                </div>
+                                                <div className={`flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg border ${res === 'win' ? 'bg-emerald-50 border-emerald-100/50 text-emerald-600' : 'bg-rose-50 border-rose-100/50 text-rose-600'}`}>
+                                                    <span className="text-[10px] sm:text-xs font-black">{res === 'win' ? 'MENANG' : 'KALAH'}</span>
+                                                </div>
                                             </div>
-                                            <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border ${res === 'win' ? 'bg-emerald-50 border-emerald-100/50 text-emerald-600' : 'bg-rose-50 border-rose-100/50 text-rose-600'}`}>
-                                                <span className="text-xs font-black">{res === 'win' ? 'MENANG' : 'KALAH'}</span>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
