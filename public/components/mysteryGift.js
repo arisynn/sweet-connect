@@ -1402,51 +1402,10 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
                 }
             `}</style>
 
-            {/* PREMIUM RESULT CARD */}
-            {gameState === 'freeze' && (
-                <div className="w-full bg-white rounded-3xl p-4 sm:p-5 mb-2 shadow-sm border border-gray-100 flex flex-col items-center shrink-0 z-20 relative" style={{ animation: 'slideDownResult 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 shadow-sm ${resultType === 'win' ? 'bg-emerald-100 text-emerald-500' : 'bg-rose-100 text-rose-500'}`}>
-                        {resultType === 'win' ? <IconCoin className="w-7 h-7" /> : <IconBomb className="w-7 h-7" />}
-                    </div>
-                    <h3 className={`text-[17px] sm:text-lg font-black tracking-tight ${resultType === 'win' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        {resultType === 'win' ? 'Cash Out Berhasil' : 'Kalah'}
-                    </h3>
-                    <p className="text-[11px] sm:text-xs text-gray-500 font-bold text-center mb-3">
-                        {resultType === 'win' ? 'Hadiah berhasil ditambahkan ke saldo.' : 'Anda membuka kotak yang berisi ranjau.'}
-                    </p>
-                    
-                    <div className="w-full bg-gray-50 rounded-2xl p-3 border border-gray-100 flex flex-col gap-1.5 mb-3.5">
-                        <div className="flex justify-between items-center border-b border-gray-200/50 pb-1.5">
-                            <span className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wide">Taruhan</span>
-                            <span className="text-[11px] sm:text-xs font-black text-gray-700 flex items-center gap-1">{formatNum(wager)} <IconCoin className="w-3.5 h-3.5 text-amber-500"/></span>
-                        </div>
-                        <div className="flex justify-between items-center border-b border-gray-200/50 pb-1.5">
-                            <span className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wide">Permata Dibuka</span>
-                            <span className="text-[11px] sm:text-xs font-black text-gray-700">{openedCount}</span>
-                        </div>
-                        <div className="flex justify-between items-center border-b border-gray-200/50 pb-1.5">
-                            <span className="text-[10px] sm:text-[11px] font-bold text-gray-500 uppercase tracking-wide">{resultType === 'win' ? 'Multiplier' : 'Multiplier Terakhir'}</span>
-                            <span className="text-[11px] sm:text-xs font-black text-emerald-600">x{getMultiplier(bombCount, openedCount).toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-0.5">
-                            <span className="text-[11px] sm:text-[12px] font-black text-gray-600 uppercase tracking-wide">Hadiah</span>
-                            <span className={`text-[13px] sm:text-sm font-black flex items-center gap-1 ${resultType === 'win' ? 'text-amber-500' : 'text-gray-400'}`}>
-                                {formatNum(resultType === 'win' ? winAmountDisplay : 0)} <IconCoin className={`w-4 h-4 ${resultType === 'win' ? 'text-amber-500' : 'text-gray-300 grayscale'}`}/>
-                            </span>
-                        </div>
-                    </div>
 
-                    <button 
-                        onClick={resetGame}
-                        className="w-full py-3 sm:py-3.5 rounded-xl bg-indigo-500 text-white font-black text-[13px] sm:text-base shadow-[0_4px_0_#4f46e5] hover:bg-indigo-600 active:translate-y-1 active:shadow-[0_0px_0_#4f46e5] transition-all tracking-wide flex items-center justify-center gap-2"
-                    >
-                        <IconRefresh className="w-4 h-4 sm:w-5 sm:h-5"/> MAIN LAGI
-                    </button>
-                </div>
-            )}
 
             {/* BOARD CARD */}
-            <div className={`bg-white rounded-3xl p-3 sm:p-4 mb-2 shadow-sm border border-gray-100 relative overflow-hidden shrink-0 transition-all duration-300 ${gameState === 'freeze' ? 'opacity-80 scale-[0.98]' : ''}`}>
+            <div className="bg-white rounded-3xl p-3 sm:p-4 mb-2 shadow-sm border border-gray-100 relative overflow-hidden shrink-0 transition-all duration-300">
                 {(gameState === 'playing' || gameState === 'freeze') && (
                     <div className="flex justify-between items-center mb-2 px-1 mt-1">
                         <span className="text-[11px] sm:text-xs font-bold text-gray-500">Aman: <span className="text-emerald-500 font-black">{openedCount}/{safeCells}</span></span>
@@ -1488,8 +1447,7 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
             </div>
 
             {/* SINGLE CONTROLS CARD */}
-            {gameState !== 'freeze' && (
-                <div className="w-full flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible transition-all duration-300 relative z-20">
+            <div className="w-full flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-visible transition-all duration-300 relative z-20">
                     {gameState === 'idle' && (
                         <div className="p-3 flex flex-col animate-[fadeIn_0.3s_ease-out]">
                             <div className="mb-2">
@@ -1606,6 +1564,44 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
                         </div>
                     )}
 
+                    {gameState === 'freeze' && (
+                        <div className="p-3 flex flex-col animate-[fadeIn_0.3s_ease-out]">
+                            <div className="flex justify-between items-center mb-2 px-1">
+                                <span className={`text-xs font-black uppercase tracking-wider ${resultType === 'win' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                    {resultType === 'win' ? 'MENANG' : 'KALAH'}
+                                </span>
+                                <div className="flex items-center gap-1 text-[11px] font-bold text-gray-500">
+                                    M. {resultType === 'win' ? '' : 'Terakhir'}: <span className="text-gray-700 font-black">x{getMultiplier(bombCount, openedCount).toFixed(2)}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded-xl border border-gray-100 mb-3">
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-black text-gray-400 tracking-wider">TARUHAN</span>
+                                    <div className="flex items-center gap-1 text-gray-600 font-black text-sm">
+                                        <IconCoin className="w-3.5 h-3.5 text-amber-500"/>
+                                        <span>{formatNum(wager)}</span>
+                                    </div>
+                                </div>
+                                <div className="w-[1px] h-8 bg-gray-200"></div>
+                                <div className="flex flex-col items-end text-right">
+                                    <span className="text-[9px] font-black text-gray-400 tracking-wider">HADIAH</span>
+                                    <div className={`flex items-center gap-1 font-black text-sm ${resultType === 'win' ? 'text-amber-500' : 'text-gray-400'}`}>
+                                        <IconCoin className={`w-3.5 h-3.5 ${resultType === 'win' ? 'text-amber-500' : 'grayscale opacity-50'}`}/>
+                                        <span>{formatNum(resultType === 'win' ? winAmountDisplay : 0)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button 
+                                onClick={resetGame}
+                                className="w-full py-2.5 sm:py-3 rounded-xl bg-indigo-500 text-white font-black text-[13px] sm:text-base shadow-[0_4px_0_#4f46e5] hover:bg-indigo-600 active:translate-y-1 active:shadow-[0_0px_0_#4f46e5] transition-all tracking-wide flex items-center justify-center gap-2"
+                            >
+                                <IconRefresh className="w-4 h-4 sm:w-5 sm:h-5"/> MAIN LAGI
+                            </button>
+                        </div>
+                    )}
+
                     {/* ACCORDION STATS */}
                     <button onClick={() => setStatsOpen(!statsOpen)} className={`w-full pt-1.5 pb-2 border-t border-gray-50 flex items-center justify-center gap-1 text-[8px] font-black text-gray-400 bg-gray-50/50 hover:bg-gray-100/50 transition-colors ${!statsOpen ? 'rounded-b-2xl' : ''}`}>
                         STATISTIK MINES {statsOpen ? <IconChevronUp className="w-3 h-3"/> : <IconChevronDown className="w-3 h-3"/>}
@@ -1672,7 +1668,6 @@ const MinesGame = ({ profile, onOpenComplete, opening, setOpening }) => {
                         </div>
                     )}
                 </div>
-            )}
         </div>
     );
 };
