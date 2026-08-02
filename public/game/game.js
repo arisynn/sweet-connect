@@ -82,6 +82,9 @@ const App = () => {
         }
 
         const handlePopState = (event) => {
+            if (window.PopupManager && window.PopupManager.handlePopState()) {
+                return; // PopupManager handled the popstate by closing a popup
+            }
             if (isProgrammaticBackRef.current) {
                 isProgrammaticBackRef.current = false;
                 historyDepthRef.current = 0;
@@ -135,16 +138,16 @@ const App = () => {
                 return;
             }
 
-            if (gameStateRef.current === 'LOBBY_MAIN') {
+            if (gameStateRef.current === 'LOBBY_MAIN' || gameStateRef.current === 'LOGIN') {
                 const now = Date.now();
                 if (now - backPressTimeRef.current < 2000) {
                     window.history.back(); 
                 } else {
                     if (typeof window.Dialog !== 'undefined' && window.Dialog.showToast) {
-                        window.Dialog.showToast("Tekan sekali lagi untuk keluar.");
+                        window.Dialog.showToast("Tekan sekali lagi untuk keluar");
                     }
                     backPressTimeRef.current = now;
-                    window.history.pushState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: 0 }, '', '');
+                    window.history.pushState({ isAppHistory: true, gameState: gameStateRef.current, depth: historyDepthRef.current || 0 }, '', '');
                 }
                 return;
             }

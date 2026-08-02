@@ -1,7 +1,17 @@
 // ===================== SHOP =====================
 const Shop = ({ profile, activeTheme, onThemeSelect, onBuy, onClose, onSell }) => {
     
-    const [modalData, setModalData] = useState(null);
+    const [modalData, setModalDataState] = useState(null);
+    const closeCbRef = React.useRef(null);
+    const setModalData = (data, fromPop = false) => {
+        if (data && !modalData) {
+            closeCbRef.current = (isPop) => setModalDataState(null);
+            if (window.PopupManager) window.PopupManager.register(closeCbRef.current);
+        } else if (!data && modalData) {
+            if (window.PopupManager) window.PopupManager.unregister(closeCbRef.current, fromPop === true);
+        }
+        setModalDataState(data);
+    };
     const [qty, setQty] = useState(1);
     const [actionType, setActionType] = useState('buy'); // 'buy', 'sell_hint', 'sell_shuffle', 'exchange_nyawa', 'buy_coin'
     const [customAmount, setCustomAmount] = useState('');

@@ -1716,8 +1716,28 @@ const MysteryGift = ({ profile, setProfile, saveProfile, playerName, onOpenCompl
     const [opening, setOpening] = useState(false);
     const [wonPrize, setWonPrize] = useState(null);
     const [wonPrizesList, setWonPrizesList] = useState(null);
-    const [showPrizePool, setShowPrizePool] = useState(false);
-    const [showThemeShop, setShowThemeShop] = useState(false);
+    const [showPrizePool, setShowPrizePoolState] = useState(false);
+    const ppCloseCb = React.useRef(null);
+    const setShowPrizePool = (val, fromPop = false) => {
+        if (val && !showPrizePool) {
+            ppCloseCb.current = (isPop) => setShowPrizePoolState(false);
+            if (window.PopupManager) window.PopupManager.register(ppCloseCb.current);
+        } else if (!val && showPrizePool) {
+            if (window.PopupManager) window.PopupManager.unregister(ppCloseCb.current, fromPop === true);
+        }
+        setShowPrizePoolState(val);
+    };
+    const [showThemeShop, setShowThemeShopState] = useState(false);
+    const tsCloseCb = React.useRef(null);
+    const setShowThemeShop = (val, fromPop = false) => {
+        if (val && !showThemeShop) {
+            tsCloseCb.current = (isPop) => setShowThemeShopState(false);
+            if (window.PopupManager) window.PopupManager.register(tsCloseCb.current);
+        } else if (!val && showThemeShop) {
+            if (window.PopupManager) window.PopupManager.unregister(tsCloseCb.current, fromPop === true);
+        }
+        setShowThemeShopState(val);
+    };
     const [gachaState, setGachaState] = useState('idle'); // 'idle', 'shaking', 'open'
     const [gachaMode, setGachaMode] = useState('dice'); // 'item' or 'theme'
     const [touchStart, setTouchStart] = useState(null);
