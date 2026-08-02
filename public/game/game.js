@@ -37,18 +37,29 @@ const App = () => {
     const historyDepthRef = useRef(0);
     const backPressTimeRef = useRef(0);
 
+    const isProgrammaticBackRef = useRef(false);
+
     const setGameState = useCallback((newState) => {
-        const navigableStates = ['SHOP', 'THEMES', 'ROULETTE', 'DAILY_REWARD', 'ACHIEVEMENTS', 'STATISTICS', 'LOGIN_REWARD', 'MULTIPLAYER_LOBBY'];
-        
-        if (newState === 'LOBBY_MAIN' && navigableStates.includes(gameStateRef.current)) {
-            if (historyDepthRef.current > 0) {
-                // Let the popstate listener handle the actual state change
-                window.history.back();
-                return;
-            }
+        if (newState === gameStateRef.current) return;
+
+        if (newState === 'LOBBY_MAIN' && historyDepthRef.current > 0) {
+            
+            window.history.go(-historyDepthRef.current);
+            
+            setTimeout(() => {
+                if (isProgrammaticBackRef.current) {
+                    isProgrammaticBackRef.current = false;
+                    window.history.replaceState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: 0 }, '', '');
+                    setGameStateInternal('LOBBY_MAIN');
+                    historyDepthRef.current = 0;
+                }
+            }, 150);
+            return;
         }
 
-        if (navigableStates.includes(newState) && newState !== gameStateRef.current) {
+        const navigableStates = ['SHOP', 'THEMES', 'ROULETTE', 'DAILY_REWARD', 'ACHIEVEMENTS', 'STATISTICS', 'LOGIN_REWARD', 'MULTIPLAYER_LOBBY', 'PLAYING', 'PAUSED'];
+        
+        if (navigableStates.includes(newState)) {
             historyDepthRef.current += 1;
             window.history.pushState({ isAppHistory: true, gameState: newState, depth: historyDepthRef.current }, '', '');
         } else {
@@ -60,35 +71,98 @@ const App = () => {
 
     useEffect(() => {
         if (!window.history.state || !window.history.state.isAppHistory) {
-            window.history.replaceState({ isAppHistory: true, gameState: gameState, depth: 0 }, '', '');
-            window.history.pushState({ isAppHistory: true, gameState: gameState, depth: 0 }, '', ''); 
+            window.history.replaceState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: 0, isDummy: true }, '', '');
+            window.history.pushState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: 0 }, '', ''); 
         } else {
             historyDepthRef.current = window.history.state.depth || 0;
-            // If we reloaded at depth 0, we might have lost our dummy state (because reload replaces the current entry, or we are at the bottom).
-            // Let's just safely push a state if depth is 0 so we can catch the first back press.
             if (historyDepthRef.current === 0) {
-                window.history.pushState({ isAppHistory: true, gameState: gameState, depth: 0 }, '', ''); 
+                window.history.replaceState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: 0, isDummy: true }, '', '');
+                window.history.pushState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: 0 }, '', ''); 
             }
         }
 
         const handlePopState = (event) => {
+            // Force LOGIN if there is no session
+            if (!localStorage.getItem('pkmnPlayerName')) {
+                if (gameStateRef.current === 'LOGIN') {
+                    const now = Date.now();
+                    if (now - backPressTimeRef.current < 2000) {
+                        window.history.back();
+                    } else {
+                        if (typeof window.Dialog !== 'undefined' && window.Dialog.showToast) {
+                            window.Dialog.showToast("Tekan sekali lagi untuk keluar.");
+                        }
+                        backPressTimeRef.current = now;
+                        window.history.pushState({ isAppHistory: true, gameState: 'LOGIN', depth: 0 }, '', '');
+                    }
+                    return;
+                } else {
+                    setGameStateInternal('LOGIN');
+                    window.history.pushState({ isAppHistory: true, gameState: 'LOGIN', depth: 0 }, '', '');
+                    return;
+                }
+            }
+
+            if (window.PopupManager && window.PopupManager.handlePopState()) {
+                return; // PopupManager handled the popstate by closing a popup
+            }
+            if (isProgrammaticBackRef.current) {
+                isProgrammaticBackRef.current = false;
+                historyDepthRef.current = 0;
+                setGameStateInternal('LOBBY_MAIN');
+                if (!event.state || event.state.isDummy) {
+                    window.history.pushState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: 0 }, '', '');
+                }
+                return;
+            }
+
+            if (window.isGameLocked) {
+                window.history.pushState({ isAppHistory: true, gameState: gameStateRef.current, depth: historyDepthRef.current }, '', '');
+                if (window.Dialog && window.Dialog.showToast) {
+                    window.Dialog.showToast(window.gameLockedMessage || "Selesaikan permainan terlebih dahulu.");
+                }
+                return;
+            }
+
             if (showSettingsRef.current) {
                 setShowSettings(false);
+        setShowCustomThemeEditor(false);
+        setShowCloudRecovery(false);
+        setShowSyncLog(false);
                 return;
             }
             if (showCustomThemeEditorRef.current) {
                 setShowCustomThemeEditor(false);
                 return;
             }
-            
-
-            if (event.state && typeof event.state.depth === 'number') {
-                historyDepthRef.current = event.state.depth;
-            } else {
-                historyDepthRef.current = Math.max(0, historyDepthRef.current - 1);
+            if (showCloudRecoveryRef.current) {
+                setShowCloudRecovery(false);
+                return;
+            }
+            if (showSyncLogRef.current) {
+                setShowSyncLog(false);
+                return;
             }
 
-            if (gameStateRef.current === 'LOBBY_MAIN') {
+            if (gameStateRef.current === 'PLAYING') {
+                const newDepth = (event.state && typeof event.state.depth === 'number' ? event.state.depth : 0) + 1;
+                historyDepthRef.current = newDepth;
+                window.history.pushState({ isAppHistory: true, gameState: 'PAUSED', depth: newDepth }, '', '');
+                setGameStateInternal('PAUSED');
+                if (typeof AudioEngine !== 'undefined') AudioEngine.uiOpen();
+                return;
+            }
+
+            if (gameStateRef.current === 'PAUSED') {
+                const newDepth = (event.state && typeof event.state.depth === 'number' ? event.state.depth : 0) + 1;
+                historyDepthRef.current = newDepth;
+                window.history.pushState({ isAppHistory: true, gameState: 'PLAYING', depth: newDepth }, '', '');
+                setGameStateInternal('PLAYING');
+                if (typeof AudioEngine !== 'undefined') AudioEngine.uiStartGame();
+                return;
+            }
+
+            if (gameStateRef.current === 'LOBBY_MAIN' || gameStateRef.current === 'LOGIN') {
                 const now = Date.now();
                 if (now - backPressTimeRef.current < 2000) {
                     window.history.back(); 
@@ -97,19 +171,23 @@ const App = () => {
                         window.Dialog.showToast("Tekan sekali lagi untuk keluar.");
                     }
                     backPressTimeRef.current = now;
-                    window.history.pushState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: historyDepthRef.current }, '', '');
+                    window.history.pushState({ isAppHistory: true, gameState: gameStateRef.current, depth: historyDepthRef.current || 0 }, '', '');
                 }
-            } else if (event.state && event.state.gameState) {
+                return;
+            }
+
+            if (event.state && typeof event.state.depth === 'number') {
+                historyDepthRef.current = event.state.depth;
                 if (event.state.gameState === 'STARTUP' || event.state.gameState === 'LOGIN') {
                     setGameStateInternal('LOBBY_MAIN');
-                    window.history.replaceState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: historyDepthRef.current }, '', '');
+                    window.history.replaceState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: 0 }, '', '');
                 } else {
-                    setGameStateInternal(event.state.gameState);
+                    setGameStateInternal(event.state.gameState || 'LOBBY_MAIN');
                 }
             } else {
+                historyDepthRef.current = 0;
                 setGameStateInternal('LOBBY_MAIN');
                 window.history.replaceState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: 0 }, '', '');
-                window.history.pushState({ isAppHistory: true, gameState: 'LOBBY_MAIN', depth: 0 }, '', '');
             }
         };
 
@@ -712,13 +790,40 @@ const handleLoginSubmit = async (isColdStart = false) => {
 
     const handleLogout = () => {
         if (window.SaveEngine) window.SaveEngine.logout();
-        AudioEngine.stopBgm();
+        if (window.AudioEngine) window.AudioEngine.stopBgm();
         if (window.NotificationManager) window.NotificationManager.reset();
         localStorage.removeItem('pkmnPlayerName');
-        try { localStorage.removeItem('pkmnActiveSession_' + playerName); } catch(e) {}
+        try { 
+            localStorage.removeItem('pkmnActiveSession_' + playerName); 
+            if (playerName) {
+                localStorage.removeItem('pkmn_trial_' + playerName);
+            }
+        } catch(e) {}
         
-        // Full reset of memory, theme assets, and runtime state
-        window.location.reload();
+        // Reset states
+        setPlayerName('');
+        setProfile(window.getDefaultProfile ? window.getDefaultProfile() : null);
+        setActiveTheme('sweets');
+        setScore(0);
+        setLevel(1);
+        setHp(5);
+        setHints(3);
+        setShuffles(3);
+        setBoard([]);
+        
+        // Ensure popups like Settings are closed without triggering popstate history problems
+        setShowSettings(false);
+        if (window.PopupManager && window.PopupManager._activePopups) {
+            window.PopupManager._activePopups = [];
+        }
+
+        // Reset history and stack completely
+        historyDepthRef.current = 0;
+        
+        
+        // Replace current state with dummy and then to LOGIN
+        setGameStateInternal('LOGIN');
+        window.history.replaceState({ isAppHistory: true, gameState: 'LOGIN', depth: 0 }, '', '');
     };
 
     const triggerLevelEndStats = useCallback(async (isGameOver = false) => {
@@ -1260,6 +1365,7 @@ const handleLoginSubmit = async (isColdStart = false) => {
         <GameContext.Provider value={ctxValue}>
             <GameUI />
             <DialogManager />
+            <ToastManager />
         </GameContext.Provider>
     );
 };

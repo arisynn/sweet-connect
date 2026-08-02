@@ -1,27 +1,48 @@
 // ===================== GLOBAL DIALOG SYSTEM =====================
 
 let dialogShowFn = null;
+window.isGlobalDialogOpen = false;
 
 window.Dialog = {
+    _isOpen: false,
+    _lastCb: null,
     showSuccess: (title, desc, buttonText = 'OK') => {
+        if (!window.Dialog._isOpen) { window.Dialog._lastCb = (f) => window.Dialog._internalClose(f); window.PopupManager.register(window.Dialog._lastCb); window.Dialog._isOpen = true; }
         if(dialogShowFn) dialogShowFn({ type: 'success', title, desc, confirmText: buttonText });
     },
     showError: (title, desc, buttonText = 'OK') => {
+        if (!window.Dialog._isOpen) { window.Dialog._lastCb = (f) => window.Dialog._internalClose(f); window.PopupManager.register(window.Dialog._lastCb); window.Dialog._isOpen = true; }
         if(dialogShowFn) dialogShowFn({ type: 'error', title, desc, confirmText: buttonText });
     },
     showWarning: (title, desc, buttonText = 'OK') => {
+        if (!window.Dialog._isOpen) { window.Dialog._lastCb = (f) => window.Dialog._internalClose(f); window.PopupManager.register(window.Dialog._lastCb); window.Dialog._isOpen = true; }
         if(dialogShowFn) dialogShowFn({ type: 'warning', title, desc, confirmText: buttonText });
     },
     showInfo: (title, desc, buttonText = 'OK') => {
+        if (!window.Dialog._isOpen) { window.Dialog._lastCb = (f) => window.Dialog._internalClose(f); window.PopupManager.register(window.Dialog._lastCb); window.Dialog._isOpen = true; }
         if(dialogShowFn) dialogShowFn({ type: 'info', title, desc, confirmText: buttonText });
     },
     showConfirm: (title, desc, confirmText = 'Ya', cancelText = 'Batal', onConfirm, onCancel) => {
+        if (!window.Dialog._isOpen) { window.Dialog._lastCb = (f) => window.Dialog._internalClose(f); window.PopupManager.register(window.Dialog._lastCb); window.Dialog._isOpen = true; }
         if(dialogShowFn) dialogShowFn({ type: 'confirm', title, desc, confirmText, cancelText, onConfirm, onCancel });
     },
     showLoading: (title = 'Memuat...', desc = 'Mohon tunggu sebentar...') => {
+        if (!window.Dialog._isOpen) { window.Dialog._lastCb = (f) => window.Dialog._internalClose(f); window.PopupManager.register(window.Dialog._lastCb); window.Dialog._isOpen = true; }
         if(dialogShowFn) dialogShowFn({ type: 'loading', title, desc });
     },
+    showToast: (message, type = 'info', duration = 2000) => {
+        if(window.toastShowFn) window.toastShowFn(message, type, duration);
+    },
     close: () => {
+        if (window.Dialog._isOpen) {
+            window.PopupManager.unregister(window.Dialog._lastCb, false);
+            window.Dialog._internalClose(false);
+        } else {
+            window.Dialog._internalClose(false);
+        }
+    },
+    _internalClose: (fromPopState) => {
+        window.Dialog._isOpen = false;
         if(dialogShowFn) dialogShowFn(null);
     }
 };
@@ -107,6 +128,53 @@ const DialogManager = () => {
                     </div>
                 )}
             </div>
+        </div>
+    );
+};
+
+
+// ===================== TOAST SYSTEM =====================
+const ToastManager = () => {
+    const [toasts, setToasts] = React.useState([]);
+
+    React.useEffect(() => {
+        window.toastShowFn = (message, type, duration) => {
+            const id = Date.now() + Math.random();
+            setToasts(prev => [...prev, { id, message, type, isClosing: false }]);
+            
+            setTimeout(() => {
+                setToasts(prev => prev.map(t => t.id === id ? { ...t, isClosing: true } : t));
+                setTimeout(() => {
+                    setToasts(prev => prev.filter(t => t.id !== id));
+                }, 300); // 300ms for exit animation
+            }, duration);
+        };
+        return () => { window.toastShowFn = null; };
+    }, []);
+
+    if (toasts.length === 0) return null;
+
+    return (
+        <div className="fixed bottom-24 left-0 right-0 z-[10000] flex flex-col items-center gap-2 pointer-events-none px-4">
+            {toasts.map(toast => (
+                <div 
+                    key={toast.id} 
+                    className={`
+                        bg-gray-900/90 backdrop-blur-md text-white px-5 py-3 rounded-full shadow-lg font-medium text-sm
+                        transition-all duration-300 ease-out transform
+                        ${toast.isClosing ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}
+                    `}
+                    style={{ animation: toast.isClosing ? 'none' : 'slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
+                >
+                    {toast.message}
+                </div>
+            ))}
+            <style dangerouslySetInnerHTML={{__html: `
+                @keyframes slideUpFade {
+                    from { opacity: 0; transform: translateY(16px) scale(0.95); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
+                }
+            `}} />
         </div>
     );
 };
