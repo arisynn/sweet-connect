@@ -76,6 +76,12 @@ const DiceGacha = ({ profile, syncProfile, onOpenComplete, opening, setOpening }
     const [phase, setPhase] = useState('betting'); // betting, rolling, result
     const [timeLeft, setTimeLeft] = useState(15);
     
+    useEffect(() => {
+        window.isGameLocked = (phase === 'rolling' || phase === 'result');
+        window.gameLockedMessage = "Selesaikan putaran Dadu terlebih dahulu.";
+        return () => { window.isGameLocked = false; };
+    }, [phase]);
+    
     // Betting states
     const [selectedChip, setSelectedChip] = useState(5);
     const [bets, setBets] = useState({});
@@ -1100,6 +1106,12 @@ const MinesGame = ({ profile, syncProfile, onOpenComplete, opening, setOpening }
     const [animatingCell, setAnimatingCell] = useState(-1);
     const [showBanner, setShowBanner] = useState(false);
     const [winAmountDisplay, setWinAmountDisplay] = useState(0);
+    
+    useEffect(() => {
+        window.isGameLocked = (gameState === 'playing' || gameState === 'result' || gameState === 'freeze');
+        window.gameLockedMessage = "Selesaikan permainan Mines terlebih dahulu.";
+        return () => { window.isGameLocked = false; };
+    }, [gameState]);
 
     const profileRef = useRef(profile);
     useEffect(() => { profileRef.current = profile; }, [profile]);
