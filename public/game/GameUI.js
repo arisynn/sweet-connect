@@ -947,7 +947,7 @@ const GameUI = () => {
                 {gameState === 'PAUSED' && (
                     <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-[100] px-6">
                         <h2 className="text-2xl font-black theme-text mb-8 tracking-widest uppercase">Dijeda</h2>
-                        <button onClick={() => { window.history.back(); }} className="btn-modern bg-gray-900 text-white w-full max-w-[260px] py-4 rounded-xl font-bold mb-4 shadow-md">Lanjutkan</button>
+                        <button onClick={() => { AudioEngine.uiStartGame(); setGameState('PLAYING'); }} className="btn-modern bg-gray-900 text-white w-full max-w-[260px] py-4 rounded-xl font-bold mb-4 shadow-md">Lanjutkan</button>
                         <button onClick={() => {
                             const statsProfile = flushStats(profile, { scoreAchieved: score, activeSession: null });
                             const newProfile = { ...statsProfile, hp, hints, shuffles, currentLevel: level, currentScore: score };
