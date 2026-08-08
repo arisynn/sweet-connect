@@ -133,3 +133,10 @@ const speedUpChestAction = (profile, slotIndex) => {
     
     return { profile: p, success: false };
 };
+
+window.CHEST_TYPES = CHEST_TYPES;
+window.getRandomChestType = getRandomChestType;
+window.initChestProfile = initChestProfile;
+window.addChestProgress = addChestProgress;
+window.openChestAction = openChestAction;
+window.speedUpChestAction = speedUpChestAction;

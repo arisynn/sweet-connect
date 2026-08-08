@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { getSupabase } from './supabase.js';
+import { MultiplayerBankEngine } from './MultiplayerBankEngine.js';
 
 const rooms = new Map<string, any>();
 
@@ -28,10 +29,19 @@ async function updatePlayerBalance(playerName: string, currency: string, delta: 
         }
         
         let profileData = data.profile_data || {};
-        let currentBalance = profileData[currency] || 0;
-        let newBalance = Math.max(0, currentBalance + delta);
+        if (typeof profileData === 'string') {
+            try { profileData = JSON.parse(profileData); } catch(e){}
+        }
         
-        profileData[currency] = newBalance;
+        if (!profileData.gameData) profileData.gameData = {};
+        
+        let currentBalance = profileData.gameData[currency] || 0;
+        if (delta < 0 && currentBalance + delta < 0) {
+            throw new Error(`INSUFFICIENT_BALANCE: Saldo tidak mencukupi untuk transaksi ini. (Butuh: ${-delta}, Dimiliki: ${currentBalance})`);
+        }
+        let newBalance = currentBalance + delta;
+        
+        profileData.gameData[currency] = newBalance;
         
         // CRITICAL FOR SAVE ENGINE V2: Increment revision so client gets 409 Conflict if they try to save an old state
         if (profileData._engine && typeof profileData._engine.revision === 'number') {
@@ -44,7 +54,8 @@ async function updatePlayerBalance(playerName: string, currency: string, delta: 
         return newBalance;
     } catch (e: any) {
         logMultiplayerEvent('BALANCE_UPDATE_ERROR', '', { playerName, error: e.message });
-        return 0;
+        if (e.message.includes('INSUFFICIENT_BALANCE')) throw e;
+        throw new Error('TRANSACTION_FAILED: ' + e.message);
     }
 }
 
@@ -59,13 +70,13 @@ export default async function handler(req: Request, res: Response) {
         
         if (action === 'create') {
             const { host, level, theme } = req.body;
-            if (!host) return res.status(400).json({ error: 'Missing host' });
+            if (!host) return res.status(400).json({ error: 'MISSING_HOST: Host tidak ditemukan.' });
             
             const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
             const room = {
                 id: roomId,
                 host,
-                status: 'LOBBY',
+                status: 'WAITING',
                 revision: 1, // Add revision for state conflict resolution
                 players: [{ name: host, level, ready: false, theme, lastSync: Date.now() }],
                 mode: 'Friendly Match',
@@ -77,21 +88,22 @@ export default async function handler(req: Request, res: Response) {
         }
         
         if (action === 'join') {
-            const { roomId, name, level, theme } = req.body;
-            if (!roomId || !name) return res.status(400).json({ error: 'Missing parameters' });
+            let { roomId, name, level, theme } = req.body;
+            if (roomId) roomId = roomId.trim().toUpperCase();
+            if (!roomId || !name) return res.status(400).json({ error: 'MISSING_PARAMS: Parameter tidak lengkap.' });
             
             const room = rooms.get(roomId);
-            if (!room) return res.status(404).json({ error: 'Room not found' });
+            if (!room) return res.status(404).json({ error: 'ROOM_NOT_FOUND: Room tidak ditemukan.' });
             
-            if (room.status !== 'LOBBY' && room.status !== 'PREPARING') {
+            if (room.status !== 'WAITING' && room.status !== 'STARTING') {
                 // If they are rejoining, allow them if they are already in the room
                 if (!room.players.find((p: any) => p.name === name)) {
-                    return res.status(400).json({ error: 'Room is currently in a match' });
+                    return res.status(400).json({ error: 'ROOM_PLAYING: Room sedang dalam permainan.' });
                 }
             }
             
             if (room.players.length >= 2 && !room.players.find((p: any) => p.name === name)) {
-                return res.status(400).json({ error: 'Room is full' });
+                return res.status(400).json({ error: 'ROOM_FULL: Room sudah penuh.' });
             }
             
             const existingPlayer = room.players.find((p: any) => p.name === name);
@@ -113,32 +125,45 @@ export default async function handler(req: Request, res: Response) {
         
         if (action === 'leave') {
             const { roomId, name } = req.body;
-            if (!roomId || !name) return res.status(400).json({ error: 'Missing parameters' });
+            if (!roomId || !name) return res.status(400).json({ error: 'MISSING_PARAMS: Parameter tidak lengkap.' });
             
             const room = rooms.get(roomId);
             if (room) {
-                if (room.status === 'ACTIVE' && !room.winner) {
+                if (room.status === 'PLAYING' && !room.winner) {
                     // Leaving during active match counts as disconnect/forfeit
                     const opponent = room.players.find((p: any) => p.name !== name);
                     if (opponent) {
                         room.winner = opponent.name;
-                        room.status = 'COMPLETED';
                         room.finishReason = 'DISCONNECT';
-                        room.revision += 1;
                         logMultiplayerEvent('MATCH_FORFEITED', roomId, { leaver: name, winner: opponent.name });
                         
-                        if (room.mode === 'Match Berhadiah' && room.wager && !room.payoutProcessed) {
-                            room.payoutProcessed = true;
-                            const amount = room.wager.amount;
-                            const curr = room.wager.currency;
-                            updatePlayerBalance(opponent.name, curr, amount * 2).then(winnerBal => {
+                        if (room.mode === 'Match Berhadiah' && room.wager && room.payoutProcessed !== room.matchId) {
+                            room.payoutProcessed = room.matchId;
+                            try {
+                                const amount = room.wager.amount;
+                                const curr = room.wager.currency;
+                                const totalPot = amount * 2;
+                                const tax = Math.floor(amount * 0.1);
+                                const payout = totalPot - tax;
+                                
+                                logMultiplayerEvent('SETTLEMENT', roomId, { matchId: room.matchId, winner: opponent.name, totalPot, tax, payout, currency: curr });
+                                
+                                const winnerBal = await updatePlayerBalance(opponent.name, curr, payout);
                                 room.wager.settledBalances = room.wager.settledBalances || {};
                                 room.wager.settledBalances[opponent.name] = winnerBal;
-                            });
+                            } catch (e: any) {
+                                logMultiplayerEvent('PAYOUT_FAILED', roomId, { error: e.message });
+                            }
                         }
+                        
+                        room.status = 'FINISHED';
+                        room.revision += 1;
                     }
                 }
                 
+                MultiplayerBankEngine.cancelRoomOffers(roomId);
+                room.mode = 'Friendly Match';
+                room.wager = null;
                 room.players = room.players.filter((p: any) => p.name !== name);
                 logMultiplayerEvent('PLAYER_LEFT', roomId, { name, remaining: room.players.length });
                 
@@ -148,15 +173,22 @@ export default async function handler(req: Request, res: Response) {
                 } else {
                     if (room.host === name) {
                         room.host = room.players[0].name;
+                        MultiplayerBankEngine.cancelRoomOffers(roomId);
+                        room.mode = 'Friendly Match';
+                        room.wager = null;
                         logMultiplayerEvent('HOST_MIGRATED', roomId, { newHost: room.host });
                     }
                     room.players.forEach((p: any) => p.ready = false);
-                    if (room.status === 'PREPARING' || room.status === 'STARTING') {
-                        room.status = 'LOBBY';
+                    if (room.status === 'STARTING' || room.status === 'STARTING') {
+                        room.status = 'WAITING';
                         if (room.mode === 'Match Berhadiah' && room.wagerLocked) {
                             // Refund wager if locked during preparing
-                            const p1 = room.players[0]?.name;
-                            if (p1) updatePlayerBalance(p1, room.wager.currency, room.wager.amount);
+                            try {
+                                const p1 = room.players[0]?.name;
+                                if (p1) await updatePlayerBalance(p1, room.wager.currency, room.wager.amount);
+                            } catch (e: any) {
+                                logMultiplayerEvent('REFUND_FAILED', roomId, { error: e.message });
+                            }
                             room.wagerLocked = false;
                         }
                     }
@@ -167,7 +199,7 @@ export default async function handler(req: Request, res: Response) {
         }
         
         if (action === 'sync') {
-            const { roomId, name, level, theme, progress } = req.query;
+            const { roomId, name, level, theme, progress, matchId } = req.query;
             let room;
             
             if (roomId) {
@@ -183,53 +215,83 @@ export default async function handler(req: Request, res: Response) {
             }
             
             if (!room) {
-                return res.status(404).json({ error: 'Room not found' });
+                return res.status(404).json({ error: 'ROOM_NOT_FOUND: Room tidak ditemukan.' });
             }
             
             const now = Date.now();
+            if (room && room.players) {
+                room.players.forEach((p: any) => {
+                    if (p.lastSync && now - p.lastSync > 3000 && now - p.lastSync <= 15000) {
+                        p.connection = 'RECONNECTING';
+                    } else if (p.lastSync && now - p.lastSync <= 3000) {
+                        p.connection = 'CONNECTED';
+                    }
+                });
+            }
             if (name && room.players) {
                 const p = room.players.find((p: any) => p.name === name);
                 if (p) {
                     if (level) p.level = Number(level);
                     if (theme) p.theme = theme as string;
-                    if (progress !== undefined) p.progress = Number(progress);
+                    if (progress !== undefined) {
+                        if (room.status === 'PLAYING' && matchId !== room.matchId) {
+                            // stale progress from an old match, ignore
+                        } else {
+                            p.progress = Number(progress);
+                        }
+                    }
                     p.lastSync = now;
+                    p.connection = 'CONNECTED';
                 }
             }
             
             // Rehydrate / Check for disconnects
-            if (room.status === 'ACTIVE' && !room.winner) {
+            if (room.status === 'PLAYING' && !room.winner) {
                 for (const p of room.players) {
                     if (p.lastSync && (now - p.lastSync > 15000)) { // 15 seconds grace period
                         if (room.startAt && now >= room.startAt) {
                             const opponent = room.players.find((op: any) => op.name !== p.name);
                             if (opponent) {
                                 room.winner = opponent.name;
-                                room.status = 'COMPLETED';
                                 room.finishReason = 'DISCONNECT';
-                                room.revision += 1;
                                 logMultiplayerEvent('MATCH_ENDED_DISCONNECT', room.id, { disconnectedPlayer: p.name, winner: opponent.name });
                                 
-                                if (room.mode === 'Match Berhadiah' && room.wager && !room.payoutProcessed) {
-                                    room.payoutProcessed = true;
-                                    const amount = room.wager.amount;
-                                    const curr = room.wager.currency;
-                                    updatePlayerBalance(opponent.name, curr, amount * 2).then(winnerBal => {
+                                if (room.mode === 'Match Berhadiah' && room.wager && room.payoutProcessed !== room.matchId) {
+                                    room.payoutProcessed = room.matchId;
+                                    try {
+                                        const amount = room.wager.amount;
+                                        const curr = room.wager.currency;
+                                        const totalPot = amount * 2;
+                                        const tax = Math.floor(amount * 0.1);
+                                        const payout = totalPot - tax;
+                                        
+                                        logMultiplayerEvent('SETTLEMENT', room.id, { matchId: room.matchId, winner: opponent.name, totalPot, tax, payout, currency: curr });
+                                        
+                                        const winnerBal = await updatePlayerBalance(opponent.name, curr, payout);
                                         room.wager.settledBalances = room.wager.settledBalances || {};
                                         room.wager.settledBalances[opponent.name] = winnerBal;
-                                    });
+                                    } catch (e: any) {
+                                        logMultiplayerEvent('PAYOUT_FAILED', room.id, { error: e.message });
+                                    }
                                 }
+                                
+                                room.status = 'FINISHED';
+                                room.revision += 1;
                             }
                         } else {
                             // Disconnected during countdown - revert to lobby
-                            room.status = 'LOBBY';
+                            room.status = 'WAITING';
                             room.revision += 1;
                             logMultiplayerEvent('COUNTDOWN_ABORTED_DISCONNECT', room.id, { disconnectedPlayer: p.name });
                             
                             if (room.mode === 'Match Berhadiah' && room.wagerLocked) {
-                                const memberName = room.players.find((player: any) => player.name !== room.host)?.name;
-                                if (room.host) updatePlayerBalance(room.host, room.wager.currency, room.wager.amount);
-                                if (memberName) updatePlayerBalance(memberName, room.wager.currency, room.wager.amount);
+                                try {
+                                    const memberName = room.players.find((player: any) => player.name !== room.host)?.name;
+                                    if (room.host) await updatePlayerBalance(room.host, room.wager.currency, room.wager.amount);
+                                    if (memberName) await updatePlayerBalance(memberName, room.wager.currency, room.wager.amount);
+                                } catch (e: any) {
+                                    logMultiplayerEvent('REFUND_FAILED', room.id, { error: e.message });
+                                }
                                 room.wagerLocked = false;
                             }
                             room.players.forEach((player: any) => player.ready = false);
@@ -244,41 +306,74 @@ export default async function handler(req: Request, res: Response) {
         if (action === 'complete') {
             const { roomId, name } = req.body;
             const room = rooms.get(roomId);
-            if (room && room.status === "ACTIVE" && !room.winner) {
+            if (room && room.status === 'PLAYING' && !room.winner) {
                 room.winner = name;
-                room.status = "COMPLETED";
-                room.finishReason = "BOARD_COMPLETED";
-                room.revision += 1;
-                logMultiplayerEvent('MATCH_COMPLETED', roomId, { winner: name });
+                room.finishReason = 'BOARD_COMPLETED';
+                logMultiplayerEvent('MATCH_COMPLETED', roomId, { winner: name, matchId: room.matchId });
                 
-                if (room.mode === "Match Berhadiah" && room.wager && !room.payoutProcessed) {
-                    room.payoutProcessed = true;
-                    const amount = room.wager.amount;
-                    const curr = room.wager.currency;
-                    // Run payouts concurrently
-                    const winnerBalP = updatePlayerBalance(name, curr, amount * 2);
-                    const loserName = room.players.find((p: any) => p.name !== name)?.name;
-                    const loserBalP = loserName ? updatePlayerBalance(loserName, curr, 0) : Promise.resolve(0); // Just fetch balance
-                    
-                    winnerBalP.then(winnerBal => {
+                if (room.mode === 'Match Berhadiah' && room.wager && room.payoutProcessed !== room.matchId) {
+                    room.payoutProcessed = room.matchId; // use matchId as idempotency key
+                    try {
+                        const amount = room.wager.amount;
+                        const curr = room.wager.currency;
+                        
+                        const totalPot = amount * 2;
+                        const tax = Math.floor(amount * 0.1);
+                        const payout = totalPot - tax;
+                        
+                        logMultiplayerEvent('SETTLEMENT', roomId, { matchId: room.matchId, winner: name, totalPot, tax, payout, currency: curr });
+                        
+                        const winnerBal = await updatePlayerBalance(name, curr, payout);
+                        const loserName = room.players.find((p: any) => p.name !== name)?.name;
+                        const loserBal = loserName ? await updatePlayerBalance(loserName, curr, 0) : 0;
+                        
                         room.wager.settledBalances = room.wager.settledBalances || {};
                         room.wager.settledBalances[name] = winnerBal;
-                    });
-                    
-                    if (loserName) {
-                        loserBalP.then(loserBal => {
-                            room.wager.settledBalances = room.wager.settledBalances || {};
-                            room.wager.settledBalances[loserName] = loserBal;
-                        });
+                        if (loserName) room.wager.settledBalances[loserName] = loserBal;
+                    } catch (e: any) {
+                        logMultiplayerEvent('PAYOUT_FAILED', roomId, { error: e.message });
                     }
                 }
+                
+                room.status = 'FINISHED';
+                room.revision += 1;
             }
-            return res.json(room || { error: "Room not found" });
+            return res.json(room || { error: 'ROOM_NOT_FOUND: Room tidak ditemukan.' });
         }
 
+        if (action === 'rematch') {
+            const { roomId, name } = req.body;
+            if (!roomId || !name) return res.status(400).json({ error: 'MISSING_PARAMS: Parameter tidak lengkap.' });
+            
+            const room = rooms.get(roomId);
+            if (room) {
+                if (room.status === 'FINISHED') {
+                    room.status = 'WAITING';
+                    room.winner = null;
+                    room.finishReason = null;
+                    room.matchId = null;
+                    // Reset to friendly match so they must wager again
+                    room.mode = 'Friendly Match';
+                    room.wager = null;
+                    room.wagerLocked = false;
+                    MultiplayerBankEngine.cancelRoomOffers(roomId);
+                    room.players.forEach((p: any) => p.ready = false);
+                    room.revision += 1;
+                    logMultiplayerEvent('ROOM_REMATCH', roomId, { initiatedBy: name });
+                }
+                const p = room.players.find((p: any) => p.name === name);
+                if (p) {
+                    p.ready = true;
+                    p.progress = 0;
+                }
+                room.revision += 1;
+            }
+            return res.json(room || { error: 'ROOM_NOT_FOUND: Room tidak ditemukan.' });
+        }
+        
         if (action === 'ready') {
             const { roomId, name, ready } = req.body;
-            if (!roomId || !name) return res.status(400).json({ error: 'Missing parameters' });
+            if (!roomId || !name) return res.status(400).json({ error: 'MISSING_PARAMS: Parameter tidak lengkap.' });
             
             const room = rooms.get(roomId);
             if (room) {
@@ -289,13 +384,13 @@ export default async function handler(req: Request, res: Response) {
                     logMultiplayerEvent('PLAYER_READY_CHANGED', roomId, { name, ready });
                 }
             }
-            return res.json(room || { error: 'Room not found' });
+            return res.json(room || { error: 'ROOM_NOT_FOUND: Room tidak ditemukan.' });
         }
 
         if (action === 'change_mode') {
             const { roomId, host, mode } = req.body;
             const room = rooms.get(roomId);
-            if (!room || room.host !== host) return res.status(403).json({ error: 'Not host' });
+            if (!room || room.host !== host) return res.status(403).json({ error: 'FORBIDDEN: Hanya host yang bisa melakukan ini.' });
             
             if (room.mode !== mode) {
                 room.mode = mode;
@@ -310,104 +405,129 @@ export default async function handler(req: Request, res: Response) {
             const { roomId, host, currency, amount } = req.body;
             
             if (typeof amount !== 'number' || amount <= 0 || isNaN(amount) || !Number.isInteger(amount)) {
-                return res.status(400).json({ error: 'Nominal taruhan tidak valid.' });
+                return res.status(400).json({ error: 'INVALID_WAGER: Nominal taruhan tidak valid.' });
             }
             if (currency !== 'coins' && currency !== 'gems') {
-                return res.status(400).json({ error: 'Currency tidak valid.' });
+                return res.status(400).json({ error: 'INVALID_CURRENCY: Mata uang tidak valid.' });
             }
-
+            
             const room = rooms.get(roomId);
-            if (!room || room.host !== host) return res.status(403).json({ error: 'Not host' });
+            if (!room || room.host !== host) return res.status(403).json({ error: 'FORBIDDEN: Hanya host yang bisa melakukan ini.' });
             
-            const supabase = getSupabase();
-            if (supabase) {
-                const { data } = await supabase.from('profiles').select('profile_data').eq('player_name', host).maybeSingle();
-                const balance = data?.profile_data?.[currency] || 0;
-                if (balance < amount) {
-                    return res.status(400).json({ error: `${currency === 'coins' ? 'Coin' : 'Gem'} kamu tidak cukup.` });
-                }
+            const member = room.players.find((p: any) => p.name !== host);
+            if (!member) {
+                return res.status(400).json({ error: 'PLAYER_LEFT: Pemain sudah meninggalkan room.' });
             }
             
-            room.mode = 'Match Berhadiah';
-            room.wager = {
-                currency,
-                amount,
-                hostAgreed: true,
-                memberAgreed: false,
-                version: Date.now()
-            };
-            room.revision += 1;
-            logMultiplayerEvent('WAGER_PROPOSED', roomId, { host, currency, amount });
-            return res.json(room);
-        }
-
-        if (action === 'accept_wager') {
-            const { roomId, name, version } = req.body;
-            const room = rooms.get(roomId);
-            if (!room || !room.wager || room.wager.version !== version) return res.status(400).json({ error: 'Wager expired' });
-            
-            const supabase = getSupabase();
-            if (supabase) {
-                const { data } = await supabase.from('profiles').select('profile_data').eq('player_name', name).maybeSingle();
-                const balance = data?.profile_data?.[room.wager.currency] || 0;
-                if (balance < room.wager.amount) {
-                    return res.status(400).json({ error: `${room.wager.currency} tidak cukup untuk menerima taruhan.` });
-                }
-            }
-            
-            if (!room.wager.memberAgreed) {
-                room.wager.memberAgreed = true;
+            try {
+                const offer = await MultiplayerBankEngine.createOffer(roomId, host, member.name, amount, currency);
+                room.mode = 'Match Berhadiah';
+                room.wager = {
+                    offerId: offer.offerId,
+                    currency,
+                    amount,
+                    hostAgreed: true,
+                    memberAgreed: false,
+                    version: Date.now()
+                };
+                room.activeOffer = offer;
                 room.revision += 1;
-                logMultiplayerEvent('WAGER_ACCEPTED', roomId, { name });
+                logMultiplayerEvent('WAGER_PROPOSED', roomId, { host, currency, amount, offer });
+                return res.json(room);
+            } catch (e: any) {
+                return res.status(400).json({ error: e.message || 'Gagal membuat offer.' });
             }
-            return res.json(room);
         }
         
-        if (action === 'reject_wager') {
-            const { roomId, version } = req.body;
+        if (action === 'cancel_wager') {
+            const { roomId, host, offerId } = req.body;
             const room = rooms.get(roomId);
-            if (room && room.wager && room.wager.version === version) {
+            if (!room || room.host !== host) return res.status(403).json({ error: 'FORBIDDEN: Hanya host yang bisa membatalkan.' });
+            
+            try {
+                const offer = MultiplayerBankEngine.cancelOffer(offerId, host);
+                room.mode = 'Friendly Match';
+                room.wager = null;
+                room.activeOffer = offer;
+                room.revision += 1;
+                logMultiplayerEvent('WAGER_CANCELLED', roomId, { host, offerId });
+                return res.json(room);
+            } catch (e: any) {
+                return res.status(400).json({ error: e.message || 'Gagal membatalkan offer.' });
+            }
+        }
+        if (action === 'accept_wager') {
+            const { roomId, name, offerId } = req.body;
+            const room = rooms.get(roomId);
+            if (!room) return res.status(404).json({ error: 'ROOM_CLOSED: Room sudah ditutup.' });
+            if (!room.wager || room.wager.offerId !== offerId) return res.status(400).json({ error: 'OFFER_ALREADY_PROCESSED: Tawaran sudah kedaluwarsa atau berubah.' });
+            
+            try {
+                const offer = await MultiplayerBankEngine.acceptOffer(offerId, name);
+                
+                try {
+                    // Deduct balances immediately and set up bank
+                    const { bank, newBalances } = await MultiplayerBankEngine.setupBank(offer, updatePlayerBalance);
+                    
+                    room.wager.memberAgreed = true;
+                    room.wager.settledBalances = newBalances;
+                    room.activeOffer = offer;
+                    room.wagerLocked = true;
+                    room.revision += 1;
+                    logMultiplayerEvent('WAGER_ACCEPTED', roomId, { name, offerId });
+                    return res.json(room);
+                } catch (bankError: any) {
+                    offer.status = 'PENDING';
+                    offer.guestId = undefined;
+                    throw bankError;
+                }
+            } catch (e: any) {
+                return res.status(400).json({ error: e.message || 'Gagal menerima offer.' });
+            }
+        }
+        if (action === 'reject_wager') {
+            const { roomId, name, offerId } = req.body;
+            const room = rooms.get(roomId);
+            if (!room) return res.status(404).json({ error: 'ROOM_CLOSED: Room sudah ditutup.' });
+            
+            try {
+                const offer = MultiplayerBankEngine.rejectOffer(offerId, name);
                 room.wager = null;
                 room.mode = 'Friendly Match';
+                room.activeOffer = offer;
                 room.revision += 1;
-                logMultiplayerEvent('WAGER_REJECTED', roomId, {});
+                logMultiplayerEvent('WAGER_REJECTED', roomId, { name, offerId });
+                return res.json(room);
+            } catch (e: any) {
+                return res.status(400).json({ error: e.message || 'Gagal menolak offer.' });
             }
-            return res.json(room || { error: 'Room not found' });
         }
-
         if (action === 'start_match') {
             const { roomId, host, board } = req.body;
             const room = rooms.get(roomId);
-            if (!room || room.host !== host) return res.status(403).json({ error: 'Invalid room' });
+            if (!room || room.host !== host) return res.status(403).json({ error: 'INVALID_ROOM: Room tidak valid atau kamu bukan host.' });
             
             // ATOMIC CHECK: Ensure we don't start multiple times
-            if (room.status === 'PREPARING' || room.status === 'ACTIVE') return res.json({ success: true, room });
-            if (room.players.length < 2 || !room.players.every((p: any) => p.ready)) return res.status(400).json({ error: 'Not all ready' });
+            if (room.status === 'STARTING' || room.status === 'PLAYING') return res.json({ success: true, room });
+            if (room.players.length < 2 || !room.players.every((p: any) => p.ready)) return res.status(400).json({ error: 'NOT_READY: Semua pemain harus siap.' });
             
             if (room.mode === 'Match Berhadiah') {
                 if (!room.wager || !room.wager.hostAgreed || !room.wager.memberAgreed) {
-                    return res.status(400).json({ error: 'Wager not agreed by both players' });
+                    return res.status(400).json({ error: 'WAGER_NOT_AGREED: Taruhan belum disetujui oleh kedua pemain.' });
                 }
                 
                 const member = room.players.find((p: any) => p.name !== room.host)?.name;
                 
                 if (!room.wagerLocked) {
-                    try {
-                        // Deduct wagers immediately
-                        await updatePlayerBalance(room.host, room.wager.currency, -room.wager.amount);
-                        if (member) await updatePlayerBalance(member, room.wager.currency, -room.wager.amount);
-                        room.wagerLocked = true;
-                    } catch (e) {
-                        logMultiplayerEvent('WAGER_LOCK_FAILED', roomId, { error: e });
-                        return res.status(500).json({ error: 'Failed to lock wagers. Match aborted.' });
-                    }
+                    return res.status(500).json({ error: 'WAGER_NOT_LOCKED: Taruhan belum dikunci.' });
                 }
             }
             
-            room.status = 'PREPARING';
+            room.status = 'STARTING';
+            room.matchId = 'M-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 6);
             room.winner = null;
             room.finishReason = null;
-            room.payoutProcessed = false;
+            room.payoutProcessed = null;
             room.revision += 1;
             room.players.forEach((p: any) => {
                 p.progress = 0;
@@ -419,19 +539,23 @@ export default async function handler(req: Request, res: Response) {
             logMultiplayerEvent('MATCH_PREPARING', roomId, {});
             
             // Timeout if players don't both ready up for game
-            setTimeout(() => {
+            setTimeout(async () => {
                 const currentRoom = rooms.get(roomId);
                 // Only abort if we are STILL in the same PREPARING state
-                if (currentRoom && currentRoom.status === 'PREPARING' && currentRoom.revision === startToken) {
+                if (currentRoom && currentRoom.status === 'STARTING' && currentRoom.revision === startToken) {
                     logMultiplayerEvent('MATCH_START_TIMEOUT', roomId, {});
-                    currentRoom.status = 'LOBBY';
+                    currentRoom.status = 'WAITING';
                     currentRoom.revision += 1;
                     
                     // Refund wager if it was locked
                     if (currentRoom.mode === 'Match Berhadiah' && currentRoom.wagerLocked) {
-                        const memberName = currentRoom.players.find((p: any) => p.name !== currentRoom.host)?.name;
-                        if (currentRoom.host) updatePlayerBalance(currentRoom.host, currentRoom.wager.currency, currentRoom.wager.amount);
-                        if (memberName) updatePlayerBalance(memberName, currentRoom.wager.currency, currentRoom.wager.amount);
+                        try {
+                            const memberName = currentRoom.players.find((p: any) => p.name !== currentRoom.host)?.name;
+                            if (currentRoom.host) await updatePlayerBalance(currentRoom.host, currentRoom.wager.currency, currentRoom.wager.amount);
+                            if (memberName) await updatePlayerBalance(memberName, currentRoom.wager.currency, currentRoom.wager.amount);
+                        } catch (e: any) {
+                            logMultiplayerEvent('REFUND_FAILED', roomId, { error: e.message });
+                        }
                         currentRoom.wagerLocked = false;
                     }
                     currentRoom.players.forEach((p: any) => p.ready = false);
@@ -444,7 +568,7 @@ export default async function handler(req: Request, res: Response) {
         if (action === 'ready_for_game') {
             const { roomId, name } = req.body;
             const room = rooms.get(roomId);
-            if (!room) return res.status(404).json({ error: 'Room not found' });
+            if (!room) return res.status(404).json({ error: 'ROOM_NOT_FOUND: Room tidak ditemukan.' });
             
             const player = room.players.find((p: any) => p.name === name);
             if (player && !player.readyForGame) {
@@ -455,8 +579,8 @@ export default async function handler(req: Request, res: Response) {
             }
 
             // ATOMIC START: Start only when both are ready and we are still PREPARING
-            if (room.status === 'PREPARING' && room.players.length === 2 && room.players.every((p: any) => p.readyForGame)) {
-                room.status = 'ACTIVE';
+            if (room.status === 'STARTING' && room.players.length === 2 && room.players.every((p: any) => p.readyForGame)) {
+                room.status = 'PLAYING';
                 // Server defines the precise start time (4 seconds in the future)
                 room.startAt = Date.now() + 4000;
                 room.revision += 1;
@@ -466,7 +590,7 @@ export default async function handler(req: Request, res: Response) {
             return res.json({ success: true, room });
         }
         
-        return res.status(400).json({ error: 'Invalid action' });
+        return res.status(400).json({ error: 'INVALID_ACTION: Aksi tidak valid.' });
     } catch (e: any) {
         // Log all uncaught errors, do not let them fail silently on the client
         console.error("Multiplayer API Error:", e);

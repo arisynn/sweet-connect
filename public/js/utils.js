@@ -1,5 +1,5 @@
 // ===================== FORMATTING HELPERS =====================
-const formatNumber = (num) => {
+window.formatNumber = (num) => {
     if (num >= 1000000) {
         return Number((num / 1000000).toFixed(1)) + 'M';
     } else if (num >= 1000) {

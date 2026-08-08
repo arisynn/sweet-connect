@@ -11,7 +11,7 @@ const SHOP_ITEMS = [];
 const THEME_BADGE_TEXT = "Eksklusif";
 
 // ===================== THEMES =====================
-let THEMES = {};
+window.THEMES = {}; let THEMES = window.THEMES;
 
 // We can add a function to inject the custom theme if needed
 function getFallbackThemes() {

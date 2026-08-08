@@ -1,6 +1,6 @@
 // ===================== WEB AUDIO =====================
 // ===================== WEB AUDIO =====================
-const AudioEngine = (() => {
+window.AudioEngine = (() => {
     let ctx = null; 
     
     // Default settings

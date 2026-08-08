@@ -9,5 +9,8 @@ window.AuthEngine = {
     },
     validateSession: () => {
         return window.SessionEngine.isValid();
+    },
+    getLoggedInUser: () => {
+        return window.SessionEngine.playerName;
     }
 };

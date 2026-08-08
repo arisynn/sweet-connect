@@ -299,8 +299,8 @@ const ChestSection = ({ profile, setProfile, saveProfile, playerName, setSweetMe
             setTimeout(() => {
                 let { profile: newP, rewards } = openChestAction(profile, index);
                 if (rewards) {
-                    if (typeof updateStatistics === 'function') {
-                        newP = updateStatistics(newP, { chestOpenedDelta: 1 });
+                    if (typeof window.updateStatistics === 'function') {
+                        newP = window.updateStatistics(newP, { chestOpenedDelta: 1 });
                     }
                     // Update chest weekly missions
                     if (typeof updateMissions === 'function') {

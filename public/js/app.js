@@ -35,13 +35,13 @@ async function initApp() {
             });
             // Ensure custom theme is always present
             loadedThemes.custom = getFallbackThemes().custom;
-            THEMES = loadedThemes;
+            window.THEMES = loadedThemes; THEMES = window.THEMES;
         } else {
             throw new Error('Failed to load themes from API');
         }
     } catch (e) {
         console.warn('Using fallback themes due to error:', e);
-        THEMES = getFallbackThemes();
+        window.THEMES = getFallbackThemes(); THEMES = window.THEMES;
     }
     
     const root = ReactDOM.createRoot(document.getElementById('root'));

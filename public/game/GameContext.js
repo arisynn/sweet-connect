@@ -1,1 +1,1 @@
-const GameContext = React.createContext();
+window.GameContext = React.createContext(); const GameContext = window.GameContext;

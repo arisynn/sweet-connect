@@ -1,5 +1,5 @@
 
-const SettingsPanel = ({ syncStatus, setShowSyncLog, onClose, onLogout, profile, setProfile, saveProfile, playerName }) => {
+const SettingsPanel = ({ syncStatus, onOpenCloudSync, onClose, onLogout, profile, setProfile, saveProfile, playerName }) => {
     const [settings, setSettings] = useState(() => AudioEngine.getSettings());
     const [isNotifExpanded, setIsNotifExpanded] = useState(false);
 
@@ -139,11 +139,11 @@ const SettingsPanel = ({ syncStatus, setShowSyncLog, onClose, onLogout, profile,
                     {/* Cloud Sync Status */}
                     <div className="flex flex-col gap-3 pt-3 border-t border-gray-200">
                         <div className="flex justify-between items-center">
-                            <span className="font-bold text-gray-700">Cloud Sync</span>
+                            <span className="font-bold text-gray-700">Status Sistem</span>
                             <div className="flex items-center gap-1.5">
                                 <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${syncStatus === 'Connected' ? 'bg-green-500' : syncStatus === 'Syncing' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
                                 <span className="text-xs font-bold text-gray-500 uppercase">{syncStatus}</span>
-                                <button onClick={() => { if(setShowSyncLog) setShowSyncLog(true); onClose(); }} className="ml-1 text-gray-400 hover:text-gray-600 bg-gray-200 hover:bg-gray-300 p-1 rounded-full transition-colors">
+                                <button onClick={() => { if(onOpenCloudSync) onOpenCloudSync(); }} className="ml-1 text-gray-400 hover:text-gray-600 bg-gray-200 hover:bg-gray-300 p-1 rounded-full transition-colors">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
                                 </button>
                             </div>

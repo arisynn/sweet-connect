@@ -52,28 +52,50 @@ const DialogManager = () => {
     const [isVisible, setIsVisible] = React.useState(false);
 
     React.useEffect(() => {
+        let timer1, timer2;
         dialogShowFn = (data) => {
+            clearTimeout(timer1);
+            clearTimeout(timer2);
             if (data === null) {
                 setIsVisible(false);
-                setTimeout(() => setDialog(null), 200); // 200ms for exit animation
+                timer1 = setTimeout(() => setDialog(null), 200); // 200ms for exit animation
             } else {
                 setDialog(data);
                 setIsVisible(false);
-                setTimeout(() => setIsVisible(true), 10);
+                timer2 = setTimeout(() => setIsVisible(true), 10);
             }
         };
-        return () => { dialogShowFn = null; };
+        return () => { 
+            dialogShowFn = null; 
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+        };
     }, []);
 
     if (!dialog && !isVisible) return null;
+    
+    // Safety check: if dialog is null but isVisible is true (due to timeout race condition)
+    if (!dialog) return null;
 
-    const handleConfirm = () => {
-        if (dialog.onConfirm) dialog.onConfirm();
+    const handleConfirm = async () => {
+        if (dialog.onConfirm) {
+            try {
+                await dialog.onConfirm();
+            } catch (e) {
+                console.error(e);
+            }
+        }
         window.Dialog.close();
     };
 
-    const handleCancel = () => {
-        if (dialog.onCancel) dialog.onCancel();
+    const handleCancel = async () => {
+        if (dialog.onCancel) {
+            try {
+                await dialog.onCancel();
+            } catch (e) {
+                console.error(e);
+            }
+        }
         window.Dialog.close();
     };
 

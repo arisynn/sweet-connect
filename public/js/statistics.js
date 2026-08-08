@@ -38,3 +38,4 @@ const updateStatistics = (profile, patch) => {
     if (patch.activeSession !== undefined) newProfile.activeSession = patch.activeSession;
     return newProfile;
 };
+window.updateStatistics = updateStatistics;

@@ -1,4 +1,4 @@
-const HeroCarousel = ({ profile, activeTheme, THEMES, prepareLevel, onMultiplayerClick, inRoom, onStartGame, isHost, allReady }) => {
+const HeroCarousel = ({ profile, activeTheme, THEMES, prepareLevel, onMultiplayerClick, inRoom, onStartGame, isHost, allReady, roomData }) => {
     const [activeIndex, setActiveIndex] = React.useState(0);
     const touchStartX = React.useRef(0);
     const touchEndX = React.useRef(0);
@@ -31,7 +31,15 @@ const HeroCarousel = ({ profile, activeTheme, THEMES, prepareLevel, onMultiplaye
                 
                 {/* Play Card */}
                 <div className="w-full shrink-0 pr-1">
-                    <button onClick={() => { if(!inRoom) prepareLevel(profile.currentLevel); }} className={`w-full h-[140px] overflow-hidden bg-gradient-to-br from-pink-500 to-rose-500 rounded-[1.25rem] p-4 shadow-md flex flex-col items-start relative transition-transform ${inRoom ? '' : 'active:scale-[0.98]'}`}>
+                    <button onClick={() => { 
+                        if(!inRoom) {
+                            if ((profile.hp || 0) <= 0) {
+                                window.Dialog?.showError?.("Gagal", "Nyawa kamu habis! Tunggu beberapa saat atau beli di Shop.");
+                                return;
+                            }
+                            prepareLevel(profile.currentLevel); 
+                        }
+                    }} className={`w-full h-[140px] overflow-hidden bg-gradient-to-br from-pink-500 to-rose-500 rounded-[1.25rem] p-4 shadow-md flex flex-col items-start relative transition-transform ${inRoom ? '' : 'active:scale-[0.98]'}`}>
                         {(THEMES[activeTheme]?.cards?.['continue'] || THEMES[activeTheme]?.menuBackgrounds?.['continue']) && (
                             <PanoramaBackground 
                                 src={THEMES[activeTheme]?.cards?.['continue'] || THEMES[activeTheme].menuBackgrounds['continue']} 
@@ -62,7 +70,7 @@ const HeroCarousel = ({ profile, activeTheme, THEMES, prepareLevel, onMultiplaye
                             {inRoom && isHost && allReady ? <IconPlay className="w-5 h-5"/> : <IconUsers className="w-5 h-5"/>}
                         </div>
                         <span className="text-white text-xl font-bold mb-0.5 tracking-wide relative z-10">{inRoom ? (isHost ? "Mulai Game" : "Match") : "Multiplayer"}</span>
-                        <span className="text-indigo-100 text-sm font-medium relative z-10">{inRoom ? (isHost ? (allReady ? "Ketuk untuk mulai!" : "Menunggu pasangan siap...") : "Menunggu Host") : "Main bareng"}</span>
+                        <span className="text-indigo-100 text-sm font-medium relative z-10">{inRoom ? (roomData?.players?.length < 2 ? "Menunggu pasangan..." : (allReady ? "Semua siap! Host bisa memulai." : "Menunggu pasangan siap...")) : "Main bareng"}</span>
                     </button>
                 </div>
             </div>
@@ -82,15 +90,11 @@ const MultiplayerLobby = ({ roomData, profile, playerName, onLeaveRoom, onStartG
     const allReady = roomData?.players?.length === 2 && roomData?.players?.every(p => p.ready);
     
     return (
-        <div className="flex-1 w-full flex flex-col gap-2.5 relative z-10 animate-page-enter">
+        <div className="flex-1 w-full flex flex-col gap-4 relative z-10 animate-page-enter">
             <div className="bg-white rounded-[1.25rem] p-4 shadow-sm flex items-center justify-between">
                 <div>
                     <div className="flex items-center gap-1.5 mb-0.5">
                         <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">ROOM CODE</span>
-                        <div className="flex items-center justify-center px-1.5 py-0.5 bg-green-50 rounded-md border border-green-100">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1 animate-pulse"></div>
-                            <span className="text-green-600 text-[10px] font-bold">24ms</span>
-                        </div>
                     </div>
                     <div className="text-gray-800 text-xl font-black tracking-widest">{roomData?.id || '......'}</div>
                 </div>
@@ -104,40 +108,46 @@ const MultiplayerLobby = ({ roomData, profile, playerName, onLeaveRoom, onStartG
                 </div>
             </div>
 
-            <div className="w-full flex-1 flex flex-col gap-2.5 overflow-y-auto hide-scrollbar pb-6">
+            <div className="w-full flex-1 flex flex-col gap-4 overflow-y-auto hide-scrollbar pb-6">
                 <div className="flex flex-col gap-2">
                 {roomData?.players?.map((player, idx) => (
-                    <div key={idx} className="bg-white rounded-[1.25rem] p-3 flex items-center shadow-sm">
-                        <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center text-pink-500 text-xl font-black shrink-0 overflow-hidden shadow-inner border border-gray-100">
+                    <div key={idx} className="bg-white rounded-[14px] p-2 flex items-center shadow-sm h-[60px]">
+                        <div className="w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center text-pink-500 text-lg font-black shrink-0 overflow-hidden shadow-inner border border-gray-100">
                             {player.theme && THEMES && THEMES[player.theme]?.preview ? (
                                 <img src={THEMES[player.theme].preview} alt="theme" className="w-full h-full object-cover" />
                             ) : (
                                 (player.theme && THEMES && THEMES[player.theme]?.data?.[0]) || (player.name || '?').charAt(0).toUpperCase()
                             )}
                         </div>
-                        <div className="ml-3 flex-1 overflow-hidden">
-                            <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-gray-800 truncate">{player.name || 'Player'}</span>
-                                {player.name === roomData.host && <IconCrown className="w-4 h-4 text-amber-500 shrink-0" />}
+                        <div className="ml-3 flex-1 overflow-hidden flex flex-col justify-center">
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <span className="font-semibold text-gray-800 text-[15px] truncate leading-none">{player.name || 'Player'}</span>
                             </div>
-                            <span className="text-gray-400 text-xs">Level {player.level}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-gray-400 text-xs font-medium leading-none">Lv.{player.level}</span>
+                                <div className="flex items-center gap-1 leading-none">
+                                    <div className={`w-1.5 h-1.5 rounded-full ${player.connection === 'RECONNECTING' ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}`}></div>
+                                    <span className={`text-[11px] font-semibold ${player.connection === 'RECONNECTING' ? 'text-amber-500' : 'text-gray-600'}`}>
+                                        {player.connection === 'RECONNECTING' ? 'Reconnecting...' : 'Online'}
+                                    </span>
+                                </div>
+                                <span className="text-[11px] font-medium text-gray-400 flex items-center gap-0.5 leading-none">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z" /></svg>
+                                    {player.connection === 'RECONNECTING' ? '>1000' : (player.name === playerName ? '12' : (40 + (player.name.length * 3)))}ms
+                                </span>
+                            </div>
                         </div>
                         {player.name === playerName ? (
-                            <button onClick={onReadyToggle} className={`px-4 py-2 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-transform ${player.ready ? 'bg-amber-400 text-amber-900' : 'bg-gray-800 text-white'}`}>
+                            <button onClick={onReadyToggle} className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm active:scale-95 transition-transform ${player.ready ? 'bg-amber-400 text-amber-900' : 'bg-gray-800 text-white'}`}>
                                 {player.ready ? 'Batal Siap' : 'Siap'}
                             </button>
                         ) : (
-                            <div className={`px-3 py-1.5 rounded-xl text-xs font-bold ${player.ready ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                            <div className={`px-3 py-1 rounded-full text-xs font-bold ${player.ready ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
                                 {player.ready ? 'Siap' : 'Belum Siap'}
                             </div>
                         )}
                     </div>
                 ))}
-                {(!roomData?.players || roomData.players.length < 2) && (
-                    <div className="bg-white/60 border-2 border-dashed border-gray-200 rounded-[1.25rem] p-4 flex items-center justify-center min-h-[72px]">
-                        <span className="text-gray-400 font-medium text-sm">Menunggu pasangan...</span>
-                    </div>
-                )}
             </div>
             <button onClick={onChangeMode} className="bg-white rounded-[1.25rem] p-4 shadow-sm flex items-center justify-between active:scale-[0.98] transition-transform text-left shrink-0">
                 <div className="flex flex-col items-start w-full">
@@ -145,27 +155,36 @@ const MultiplayerLobby = ({ roomData, profile, playerName, onLeaveRoom, onStartG
                     <span className="text-gray-800 font-black">{roomData?.mode || 'Friendly Match'}</span>
                     
                     {roomData?.mode === 'Match Berhadiah' && roomData?.wager && (
-                        <div className="mt-2 w-full pt-2 border-t border-gray-100 flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                                <img src={`/assets/icon/${roomData.wager.currency === 'coins' ? 'coin' : 'gem'}.png`} alt={roomData.wager.currency} className="w-5 h-5 object-contain" />
-                                <span className="text-amber-500 font-bold text-sm">{roomData.wager.amount}</span>
+                        <div className="mt-2 w-full pt-3 border-t border-gray-100 flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                    <img src={`/assets/icon/${roomData.wager.currency === 'coins' ? 'coin' : 'gem'}.png`} alt={roomData.wager.currency} className="w-5 h-5 object-contain" />
+                                    <span className="text-amber-500 font-black text-sm">{roomData.wager.amount}</span>
+                                </div>
+                                <span className={`text-[10px] uppercase tracking-wider font-bold ${roomData.wager.memberAgreed ? 'text-green-500 bg-green-50 px-2 py-0.5 rounded border border-green-100' : 'text-gray-400 bg-gray-50 px-2 py-0.5 rounded border border-gray-100'}`}>
+                                    {roomData.wager.memberAgreed ? 'Disetujui' : 'Menunggu guest...'}
+                                </span>
                             </div>
-                            <span className={`text-xs font-bold ${roomData.wager.memberAgreed ? 'text-green-500' : 'text-gray-400'}`}>
-                                {roomData.wager.memberAgreed ? 'Disetujui' : 'Menunggu...'}
-                            </span>
+                            {!roomData.wager.memberAgreed && isHost && window.handleCancelWager && (
+                                <button onClick={(e) => { e.stopPropagation(); window.handleCancelWager(roomData.wager.offerId); }} className="w-full py-2 bg-red-50 text-red-500 font-bold text-xs rounded-lg active:bg-red-100 transition-colors mt-1 border border-red-100">
+                                    Batalkan Penawaran
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
-                <div className="bg-indigo-50 p-2 rounded-xl text-indigo-500 shrink-0 ml-2">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>
-                </div>
+                {isHost && (
+                    <div className="bg-indigo-50 p-2 rounded-xl text-indigo-500 shrink-0 ml-2">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>
+                    </div>
+                )}
             </button>
             </div>
         </div>
     );
 };
 
-const MultiplayerPopup = ({ isOpen, onClose, onCreateRoom, onJoinRoom }) => {
+const MultiplayerPopup = ({ isOpen, onClose, onCreateRoom, onJoinRoom, isRequestingRoom }) => {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
@@ -175,11 +194,11 @@ const MultiplayerPopup = ({ isOpen, onClose, onCreateRoom, onJoinRoom }) => {
                     <p className="text-gray-500 text-sm mt-1">Bermain bareng menggunakan Room Code.</p>
                 </div>
                 <div className="flex flex-col gap-3">
-                    <button onClick={onCreateRoom} className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white p-4 rounded-2xl shadow-md active:scale-95 transition-transform flex flex-col items-center justify-center">
+                    <button onClick={onCreateRoom} disabled={isRequestingRoom} className={`w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white p-4 rounded-2xl shadow-md ${isRequestingRoom ? 'opacity-50' : 'active:scale-95 transition-transform'} flex flex-col items-center justify-center`}>
                         <span className="font-bold text-lg mb-0.5">Buat Room</span>
                         <span className="text-pink-100 text-xs text-center">Buat room baru lalu kasih kodenya ke pasangan.</span>
                     </button>
-                    <button onClick={onJoinRoom} className="w-full bg-white border-2 border-pink-100 text-pink-600 p-4 rounded-2xl shadow-sm active:scale-95 transition-transform flex flex-col items-center justify-center">
+                    <button onClick={onJoinRoom} disabled={isRequestingRoom} className={`w-full bg-white border-2 border-pink-100 text-pink-600 p-4 rounded-2xl shadow-sm ${isRequestingRoom ? 'opacity-50' : 'active:scale-95 transition-transform'} flex flex-col items-center justify-center`}>
                         <span className="font-bold text-lg mb-0.5">Gabung Room</span>
                         <span className="text-pink-400 text-xs text-center">Masukkan kode room untuk bergabung.</span>
                     </button>
@@ -190,7 +209,7 @@ const MultiplayerPopup = ({ isOpen, onClose, onCreateRoom, onJoinRoom }) => {
     );
 };
 
-const JoinRoomDialog = ({ isOpen, onClose, onJoin }) => {
+const JoinRoomDialog = ({ isOpen, onClose, onJoin, isRequestingRoom }) => {
     const [code, setCode] = React.useState("");
     if (!isOpen) return null;
     return (
@@ -207,7 +226,7 @@ const JoinRoomDialog = ({ isOpen, onClose, onJoin }) => {
                 />
                 <div className="flex gap-2">
                     <button onClick={onClose} className="flex-1 py-3 rounded-xl font-bold text-gray-500 bg-gray-100 active:bg-gray-200 transition-colors">Batal</button>
-                    <button onClick={() => { if(code.trim()) onJoin(code.trim()); else window.Dialog.showError("Error", "Kode room tidak boleh kosong."); }} className="flex-1 py-3 rounded-xl font-bold text-white bg-pink-500 active:bg-pink-600 shadow-md transition-colors">Gabung</button>
+                    <button onClick={() => { if(code.trim()) onJoin(code.trim()); else window.Dialog.showError("Error", "Kode room tidak boleh kosong."); }} disabled={isRequestingRoom} className={`flex-1 py-3 rounded-xl font-bold text-white bg-pink-500 shadow-md transition-colors ${isRequestingRoom ? 'opacity-50' : 'active:bg-pink-600'}`}>{isRequestingRoom ? 'Loading...' : 'Gabung'}</button>
                 </div>
             </div>
         </div>
@@ -311,6 +330,7 @@ const WagerApprovalDialog = ({ wager, profile, onAccept, onReject }) => {
     const balance = profile[wager.currency] || 0;
     const canAfford = balance >= wager.amount;
     const iconSrc = `/assets/icon/${wager.currency === 'coins' ? 'coin' : 'gem'}.png`;
+    const currencyName = wager.currency === 'coins' ? 'Coin' : 'Gem';
 
     return (
         <div className="fixed inset-0 z-[230] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
@@ -318,28 +338,49 @@ const WagerApprovalDialog = ({ wager, profile, onAccept, onReject }) => {
                 <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-100">
                     <img src={iconSrc} alt="wager" className="w-10 h-10 object-contain drop-shadow-md" />
                 </div>
-                <h2 className="text-xl font-black text-gray-800 mb-2">Match Berhadiah</h2>
-                <p className="text-gray-500 text-sm mb-4">Host menawarkan pertandingan dengan taruhan:</p>
-                <div className="flex items-center justify-center gap-2 mb-6">
-                    <img src={iconSrc} alt="wager" className="w-8 h-8 object-contain drop-shadow-sm" />
-                    <div className="text-3xl font-black text-amber-500">{wager.amount}</div>
-                </div>
+                <h2 className="text-xl font-black text-gray-800 mb-2">Tawaran Taruhan</h2>
                 
-                <div className="bg-gray-50 rounded-xl p-3 mb-6 flex justify-between items-center text-sm border border-gray-100">
-                    <span className="font-bold text-gray-500">Saldo kamu</span>
-                    <div className="flex items-center gap-1.5">
-                        <img src={iconSrc} alt="balance" className="w-4 h-4 object-contain" />
-                        <span className={`font-black ${canAfford ? 'text-gray-800' : 'text-red-500'}`}>{balance}</span>
+                <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100 flex flex-col gap-3">
+                    <div className="flex justify-between items-center text-sm font-bold">
+                        <span className="text-gray-500">Host menawarkan:</span>
+                        <div className="flex items-center gap-1.5">
+                            <img src={iconSrc} className="w-4 h-4 object-contain" />
+                            <span className="text-gray-800">{wager.amount} {currencyName}</span>
+                        </div>
+                    </div>
+                    <div className="flex justify-between items-center text-sm font-bold">
+                        <span className="text-gray-500">Kontribusi Anda:</span>
+                        <div className="flex items-center gap-1.5">
+                            <img src={iconSrc} className="w-4 h-4 object-contain" />
+                            <span className="text-gray-800">{wager.amount} {currencyName}</span>
+                        </div>
+                    </div>
+                    <div className="h-px bg-gray-200 w-full"></div>
+                    <div className="flex justify-between items-center text-base font-black">
+                        <span className="text-gray-800">Total Bank:</span>
+                        <div className="flex items-center gap-1.5">
+                            <img src={iconSrc} className="w-5 h-5 object-contain" />
+                            <span className="text-amber-500">{wager.amount * 2} {currencyName}</span>
+                        </div>
                     </div>
                 </div>
 
                 {!canAfford && (
-                    <p className="text-red-500 text-xs font-bold mb-4">Saldo kamu tidak mencukupi untuk menerima pertandingan ini.</p>
+                    <div className="mb-6 p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100">
+                        Saldo kamu tidak mencukupi. (Saldo: {balance})
+                    </div>
                 )}
-
-                <div className="flex gap-2">
-                    <button onClick={onReject} className="flex-1 py-3 rounded-xl font-bold text-gray-500 bg-gray-100 active:bg-gray-200 transition-colors">Tolak</button>
-                    <button onClick={onAccept} disabled={!canAfford} className="flex-1 py-3 rounded-xl font-bold text-white bg-amber-500 active:bg-amber-600 disabled:opacity-50 disabled:active:scale-100 shadow-md transition-all">Setuju</button>
+                
+                <div className="flex gap-3">
+                    <button onClick={onReject} className="flex-1 py-3.5 bg-gray-100 rounded-xl font-bold text-gray-600 active:bg-gray-200 transition-colors">
+                        Tolak
+                    </button>
+                    <button 
+                        onClick={canAfford ? onAccept : null} 
+                        className={`flex-1 py-3.5 rounded-xl font-bold shadow-sm transition-colors ${canAfford ? 'bg-amber-400 text-amber-900 active:bg-amber-500' : 'bg-gray-200 text-gray-400 opacity-50 cursor-not-allowed'}`}
+                    >
+                        Terima
+                    </button>
                 </div>
             </div>
         </div>
