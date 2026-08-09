@@ -1,0 +1,15 @@
+{
+  "id": "halloween",
+  "name": "Halloween",
+  "desc": "Tema Halloween malam yang gelap dengan karakter dan benda Halloween yang lucu dan menyeramkan.",
+  "type": "premium",
+  "price": 200,
+  "currency": "candy",
+  "colors": {
+    "bg": "#0D0A14",
+    "border": "#382044",
+    "text": "#F5EAF7",
+    "accent": "#A855F7",
+    "buttonActive": "#7E22CE"
+  }
+}
