@@ -3,8 +3,8 @@
   "name": "Halloween",
   "desc": "Tema Halloween malam yang gelap dengan karakter dan benda Halloween yang lucu dan menyeramkan.",
   "price": 2000000,
-  "currency": "coins",
-  "type": "standar",
+  "currency": "permen_pelangi",
+  "type": "premium",
 
   "colors": {
     "bg": "#0D0A14",
